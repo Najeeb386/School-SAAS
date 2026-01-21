@@ -4,8 +4,8 @@
                     <div class="navbar-header d-flex align-items-center">
                         <a href="javascript:void:(0)" class="mobile-toggle"><i class="ti ti-align-right"></i></a>
                         <a class="navbar-brand" href="index.html">
-                            <img src="../../../../public/assets/img/logo.png" class="img-fluid logo-desktop" alt="logo" />
-                            <img src="../../../../public/assets/img/logo-icon.png" class="img-fluid logo-mobile" alt="logo" />
+                            <img src="../../../../../public/assets/img/logo.png" class="img-fluid logo-desktop" alt="logo" />
+                            <img src="../../../../../public/assets/img/logo-icon.png" class="img-fluid logo-mobile" alt="logo" />
                         </a>
                     </div>
                     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -151,7 +151,7 @@
                                 </li>
                                 <li class="nav-item dropdown user-profile">
                                     <a href="javascript:void(0)" class="nav-link dropdown-toggle " id="navbarDropdown4" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <img src="../../../../public/assets/img/avtar/02.jpg" alt="avtar-img">
+                                        <img src="../../../../../public/assets/img/avtar/02.jpg" alt="avtar-img">
                                         <span class="bg-success user-status"></span>
                                     </a>
                                     <div class="dropdown-menu animated fadeIn" aria-labelledby="navbarDropdown">

@@ -64,59 +64,14 @@
                                                 <li class="breadcrumb-item">
                                                     Dashboard
                                                 </li>
-                                                <li class="breadcrumb-item active text-primary" aria-current="page">Schools</li>
+                                                <li class="breadcrumb-item" aria-current="page">Schools</li>
+                                                <li class="breadcrumb-item active text-primary" aria-current="page">School Details</li>
                                             </ol>
                                         </nav>
                                     </div>
                                   
                                 </div>
                                 <!-- end page title -->
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="card card-statistics">
-                                    <div class="card-body">
-                                        <div class="datatable-wrapper table-responsive">
-                                            <table id="datatable" class="display compact table table-striped table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>School Name</th>
-                                                        <th>Domain</th>
-                                                        <th>email</th>
-                                                        <th>Contact No</th>
-                                                        <th>Students</th>
-                                                        <th>Plan</th>
-                                                        <th>Status</th>
-                                                        <th>Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td>Tiger Nixon</td>
-                                                        <td>System Architect</td>
-                                                        <td>Edinburgh</td>
-                                                        <td>61</td>
-                                                        <td>2011/04/25</td>
-                                                        <td>$320,800</td>
-                                                        <td>test</td>
-                                                        <td><a href="./school_details.php" class="btn btn-primary">Details</a></td>
-                                                    </tr>
-                                                </tbody>
-                                                <tfoot>
-                                                    <tr>
-                                                        <th>Name</th>
-                                                        <th>Position</th>
-                                                        <th>Office</th>
-                                                        <th>Age</th>
-                                                        <th>Start date</th>
-                                                        <th>Salary</th>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                         <!-- end row -->
