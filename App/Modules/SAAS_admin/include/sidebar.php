@@ -21,7 +21,7 @@
                                     <li> <a href='index-crypto-currency.html'>Crypto Currency</a> </li>
                                 </ul>
                             </li>
-                            <li><a href="app-chat.html" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Schools</span></a> </li>
+                            <li><a href="../views/schools/schools.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Schools</span></a> </li>
                             
 
                         </ul>
