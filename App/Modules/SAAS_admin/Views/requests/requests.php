@@ -120,7 +120,10 @@
                                                         <td>$320,800</td>
                                                         <td>2026/02/15</td>
                                                         <td>test</td>
-                                                        <td><a href="./request_details.php" class="btn btn-primary">Details</a></td>
+                                                        <td><a href="./request_details.php" class="btn btn-primary">Details</a>
+                                                            <a href="#" class="btn btn-success">A</a>
+                                                            <a href="#" class="btn btn-danger">R</a>
+                                                    </td>
                                                     </tr>
                                                 </tbody>
                                                 <tfoot>
@@ -167,104 +170,10 @@
     </div>
     <!-- end app -->
 
-    <!-- Add School Modal -->
-    <div class="modal fade" id="addSchoolModal" tabindex="-1" role="dialog" aria-labelledby="addSchoolModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addSchoolModalLabel">Add New School</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="addSchoolForm">
-                        <div class="form-group">
-                            <label for="schoolName">School Name</label>
-                            <input type="text" class="form-control" id="schoolName" placeholder="Enter school name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="domain">Domain</label>
-                            <input type="text" class="form-control" id="domain" placeholder="Enter domain" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="email">Email</label>
-                            <input type="email" class="form-control" id="email" placeholder="Enter email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="contactNo">Contact Number</label>
-                            <input type="tel" class="form-control" id="contactNo" placeholder="Enter contact number" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="students">Number of Students</label>
-                            <input type="number" class="form-control" id="students" placeholder="Enter number of students" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="plan">Plan</label>
-                            <select class="form-control" id="plan" required>
-                                <option value="">Select Plan</option>
-                                <option value="Basic">Basic</option>
-                                <option value="Standard">Standard</option>
-                                <option value="Premium">Premium</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="dueDate">Due Date</label>
-                            <input type="date" class="form-control" id="dueDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="status">Status</label>
-                            <select class="form-control" id="status" required>
-                                <option value="">Select Status</option>
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                                <option value="Pending">Pending</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="saveSchoolBtn">Save School</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- End Add School Modal -->
+  
 
     <!-- plugins -->
     <script src="../../../../../public/assets/js/vendors.js"></script>
 
     <!-- custom app -->
     <script src="../../../../../public/assets/js/app.js"></script>
-    
-    <!-- Modal Script -->
-    <script>
-        document.getElementById('saveSchoolBtn').addEventListener('click', function() {
-            const form = document.getElementById('addSchoolForm');
-            if (form.checkValidity() === false) {
-                event.preventDefault();
-                event.stopPropagation();
-                form.classList.add('was-validated');
-            } else {
-                // Here you can add the code to submit the form data
-                console.log('Form is valid - Ready for backend submission');
-                const formData = {
-                    schoolName: document.getElementById('schoolName').value,
-                    domain: document.getElementById('domain').value,
-                    email: document.getElementById('email').value,
-                    contactNo: document.getElementById('contactNo').value,
-                    students: document.getElementById('students').value,
-                    plan: document.getElementById('plan').value,
-                    dueDate: document.getElementById('dueDate').value,
-                    status: document.getElementById('status').value
-                };
-                console.log(formData);
-                
-                // Reset form
-                form.reset();
-                // Close modal
-                $('#addSchoolModal').modal('hide');
-            }
-        });
-    </script>

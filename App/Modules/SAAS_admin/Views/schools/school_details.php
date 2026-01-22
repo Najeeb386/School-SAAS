@@ -145,6 +145,8 @@
                     <table class="table">
                         <tr><th>Current Plan</th><td>Basic</td></tr>
                         <tr><th>Amount</th><td>PKR 180 / Student / Year</td></tr>
+                        <tr><th>Last payment date</th><td>25-Jan-2026</td></tr>
+                        <tr><th>Upcoming payment Date</th><td>25-Jan-2026</td></tr>
                         <tr><th>Due Date</th><td>25-Jan-2026</td></tr>
                         <tr><th>Payment Status</th><td><span class="badge badge-warning">Due</span></td></tr>
                     </table>

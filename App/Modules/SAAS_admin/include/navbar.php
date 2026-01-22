@@ -158,10 +158,10 @@
                                         <div class="bg-gradient px-4 py-3">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div class="mr-1">
-                                                    <h4 class="text-white mb-0">Alice Williams</h4>
-                                                    <small class="text-white">Henry@example.com</small>
+                                                    <h4 class="text-white mb-0"><?php echo isset($_SESSION['name']) ? htmlspecialchars($_SESSION['name']) : 'User'; ?></h4>
+                                                    <small class="text-white"><?php echo isset($_SESSION['email']) ? htmlspecialchars($_SESSION['email']) : ''; ?></small>
                                                 </div>
-                                                <a href="#" class="text-white font-20 tooltip-wrapper" data-toggle="tooltip" data-placement="top" title="" data-original-title="Logout"> <i
+                                                <a href="../../../Auth/logout.php" class="text-white font-20 tooltip-wrapper" data-toggle="tooltip" data-placement="top" title="" data-original-title="Logout"> <i
                                                                 class="zmdi zmdi-power"></i></a>
                                             </div>
                                         </div>
