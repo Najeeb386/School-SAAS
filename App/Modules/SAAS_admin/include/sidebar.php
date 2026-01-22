@@ -10,7 +10,7 @@
                                     <span class="nav-label label label-danger">9</span>
                                 </a>
                                 <ul aria-expanded="false">
-                                    <li class="active"> <a href='index.html'>Default</a> </li>
+                                    <li class="active"> <a href='../../views/dashboard/index.php'>Default</a> </li>
                                     <li> <a href='index-ecommerce.html'>Ecommerce</a> </li>
                                     <li> <a href='index-car-dealer.html'>Car Dealer</a> </li>
                                     <li> <a href='index-stock-market.html'>Stock Market</a> </li>
@@ -21,9 +21,10 @@
                                     <li> <a href='index-crypto-currency.html'>Crypto Currency</a> </li>
                                 </ul>
                             </li>
-                            <li><a href="../views/schools/schools.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Schools</span></a> </li>
+                            <li><a href="../../views/schools/schools.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Schools</span></a> </li>
+                            <li><a href="../../views/requests/requests.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Requests</span></a> </li>
+                            <li><a href="../../views/finance/finance.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Finance</span></a> </li>
                             
-
                         </ul>
                     </div>
                     <!-- end sidebar-nav -->

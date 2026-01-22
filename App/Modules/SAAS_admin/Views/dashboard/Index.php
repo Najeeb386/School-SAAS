@@ -12,9 +12,9 @@
     <!-- google fonts -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet">
     <!-- plugin stylesheets -->
-    <link rel="stylesheet" type="text/css" href="../../../../public/assets/css/vendors.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../public/assets/css/vendors.css" />
     <!-- app style -->
-    <link rel="stylesheet" type="text/css" href="../../../../public/assets/css/style.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../public/assets/css/style.css" />
 </head>
 
 <body>
@@ -26,7 +26,7 @@
             <div class="loader">
                 <div class="h-100 d-flex justify-content-center">
                     <div class="align-self-center">
-                        <img src="../../../../public/assets/img/loader/loader.svg" alt="loader">
+                        <img src="../../../../../public/assets/img/loader/loader.svg" alt="loader">
                     </div>
                 </div>
             </div>
@@ -34,14 +34,14 @@
             <!-- begin app-header -->
             <header class="app-header top-bar">
                 <!-- begin navbar -->
-                <?php include_once '../include/navbar.php'; ?>
+                <?php include_once '../../include/navbar.php'; ?>
                 <!-- end navbar -->
             </header>
             <!-- end app-header -->
             <!-- begin app-container -->
             <div class="app-container">
                 <!-- begin app-nabar -->
-                <?php include_once '../include/sidebar.php'; ?>
+                <?php include_once '../../include/sidebar.php'; ?>
                 <!-- end app-navbar -->
                 <!-- begin app-main -->
                 <div class="app-main" id="main">
@@ -777,10 +777,10 @@
     <!-- end app -->
 
     <!-- plugins -->
-    <script src="../../../../public/assets/js/vendors.js"></script>
+    <script src="../../../../../public/assets/js/vendors.js"></script>
 
     <!-- custom app -->
-    <script src="../../../../public/assets/js/app.js"></script>
+    <script src="../../../../../public/assets/js/app.js"></script>
 </body>
 
 

@@ -53,7 +53,7 @@
                                 <!-- begin page title -->
                                 <div class="d-block d-lg-flex flex-nowrap align-items-center">
                                     <div class="page-title mr-4 pr-4 border-right">
-                                        <h1>Schools</h1>
+                                        <h1>Finance</h1>
                                     </div>
                                     <div class="breadcrumb-bar d-flex align-items-center">
                                         <nav>
@@ -63,23 +63,26 @@
                                                 </li>
                                                 <li class="breadcrumb-item">Dashboard</li>
                                                 <li class="breadcrumb-item active text-primary" aria-current="page">
-                                                    Schools
+                                                    Finance
                                                 </li>
                                             </ol>
                                         </nav>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-end mt-3">
+                                <!-- <div class="d-flex justify-content-end mt-3">
                                     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addSchoolModal">
                                         Add School
                                     </button>
-                                </div>
+                                </div> -->
                                 <!-- end page title -->
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-lg-12">
                                 <div class="card card-statistics">
+                                    <div class="card-header">
+                                        <h3>Due Payments</h3>
+                                    </div>
                                     <div class="card-body">
                                         <!-- Filters Section -->
                                         <div class="row mb-3">
@@ -241,34 +244,3 @@
 
     <!-- custom app -->
     <script src="../../../../../public/assets/js/app.js"></script>
-    
-    <!-- Modal Script -->
-    <script>
-        document.getElementById('saveSchoolBtn').addEventListener('click', function() {
-            const form = document.getElementById('addSchoolForm');
-            if (form.checkValidity() === false) {
-                event.preventDefault();
-                event.stopPropagation();
-                form.classList.add('was-validated');
-            } else {
-                // Here you can add the code to submit the form data
-                console.log('Form is valid - Ready for backend submission');
-                const formData = {
-                    schoolName: document.getElementById('schoolName').value,
-                    domain: document.getElementById('domain').value,
-                    email: document.getElementById('email').value,
-                    contactNo: document.getElementById('contactNo').value,
-                    students: document.getElementById('students').value,
-                    plan: document.getElementById('plan').value,
-                    dueDate: document.getElementById('dueDate').value,
-                    status: document.getElementById('status').value
-                };
-                console.log(formData);
-                
-                // Reset form
-                form.reset();
-                // Close modal
-                $('#addSchoolModal').modal('hide');
-            }
-        });
-    </script>

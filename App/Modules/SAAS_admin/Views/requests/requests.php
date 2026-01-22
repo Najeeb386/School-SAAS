@@ -53,7 +53,7 @@
                                 <!-- begin page title -->
                                 <div class="d-block d-lg-flex flex-nowrap align-items-center">
                                     <div class="page-title mr-4 pr-4 border-right">
-                                        <h1>Schools</h1>
+                                        <h1>New Requests</h1>
                                     </div>
                                     <div class="breadcrumb-bar d-flex align-items-center">
                                         <nav>
@@ -63,17 +63,13 @@
                                                 </li>
                                                 <li class="breadcrumb-item">Dashboard</li>
                                                 <li class="breadcrumb-item active text-primary" aria-current="page">
-                                                    Schools
+                                                    New Requests
                                                 </li>
                                             </ol>
                                         </nav>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-end mt-3">
-                                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addSchoolModal">
-                                        Add School
-                                    </button>
-                                </div>
+                                
                                 <!-- end page title -->
                             </div>
                         </div>
@@ -124,7 +120,7 @@
                                                         <td>$320,800</td>
                                                         <td>2026/02/15</td>
                                                         <td>test</td>
-                                                        <td><a href="./school_details.php" class="btn btn-primary">Details</a></td>
+                                                        <td><a href="./request_details.php" class="btn btn-primary">Details</a></td>
                                                     </tr>
                                                 </tbody>
                                                 <tfoot>
