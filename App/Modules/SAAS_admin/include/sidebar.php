@@ -24,7 +24,7 @@
                             <li><a href="../../views/schools/schools.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Schools</span></a> </li>
                             <li><a href="../../views/requests/requests.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Requests</span></a> </li>
                             <li><a href="../../views/finance/finance.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Finance</span></a> </li>
-                            
+                            <li><a href="../../views/finance/finance.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">expenses</span></a> </li>
                         </ul>
                     </div>
                     <!-- end sidebar-nav -->

@@ -112,23 +112,32 @@
                                                         <th>Contact No</th>
                                                         <th>Students</th>
                                                         <th>Plan</th>
+                                                        <th>Start Date</th>
                                                         <th>Due Date</th>
-                                                        <th>Status</th>
+                                                        <th>Payment Status</th>
                                                         <th>Action</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     <tr>
                                                         <td>Tiger Nixon</td>
-                                                        <td>System Architect</td>
+                                                        <td>
+                                                            System Architect
+                                                            <br>
+                                                            <span class="badge badge-success mt-2">Active</span>
+                                                        </td>
                                                         <td>Edinburgh</td>
                                                         <td>61</td>
                                                         <td>2011/04/25</td>
                                                         <td>$320,800</td>
                                                         <td>2026/02/15</td>
                                                         <td>test</td>
-                                                        <td><a href="./school_details.php" class="btn btn-primary">Details</a></td>
+                                                        <td><span class="badge badge-success">Paid</span></td>
+                                                        <td><a href="./fin_detail.php" class="btn btn-primary">Detail</a>
+                                                            <button type="button" class="btn btn-danger block-school-btn" data-school-name="Tiger Nixon" data-toggle="modal" data-target="#blockConfirmModal">Block</button>
+                                                    </td>
                                                     </tr>
+                                                   
                                                 </tbody>
                                                 <tfoot>
                                                     <tr>
@@ -239,8 +248,79 @@
     </div>
     <!-- End Add School Modal -->
 
+    <!-- Block Confirmation Modal -->
+    <div class="modal fade" id="blockConfirmModal" tabindex="-1" role="dialog" aria-labelledby="blockConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content border-danger">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="blockConfirmModalLabel">
+                        <i class="ti ti-alert-triangle mr-2"></i> Confirm Block
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">
+                        Are you sure you want to block 
+                        <strong id="schoolNameDisplay">this school</strong>?
+                    </p>
+                    <p class="text-muted small mt-2">This action will suspend the school's access until it is unblocked.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">No, Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmBlockBtn">Yes, Block School</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End Block Confirmation Modal -->
+
     <!-- plugins -->
     <script src="../../../../../public/assets/js/vendors.js"></script>
 
     <!-- custom app -->
     <script src="../../../../../public/assets/js/app.js"></script>
+
+    <!-- Block Confirmation Script -->
+    <script>
+        var selectedSchoolName = '';
+        
+        // Handle block button click
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('block-school-btn')) {
+                selectedSchoolName = e.target.getAttribute('data-school-name');
+                document.getElementById('schoolNameDisplay').textContent = selectedSchoolName;
+            }
+        });
+        
+        // Handle confirm block button
+        document.getElementById('confirmBlockBtn').addEventListener('click', function() {
+            console.log('School blocked:', selectedSchoolName);
+            
+            // Show success message
+            alert('School "' + selectedSchoolName + '" has been successfully blocked!');
+            
+            // Close modal
+            $('#blockConfirmModal').modal('hide');
+            
+            // Here you can add API call to block the school
+            // Example:
+            // fetch('/api/schools/block', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json'
+            //     },
+            //     body: JSON.stringify({
+            //         schoolName: selectedSchoolName
+            //     })
+            // })
+            // .then(response => response.json())
+            // .then(data => {
+            //     console.log('Success:', data);
+            //     // Refresh the table
+            //     location.reload();
+            // });
+        });
+    </script>
+    <!-- End Block Confirmation Script -->

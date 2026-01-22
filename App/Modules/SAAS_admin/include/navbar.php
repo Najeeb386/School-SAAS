@@ -2,7 +2,7 @@
 
                     <!-- begin navbar-header -->
                     <div class="navbar-header d-flex align-items-center">
-                        <a href="javascript:void:(0)" class="mobile-toggle"><i class="ti ti-align-right"></i></a>
+                        <a href="javascript:void(0)" class="mobile-toggle"><i class="ti ti-align-right"></i></a>
                         <a class="navbar-brand" href="index.html">
                             <img src="../../../../../public/assets/img/logo.png" class="img-fluid logo-desktop" alt="logo" />
                             <img src="../../../../../public/assets/img/logo-icon.png" class="img-fluid logo-mobile" alt="logo" />
@@ -199,3 +199,28 @@
                     </div>
                     <!-- endnavigation -->
                 </nav>
+
+                <!-- Mobile Sidebar Toggle Script -->
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var mobileToggle = document.querySelector('.mobile-toggle');
+                        if (mobileToggle) {
+                            mobileToggle.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                document.body.classList.toggle('sidebar-toggled');
+                            });
+                        }
+
+                        // Close sidebar when clicking outside on mobile
+                        document.addEventListener('click', function(e) {
+                            var sidebar = document.querySelector('.app-navbar');
+                            var toggle = document.querySelector('.mobile-toggle');
+                            if (sidebar && toggle && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
+                                if (document.body.classList.contains('sidebar-toggled')) {
+                                    document.body.classList.remove('sidebar-toggled');
+                                }
+                            }
+                        });
+                    });
+                </script>
+                <!-- End Mobile Sidebar Toggle Script -->
