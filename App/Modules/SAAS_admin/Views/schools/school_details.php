@@ -4,9 +4,14 @@ session_start();
 // Database connection
 require_once '../../../../Config/connection.php';
 require_once '../../Controllers/School_controller.php';
+require_once '../../Controllers/plain_controller.php';
 
-// Initialize controller
+// Initialize controllers
 $schoolController = new SchoolController($DB_con);
+$planController = new PlanController($DB_con);
+
+// Get all plans for dropdown
+$plans = $planController->index();
 
 // Get school ID from URL
 $schoolId = isset($_GET['id']) ? $_GET['id'] : null;
@@ -325,9 +330,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
                     <div class="form-group">
                         <label>Plan</label>
                         <select class="form-control" name="plan" required>
-                            <option value="Basic" <?php echo ($school['plan'] === 'Basic') ? 'selected' : ''; ?>>Basic</option>
-                            <option value="Standard" <?php echo ($school['plan'] === 'Standard') ? 'selected' : ''; ?>>Standard</option>
-                            <option value="Premium" <?php echo ($school['plan'] === 'Premium') ? 'selected' : ''; ?>>Premium</option>
+                            <option value="">Select Plan</option>
+                            <?php if(!empty($plans)): ?>
+                                <?php foreach($plans as $plan): ?>
+                                    <option value="<?php echo htmlspecialchars($plan['name']); ?>" <?php echo ($school['plan'] === $plan['name']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($plan['name']); ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
                     </div>
 
@@ -384,9 +392,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
                         <label>Plan</label>
                         <select class="form-control" name="plan" required>
                             <option value="">Select Plan</option>
-                            <option value="Basic" <?php echo ($school['plan'] === 'Basic') ? 'selected' : ''; ?>>Basic</option>
-                            <option value="Standard" <?php echo ($school['plan'] === 'Standard') ? 'selected' : ''; ?>>Standard</option>
-                            <option value="Premium" <?php echo ($school['plan'] === 'Premium') ? 'selected' : ''; ?>>Premium</option>
+                            <?php if(!empty($plans)): ?>
+                                <?php foreach($plans as $plan): ?>
+                                    <option value="<?php echo htmlspecialchars($plan['name']); ?>" <?php echo ($school['plan'] === $plan['name']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($plan['name']); ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
                     </div>
 

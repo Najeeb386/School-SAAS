@@ -4,9 +4,14 @@ session_start();
 // Database connection
 require_once '../../../../Config/connection.php';
 require_once '../../Controllers/School_controller.php';
+require_once '../../Controllers/plain_controller.php';
 
-// Initialize controller
+// Initialize controllers
 $schoolController = new SchoolController($DB_con);
+$planController = new PlanController($DB_con);
+
+// Get all plans for dropdown
+$plans = $planController->index();
 
 // Handle POST request for adding/updating school
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -209,6 +214,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                                 <td><?php echo htmlspecialchars($school['expires_at']); ?></td>
                                                                 <td>
                                                                     <a href="school_details.php?id=<?php echo htmlspecialchars($school['id']); ?>" class="btn btn-sm btn-primary">Details</a>
+                                                                    <a href="../finance/fin_detail.php" class="btn btn-sm btn-success">Finance</a>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>
@@ -310,9 +316,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             <label for="plan">Plan <span class="text-danger">*</span></label>
                             <select class="form-control" id="plan" name="plan" required>
                                 <option value="">Select Plan</option>
-                                <option value="Basic">Basic</option>
-                                <option value="Standard">Standard</option>
-                                <option value="Premium">Premium</option>
+                                <?php if(!empty($plans)): ?>
+                                    <?php foreach($plans as $plan): ?>
+                                        <option value="<?php echo htmlspecialchars($plan['name']); ?>"><?php echo htmlspecialchars($plan['name']); ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </select>
                         </div>
 
@@ -389,9 +397,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             <label for="editPlan">Plan <span class="text-danger">*</span></label>
                             <select class="form-control" id="editPlan" name="plan" required>
                                 <option value="">Select Plan</option>
-                                <option value="Basic">Basic</option>
-                                <option value="Standard">Standard</option>
-                                <option value="Premium">Premium</option>
+                                <?php if(!empty($plans)): ?>
+                                    <?php foreach($plans as $plan): ?>
+                                        <option value="<?php echo htmlspecialchars($plan['name']); ?>"><?php echo htmlspecialchars($plan['name']); ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </select>
                         </div>
 
