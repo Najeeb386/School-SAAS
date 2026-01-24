@@ -122,7 +122,7 @@ $schools = $subscriptionModel->getAllSchools();
                                                         <th>Plan</th>
                                                         <th>Start Date</th>
                                                         <th>Due Date</th>
-                                                        <th>Payment Status</th>
+                                                        <th>Status</th>
                                                         <th>Action</th>
                                                     </tr>
                                                 </thead>
@@ -158,7 +158,7 @@ $schools = $subscriptionModel->getAllSchools();
                                                                         $today = strtotime(date('Y-m-d'));
                                                                         $expiry = strtotime($school['expires_at']);
                                                                         if ($expiry >= $today) {
-                                                                            echo '<span class="badge badge-success">Paid</span>';
+                                                                            echo '<span class="badge badge-success">Active</span>';
                                                                         } else {
                                                                             echo '<span class="badge badge-danger">Expired</span>';
                                                                         }
