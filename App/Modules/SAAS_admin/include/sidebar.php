@@ -7,7 +7,6 @@
                                 <a href="../../views/dashboard/index.php" aria-expanded="false">
                                     <i class="nav-icon ti ti-rocket"></i>
                                     <span class="nav-title">Dashboards</span>
-                                    <span class="nav-label label label-danger">9</span>
 
                                 </a>
                                 

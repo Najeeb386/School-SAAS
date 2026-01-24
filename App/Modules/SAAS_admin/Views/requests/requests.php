@@ -1,3 +1,21 @@
+<?php
+// Include database connection
+require_once __DIR__ . '/../../../../Config/connection.php';
+require_once __DIR__ . '/../../Models/requests_model.php';
+
+// Initialize Requests model
+$requestsModel = new Requests($DB_con);
+
+// Get data based on filters
+$newRequests = [];
+$approvedRequests = [];
+$rejectedRequests = [];
+
+// Fetch all requests
+$newRequests = $requestsModel->getNewRequests();
+$approvedRequests = $requestsModel->getApprovedRequests();
+$rejectedRequests = $requestsModel->getRejectedRequests();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,7 +71,7 @@
                                 <!-- begin page title -->
                                 <div class="d-block d-lg-flex flex-nowrap align-items-center">
                                     <div class="page-title mr-4 pr-4 border-right">
-                                        <h1>New Requests</h1>
+                                        <h1>Requests</h1>
                                     </div>
                                     <div class="breadcrumb-bar d-flex align-items-center">
                                         <nav>
@@ -63,7 +81,7 @@
                                                 </li>
                                                 <li class="breadcrumb-item">Dashboard</li>
                                                 <li class="breadcrumb-item active text-primary" aria-current="page">
-                                                    New Requests
+                                                    Requests
                                                 </li>
                                             </ol>
                                         </nav>
@@ -77,69 +95,216 @@
                             <div class="col-lg-12">
                                 <div class="card card-statistics">
                                     <div class="card-body">
-                                        <!-- Filters Section -->
-                                        <div class="row mb-3">
-                                            <div class="col-md-4">
-                                                <input type="text" id="filterName" class="form-control" placeholder="Search by School Name">
+                                        <!-- Tabs Navigation -->
+                                        <ul class="nav nav-tabs" id="requestTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <a class="nav-link active" id="new-requests-tab" data-toggle="tab" href="#newRequests" role="tab" aria-controls="newRequests" aria-selected="true">
+                                                    <i class="ti ti-bell"></i> New Requests
+                                                </a>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <a class="nav-link" id="approved-requests-tab" data-toggle="tab" href="#approvedRequests" role="tab" aria-controls="approvedRequests" aria-selected="false">
+                                                    <i class="ti ti-check"></i> Approved Requests
+                                                </a>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <a class="nav-link" id="rejected-requests-tab" data-toggle="tab" href="#rejectedRequests" role="tab" aria-controls="rejectedRequests" aria-selected="false">
+                                                    <i class="ti ti-close"></i> Rejected Requests
+                                                </a>
+                                            </li>
+                                        </ul>
+
+                                        <!-- Tab Content -->
+                                        <div class="tab-content" id="requestTabsContent">
+                                            <!-- New Requests Tab -->
+                                            <div class="tab-pane fade show active" id="newRequests" role="tabpanel" aria-labelledby="new-requests-tab">
+                                                <div class="mt-4">
+                                                    <!-- Filters Section -->
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-4">
+                                                            <input type="text" class="form-control filterName" placeholder="Search by School Name">
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <input type="date" class="form-control filterStartDate" placeholder="Start Date">
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <input type="date" class="form-control filterEndDate" placeholder="End Date">
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-12">
+                                                            <button class="btn btn-secondary resetFilter">Reset Filters</button>
+                                                        </div>
+                                                    </div>
+                                                    <!-- End Filters Section -->
+                                                    <div class="datatable-wrapper table-responsive">
+                                                        <table class="display compact table table-striped table-bordered newRequestsTable">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>School Name</th>
+                                                                    <th>Email</th>
+                                                                    <th>Contact No</th>
+                                                                    <th>Estimated Students</th>
+                                                                    <th>Plan</th>
+                                                                    <th>Request Date</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php if (!empty($newRequests)): ?>
+                                                                    <?php foreach ($newRequests as $request): ?>
+                                                                        <tr>
+                                                                            <td><?php echo htmlspecialchars($request['school_name']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['school_email']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['school_phone']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['estimated_students']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['plan_type']); ?></td>
+                                                                            <td><?php echo date('Y-m-d H:i', strtotime($request['requested_at'])); ?></td>
+                                                                            <td>
+                                                                                <a href="./request_details.php?id=<?php echo $request['request_id']; ?>" class="btn btn-sm btn-primary">Details</a>
+                                                                                <a href="#" class="btn btn-sm btn-success approve-btn" data-id="<?php echo $request['request_id']; ?>">Approve</a>
+                                                                                <a href="#" class="btn btn-sm btn-danger reject-btn" data-id="<?php echo $request['request_id']; ?>">Reject</a>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                <?php else: ?>
+                                                                    <tr>
+                                                                        <td colspan="7" class="text-center text-muted">No new requests found</td>
+                                                                    </tr>
+                                                                <?php endif; ?>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="col-md-4">
-                                                <input type="date" id="filterStartDate" class="form-control" placeholder="Start Date">
+
+                                            <!-- Approved Requests Tab -->
+                                            <div class="tab-pane fade" id="approvedRequests" role="tabpanel" aria-labelledby="approved-requests-tab">
+                                                <div class="mt-4">
+                                                    <!-- Filters Section -->
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-4">
+                                                            <input type="text" class="form-control filterName" placeholder="Search by School Name">
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <input type="date" class="form-control filterStartDate" placeholder="Approval Date From">
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <input type="date" class="form-control filterEndDate" placeholder="Approval Date To">
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-12">
+                                                            <button class="btn btn-secondary resetFilter">Reset Filters</button>
+                                                        </div>
+                                                    </div>
+                                                    <!-- End Filters Section -->
+                                                    <div class="datatable-wrapper table-responsive">
+                                                        <table class="display compact table table-striped table-bordered approvedRequestsTable">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th> Name</th>
+                                                                    <th>Email</th>
+                                                                    <th>Contact No</th>
+                                                                    <th>Estimated Students</th>
+                                                                    <th>Plan</th>
+                                                                    <th>Request Date</th>
+                                                                    <th>Approval Date</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php if (!empty($approvedRequests)): ?>
+                                                                    <?php foreach ($approvedRequests as $request): ?>
+                                                                        <tr>
+                                                                            <td><?php echo htmlspecialchars($request['school_name']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['school_email']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['school_phone']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['estimated_students']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['plan_type']); ?></td>
+                                                                            <td><?php echo date('Y-m-d H:i', strtotime($request['requested_at'])); ?></td>
+                                                                            <td><?php echo date('Y-m-d H:i', strtotime($request['actioned_at'])); ?></td>
+                                                                            <td>
+                                                                                <a href="./request_details.php?id=<?php echo $request['request_id']; ?>" class="btn btn-sm btn-primary">Details</a>
+                                                                                <a href="#" class="btn btn-sm btn-info">View Account</a>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                <?php else: ?>
+                                                                    <tr>
+                                                                        <td colspan="8" class="text-center text-muted">No approved requests found</td>
+                                                                    </tr>
+                                                                <?php endif; ?>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="col-md-4">
-                                                <input type="date" id="filterEndDate" class="form-control" placeholder="End Date">
+
+                                            <!-- Rejected Requests Tab -->
+                                            <div class="tab-pane fade" id="rejectedRequests" role="tabpanel" aria-labelledby="rejected-requests-tab">
+                                                <div class="mt-4">
+                                                    <!-- Filters Section -->
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-4">
+                                                            <input type="text" class="form-control filterName" placeholder="Search by School Name">
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <input type="date" class="form-control filterStartDate" placeholder="Rejection Date From">
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <input type="date" class="form-control filterEndDate" placeholder="Rejection Date To">
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-12">
+                                                            <button class="btn btn-secondary resetFilter">Reset Filters</button>
+                                                        </div>
+                                                    </div>
+                                                    <!-- End Filters Section -->
+                                                    <div class="datatable-wrapper table-responsive">
+                                                        <table class="display compact table table-striped table-bordered rejectedRequestsTable">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>School Name</th>
+                                                                    <th>Email</th>
+                                                                    <th>Contact No</th>
+                                                                    <th>Estimated Students</th>
+                                                                    <th>Plan</th>
+                                                                    <th>Request Date</th>
+                                                                    <th>Rejection Date</th>
+                                                                    <th>Reason</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php if (!empty($rejectedRequests)): ?>
+                                                                    <?php foreach ($rejectedRequests as $request): ?>
+                                                                        <tr>
+                                                                            <td><?php echo htmlspecialchars($request['school_name']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['school_email']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['school_phone']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['estimated_students']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['plan_type']); ?></td>
+                                                                            <td><?php echo date('Y-m-d H:i', strtotime($request['requested_at'])); ?></td>
+                                                                            <td><?php echo date('Y-m-d H:i', strtotime($request['actioned_at'])); ?></td>
+                                                                            <td><?php echo htmlspecialchars($request['rejection_reason']); ?></td>
+                                                                            <td>
+                                                                                <a href="./request_details.php?id=<?php echo $request['request_id']; ?>" class="btn btn-sm btn-primary">Details</a>
+                                                                                <a href="#" class="btn btn-sm btn-warning reconsider-btn" data-id="<?php echo $request['request_id']; ?>">Reconsider</a>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                <?php else: ?>
+                                                                    <tr>
+                                                                        <td colspan="9" class="text-center text-muted">No rejected requests found</td>
+                                                                    </tr>
+                                                                <?php endif; ?>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-12">
-                                                <button id="resetFilter" class="btn btn-secondary">Reset Filters</button>
-                                            </div>
-                                        </div>
-                                        <!-- End Filters Section -->
-                                        <div class="datatable-wrapper table-responsive">
-                                            <table id="datatable" class="display compact table table-striped table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>School Name</th>
-                                                        <th>Domain</th>
-                                                        <th>email</th>
-                                                        <th>Contact No</th>
-                                                        <th>Students</th>
-                                                        <th>Plan</th>
-                                                        <th>Due Date</th>
-                                                        <th>Status</th>
-                                                        <th>Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td>Tiger Nixon</td>
-                                                        <td>System Architect</td>
-                                                        <td>Edinburgh</td>
-                                                        <td>61</td>
-                                                        <td>2011/04/25</td>
-                                                        <td>$320,800</td>
-                                                        <td>2026/02/15</td>
-                                                        <td>test</td>
-                                                        <td><a href="./request_details.php" class="btn btn-primary">Details</a>
-                                                            <a href="#" class="btn btn-success">A</a>
-                                                            <a href="#" class="btn btn-danger">R</a>
-                                                    </td>
-                                                    </tr>
-                                                </tbody>
-                                                <tfoot>
-                                                    <tr>
-                                                        <th>School Name</th>
-                                                        <th>Domain</th>
-                                                        <th>email</th>
-                                                        <th>Contact No</th>
-                                                        <th>Students</th>
-                                                        <th>Plan</th>
-                                                        <th>Due Date</th>
-                                                        <th>Status</th>
-                                                        <th>Action</th>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
                                         </div>
                                     </div>
                                 </div>
@@ -177,3 +342,108 @@
 
     <!-- custom app -->
     <script src="../../../../../public/assets/js/app.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize tabs
+            $('#requestTabs a').on('click', function(e) {
+                e.preventDefault();
+                $(this).tab('show');
+            });
+
+            // Handle tab change
+            $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+                var target = $(e.target).attr("href");
+                console.log("Tab switched to: " + target);
+            });
+
+            // Handle Approve button click
+            $(document).on('click', '.approve-btn', function(e) {
+                e.preventDefault();
+                var requestId = $(this).data('id');
+                
+                if (confirm('Are you sure you want to approve this request?')) {
+                    $.ajax({
+                        url: './handle_request.php',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            action: 'approve',
+                            id: requestId
+                        }),
+                        success: function(response) {
+                            if (response.success) {
+                                alert('Request approved successfully');
+                                location.reload();
+                            } else {
+                                alert('Error: ' + response.message);
+                            }
+                        },
+                        error: function() {
+                            alert('Error approving request');
+                        }
+                    });
+                }
+            });
+
+            // Handle Reject button click
+            $(document).on('click', '.reject-btn', function(e) {
+                e.preventDefault();
+                var requestId = $(this).data('id');
+                var reason = prompt('Please provide a reason for rejection:');
+                
+                if (reason !== null && reason.trim() !== '') {
+                    $.ajax({
+                        url: './handle_request.php',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            action: 'reject',
+                            id: requestId,
+                            reason: reason
+                        }),
+                        success: function(response) {
+                            if (response.success) {
+                                alert('Request rejected successfully');
+                                location.reload();
+                            } else {
+                                alert('Error: ' + response.message);
+                            }
+                        },
+                        error: function() {
+                            alert('Error rejecting request');
+                        }
+                    });
+                }
+            });
+
+            // Handle Reconsider button click
+            $(document).on('click', '.reconsider-btn', function(e) {
+                e.preventDefault();
+                var requestId = $(this).data('id');
+                
+                if (confirm('Are you sure you want to reconsider this request?')) {
+                    $.ajax({
+                        url: './handle_request.php',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            action: 'reconsider',
+                            id: requestId
+                        }),
+                        success: function(response) {
+                            if (response.success) {
+                                alert('Request moved back to pending');
+                                location.reload();
+                            } else {
+                                alert('Error: ' + response.message);
+                            }
+                        },
+                        error: function() {
+                            alert('Error reconsidering request');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
