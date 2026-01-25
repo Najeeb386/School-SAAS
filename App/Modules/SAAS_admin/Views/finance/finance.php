@@ -1,3 +1,37 @@
+<?php
+// Initialize database connection
+require_once __DIR__ . '/../../../../Core/database.php';
+require_once __DIR__ . '/../../Controllers/billing_cycles_controller.php';
+
+$db = Database::connect();
+$billingController = new BillingCyclesController($db);
+
+// Fetch unpaid billing cycles
+$unpaidBillings = $billingController->getUnpaid();
+$totalUnpaid = $billingController->getTotalUnpaidAmount();
+
+// Temporary debug
+file_put_contents('/tmp/debug.log', "Count: " . count($unpaidBillings) . " | Total: " . $totalUnpaid . " | Data: " . json_encode($unpaidBillings) . "\n", FILE_APPEND);
+error_log("Billings Count: " . count($unpaidBillings));
+error_log("Total Unpaid: " . $totalUnpaid);
+
+// Function to calculate days overdue
+function calculateDaysOverdue($dueDate) {
+    $today = new DateTime();
+    $due = new DateTime($dueDate);
+    $interval = $today->diff($due);
+    
+    if ($today > $due) {
+        return $interval->days;
+    }
+    return 0;
+}
+
+// Function to format currency
+function formatCurrency($amount) {
+    return '$' . number_format($amount, 2);
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,6 +49,49 @@
     <link rel="stylesheet" type="text/css" href="../../../../../public/assets/css/vendors.css" />
     <!-- app style -->
     <link rel="stylesheet" type="text/css" href="../../../../../public/assets/css/style.css" />
+    <style>
+        .nav-tabs {
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .nav-tabs .nav-link {
+            color: #666;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+            background-color: transparent;
+        }
+
+        .nav-tabs .nav-link i {
+            margin-right: 8px;
+        }
+
+        .tab-pane {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -150,81 +227,293 @@
                             <div class="col-lg-12">
                                 <div class="card card-statistics">
                                     <div class="card-header">
-                                        <h3>Due Payments</h3>
+                                        <h3>Financial Management</h3>
                                     </div>
                                     <div class="card-body">
-                                        <!-- Filters Section -->
-                                        <div class="row mb-3">
-                                            <div class="col-md-4">
-                                                <input type="text" id="filterName" class="form-control" placeholder="Search by School Name">
+                                        <!-- Tabs Navigation -->
+                                        <ul class="nav nav-tabs" id="financeTab" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <a class="nav-link active" id="payments-tab" data-toggle="tab" href="#payments" role="tab" aria-controls="payments" aria-selected="true">
+                                                    <i class="ti ti-receipt"></i> Payments
+                                                </a>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <a class="nav-link" id="due-tab" data-toggle="tab" href="#due" role="tab" aria-controls="due" aria-selected="false">
+                                                    <i class="ti ti-alert"></i> Due Payments
+                                                </a>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <a class="nav-link" id="defaulters-tab" data-toggle="tab" href="#defaulters" role="tab" aria-controls="defaulters" aria-selected="false">
+                                                    <i class="ti ti-ban"></i> Defaulters
+                                                </a>
+                                            </li>
+                                        </ul>
+
+                                        <!-- Tabs Content -->
+                                        <div class="tab-content" id="financeTabContent">
+                                            <!-- Payments Tab -->
+                                            <div class="tab-pane fade show active" id="payments" role="tabpanel" aria-labelledby="payments-tab">
+                                                <div class="mt-4">
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-12">
+                                                            <div class="d-flex justify-content-between mb-3">
+                                                                <div></div>
+                                                                <div>
+                                                                    <button class="btn btn-primary" data-toggle="modal" data-target="#addPaymentModal">Add Payment</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="datatable-wrapper table-responsive">
+                                                        <table id="paymentsTable" class="display compact table table-striped table-bordered">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Payment ID</th>
+                                                                    <th>Student/School</th>
+                                                                    <th>Amount</th>
+                                                                    <th>Payment Date</th>
+                                                                    <th>Payment Method</th>
+                                                                    <th>Reference No</th>
+                                                                    <th>Status</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td>#P001</td>
+                                                                    <td>John Doe</td>
+                                                                    <td>$5,000</td>
+                                                                    <td>2026-01-20</td>
+                                                                    <td>Bank Transfer</td>
+                                                                    <td>REF001</td>
+                                                                    <td><span class="badge badge-success">Completed</span></td>
+                                                                    <td>
+                                                                        <button class="btn btn-sm btn-primary">Edit</button>
+                                                                        <button class="btn btn-sm btn-danger">Delete</button>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>#P002</td>
+                                                                    <td>Jane Smith</td>
+                                                                    <td>$3,500</td>
+                                                                    <td>2026-01-19</td>
+                                                                    <td>Cash</td>
+                                                                    <td>REF002</td>
+                                                                    <td><span class="badge badge-success">Completed</span></td>
+                                                                    <td>
+                                                                        <button class="btn btn-sm btn-primary">Edit</button>
+                                                                        <button class="btn btn-sm btn-danger">Delete</button>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>#P003</td>
+                                                                    <td>ABC School</td>
+                                                                    <td>$10,000</td>
+                                                                    <td>2026-01-18</td>
+                                                                    <td>Card</td>
+                                                                    <td>REF003</td>
+                                                                    <td><span class="badge badge-success">Completed</span></td>
+                                                                    <td>
+                                                                        <button class="btn btn-sm btn-primary">Edit</button>
+                                                                        <button class="btn btn-sm btn-danger">Delete</button>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                            <tfoot>
+                                                                <tr>
+                                                                    <th>Payment ID</th>
+                                                                    <th>Student/School</th>
+                                                                    <th>Amount</th>
+                                                                    <th>Payment Date</th>
+                                                                    <th>Payment Method</th>
+                                                                    <th>Reference No</th>
+                                                                    <th>Status</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="col-md-4">
-                                                <input type="date" id="filterStartDate" class="form-control" placeholder="Start Date">
+
+                                            <!-- Due Payments Tab -->
+                                            <div class="tab-pane fade" id="due" role="tabpanel" aria-labelledby="due-tab">
+                                                <div class="mt-4">
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-12">
+                                                            <div class="alert alert-warning" role="alert">
+                                                                <strong>Total Due Amount:</strong> <?php echo formatCurrency($totalUnpaid); ?>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="datatable-wrapper table-responsive">
+                                                        <table id="dueTable" class="display compact table table-striped table-bordered">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Billing ID</th>
+                                                                    <th>School/Client Name</th>
+                                                                    <th>Contact</th>
+                                                                    <th>Period</th>
+                                                                    <th>Total Amount</th>
+                                                                    <th>Paid Amount</th>
+                                                                    <th>Due Amount</th>
+                                                                    <th>Due Date</th>
+                                                                    <th>Days Overdue</th>
+                                                                    <th>Status</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php if (!empty($unpaidBillings)): ?>
+                                                                    <?php foreach ($unpaidBillings as $billing): ?>
+                                                                        <?php 
+                                                                            $daysOverdue = calculateDaysOverdue($billing['due_date']);
+                                                                            $dueAmount = $billing['total_amount'] - $billing['paid_amount'];
+                                                                            $periodStart = date('M d, Y', strtotime($billing['period_start']));
+                                                                            $periodEnd = date('M d, Y', strtotime($billing['period_end']));
+                                                                            $dueDate = date('M d, Y', strtotime($billing['due_date']));
+                                                                        ?>
+                                                                        <tr>
+                                                                            <td><?php echo htmlspecialchars($billing['billing_id']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($billing['school_name'] ?? 'N/A'); ?></td>
+                                                                            <td><?php echo htmlspecialchars($billing['contact_phone'] ?? 'N/A'); ?></td>
+                                                                            <td><?php echo $periodStart . ' - ' . $periodEnd; ?></td>
+                                                                            <td><?php echo formatCurrency($billing['total_amount']); ?></td>
+                                                                            <td><?php echo formatCurrency($billing['paid_amount']); ?></td>
+                                                                            <td><?php echo formatCurrency($dueAmount); ?></td>
+                                                                            <td><?php echo $dueDate; ?></td>
+                                                                            <td>
+                                                                                <?php if ($daysOverdue > 0): ?>
+                                                                                    <span class="badge badge-danger"><?php echo $daysOverdue; ?></span>
+                                                                                <?php else: ?>
+                                                                                    <span class="badge badge-warning">Due Soon</span>
+                                                                                <?php endif; ?>
+                                                                            </td>
+                                                                            
+                                                                            <td><span class="badge badge-warning">Unpaid</span></td>
+                                                                            <td>
+                                                                                <button class="btn btn-sm btn-primary" title="Send Reminder">
+                                                                                    <i class="ti ti-email"></i> Remind
+                                                                                </button>
+                                                                                <button class="btn btn-sm btn-success" title="Mark as Paid">
+                                                                                    <i class="ti ti-check"></i> Paid
+                                                                                </button>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                <?php else: ?>
+                                                                    <tr>
+                                                                        <td colspan="12" class="text-center text-muted py-4">
+                                                                            <i class="ti ti-mood-smile"></i> No unpaid billing cycles at this time
+                                                                        </td>
+                                                                    </tr>
+                                                                <?php endif; ?>
+                                                            </tbody>
+                                                            <tfoot>
+                                                                <tr>
+                                                                    <th>Billing ID</th>
+                                                                    <th>School/Client Name</th>
+                                                                    <th>Contact</th>
+                                                                    <th>Period</th>
+                                                                    <th>Total Amount</th>
+                                                                    <th>Paid Amount</th>
+                                                                    <th>Due Amount</th>
+                                                                    <th>Due Date</th>
+                                                                    <th>Days Overdue</th>
+                                                                    <th>Email</th>
+                                                                    <th>Status</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="col-md-4">
-                                                <input type="date" id="filterEndDate" class="form-control" placeholder="End Date">
+
+                                            <!-- Defaulters Tab -->
+                                            <div class="tab-pane fade" id="defaulters" role="tabpanel" aria-labelledby="defaulters-tab">
+                                                <div class="mt-4">
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-12">
+                                                            <div class="alert alert-danger" role="alert">
+                                                                <strong>Total Defaulters:</strong> 8 | <strong>Total Amount at Risk:</strong> $45,000
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="datatable-wrapper table-responsive">
+                                                        <table id="defaultersTable" class="display compact table table-striped table-bordered">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Student/School Name</th>
+                                                                    <th>Outstanding Amount</th>
+                                                                    <th>Last Payment Date</th>
+                                                                    <th>Days Since Last Payment</th>
+                                                                    <th>Contact</th>
+                                                                    <th>Email</th>
+                                                                    <th>Risk Level</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td>Robert Brown</td>
+                                                                    <td>$15,000</td>
+                                                                    <td>2025-11-15</td>
+                                                                    <td><span class="badge badge-danger">70</span></td>
+                                                                    <td>555-0105</td>
+                                                                    <td>robert@email.com</td>
+                                                                    <td><span class="badge badge-danger">High</span></td>
+                                                                    <td>
+                                                                        <button class="btn btn-sm btn-warning">Take Action</button>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>Global Learning Center</td>
+                                                                    <td>$20,000</td>
+                                                                    <td>2025-11-01</td>
+                                                                    <td><span class="badge badge-danger">84</span></td>
+                                                                    <td>555-0106</td>
+                                                                    <td>info@globallearning.com</td>
+                                                                    <td><span class="badge badge-danger">High</span></td>
+                                                                    <td>
+                                                                        <button class="btn btn-sm btn-warning">Take Action</button>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>Emma Harris</td>
+                                                                    <td>$10,000</td>
+                                                                    <td>2025-10-30</td>
+                                                                    <td><span class="badge badge-danger">86</span></td>
+                                                                    <td>555-0107</td>
+                                                                    <td>emma@email.com</td>
+                                                                    <td><span class="badge badge-danger">Critical</span></td>
+                                                                    <td>
+                                                                        <button class="btn btn-sm btn-warning">Take Action</button>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                            <tfoot>
+                                                                <tr>
+                                                                    <th>Student/School Name</th>
+                                                                    <th>Outstanding Amount</th>
+                                                                    <th>Last Payment Date</th>
+                                                                    <th>Days Since Last Payment</th>
+                                                                    <th>Contact</th>
+                                                                    <th>Email</th>
+                                                                    <th>Risk Level</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-12">
-                                                <button id="resetFilter" class="btn btn-secondary">Reset Filters</button>
-                                            </div>
-                                        </div>
-                                        <!-- End Filters Section -->
-                                        <div class="datatable-wrapper table-responsive">
-                                            <table id="datatable" class="display compact table table-striped table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>School Name</th>
-                                                        <th>Domain</th>
-                                                        <th>email</th>
-                                                        <th>Contact No</th>
-                                                        <th>Students</th>
-                                                        <th>Plan</th>
-                                                        <th>Start Date</th>
-                                                        <th>Due Date</th>
-                                                        <th>Payment Status</th>
-                                                        <th>Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td>Tiger Nixon</td>
-                                                        <td>
-                                                            System Architect
-                                                            <br>
-                                                            <span class="badge badge-success mt-2">Active</span>
-                                                        </td>
-                                                        <td>Edinburgh</td>
-                                                        <td>61</td>
-                                                        <td>2011/04/25</td>
-                                                        <td>$320,800</td>
-                                                        <td>2026/02/15</td>
-                                                        <td>test</td>
-                                                        <td><span class="badge badge-success">Paid</span></td>
-                                                        <td><a href="./fin_detail.php" class="btn btn-primary">Detail</a>
-                                                            <button type="button" class="btn btn-danger block-school-btn" data-school-name="Tiger Nixon" data-toggle="modal" data-target="#blockConfirmModal">Block</button>
-                                                    </td>
-                                                    </tr>
-                                                   
-                                                </tbody>
-                                                <tfoot>
-                                                    <tr>
-                                                        <th>School Name</th>
-                                                        <th>Domain</th>
-                                                        <th>email</th>
-                                                        <th>Contact No</th>
-                                                        <th>Students</th>
-                                                        <th>Plan</th>
-                                                        <th>Due Date</th>
-                                                        <th>Status</th>
-                                                        <th>Action</th>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                               
                             </div>
                         </div>
                         <!-- end row -->
@@ -234,18 +523,10 @@
                 </div>
                 <!-- end app-main -->
             </div>
+
             <!-- end app-container -->
             <!-- begin footer -->
-            <footer class="footer">
-                <div class="row">
-                    <div class="col-12 col-sm-6 text-center text-sm-left">
-                        <p>&copy; Copyright 2026. All rights reserved.</p>
-                    </div>
-                   <div class="col  col-sm-6 ml-sm-auto text-center text-sm-right">
-                        <p><a target="_blank" href="https://www.templateshub.net">Inventory Hub</a></p>
-                    </div>
-                </div>
-            </footer>
+           
             <!-- end footer -->
         </div>
         <!-- end app-wrap -->

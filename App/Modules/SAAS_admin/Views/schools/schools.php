@@ -188,6 +188,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                         <th>Contact No</th>
                                                         <th>Students</th>
                                                         <th>Plan</th>
+                                                        <th>Price/Student</th>
+                                                        <th>Billing Cycle</th>
                                                         <th>Status</th>
                                                         <th>Starts</th>
                                                         <th>Expires</th>
@@ -206,6 +208,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                                 <td><?php echo htmlspecialchars($school['estimated_students']); ?></td>
                                                                 <td><?php echo htmlspecialchars($school['plan']); ?></td>
                                                                 <td>
+                                                                    <?php 
+                                                                    // Try to get subscription data for price
+                                                                    $subsQuery = $DB_con->prepare("SELECT price_per_student FROM saas_school_subscriptions WHERE school_id = ? LIMIT 1");
+                                                                    $subsQuery->execute([$school['id']]);
+                                                                    $subData = $subsQuery->fetch(PDO::FETCH_ASSOC);
+                                                                    echo htmlspecialchars($subData['price_per_student'] ?? '0.00');
+                                                                    ?>
+                                                                </td>
+                                                                <td>
+                                                                    <?php 
+                                                                    // Get billing cycle from subscription
+                                                                    $billQuery = $DB_con->prepare("SELECT billing_cycle FROM saas_school_subscriptions WHERE school_id = ? LIMIT 1");
+                                                                    $billQuery->execute([$school['id']]);
+                                                                    $billData = $billQuery->fetch(PDO::FETCH_ASSOC);
+                                                                    echo htmlspecialchars($billData['billing_cycle'] ?? 'N/A');
+                                                                    ?>
+                                                                </td>
+                                                                <td>
                                                                     <span class="badge badge-<?php echo ($school['status'] === 'active') ? 'success' : 'warning'; ?>">
                                                                         <?php echo htmlspecialchars($school['status']); ?>
                                                                     </span>
@@ -213,14 +233,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                                 <td><?php echo htmlspecialchars($school['start_date']); ?></td>
                                                                 <td><?php echo htmlspecialchars($school['expires_at']); ?></td>
                                                                 <td>
-                                                                    <a href="school_details.php?id=<?php echo htmlspecialchars($school['id']); ?>" class="btn btn-sm btn-primary">Details</a>
-                                                                    <a href="../finance/fin_detail.php" class="btn btn-sm btn-success">Finance</a>
+                                                                    <button class="btn btn-sm btn-primary" onclick="editSchool(<?php echo htmlspecialchars(json_encode($school)); ?>)" data-toggle="modal" data-target="#editSchoolModal">Edit</button>
+                                                                    <button class="btn btn-sm btn-danger" onclick="setDeleteId(<?php echo htmlspecialchars($school['id']); ?>)" data-toggle="modal" data-target="#deleteConfirmModal">Delete</button>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>
                                                     <?php else: ?>
                                                         <tr>
-                                                            <td colspan="11" class="text-center text-muted">No schools found</td>
+                                                            <td colspan="13" class="text-center text-muted">No schools found</td>
                                                         </tr>
                                                     <?php endif; ?>
                                                 </tbody>
@@ -233,6 +253,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                         <th>Contact No</th>
                                                         <th>Students</th>
                                                         <th>Plan</th>
+                                                        <th>Price/Student</th>
+                                                        <th>Billing Cycle</th>
                                                         <th>Status</th>
                                                         <th>Starts</th>
                                                         <th>Expires</th>
@@ -280,7 +302,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <form method="POST" action="">
+                <form id="addSchoolForm" method="POST" action="">
                     <div class="modal-body">
                         <div class="form-group">
                             <label for="name">School Name <span class="text-danger">*</span></label>
@@ -318,9 +340,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <option value="">Select Plan</option>
                                 <?php if(!empty($plans)): ?>
                                     <?php foreach($plans as $plan): ?>
-                                        <option value="<?php echo htmlspecialchars($plan['name']); ?>"><?php echo htmlspecialchars($plan['name']); ?></option>
+                                        <option value="<?php echo htmlspecialchars($plan['name']); ?>" data-price="<?php echo htmlspecialchars($plan['price'] ?? 0); ?>"><?php echo htmlspecialchars($plan['name']); ?></option>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
+                            </select>
+                        </div>
+
+                        <!-- Hidden field for price per student -->
+                        <input type="hidden" id="price_per_student" name="price_per_student" value="">
+
+                        <div class="form-group">
+                            <label for="billing_cycle">Billing Cycle <span class="text-danger">*</span></label>
+                            <select class="form-control" id="billing_cycle" name="billing_cycle" required>
+                                <option value="">Select Billing Cycle</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                                <option value="semi-annual">Semi-Annual</option>
+                                <option value="yearly">Yearly</option>
                             </select>
                         </div>
 
@@ -395,13 +431,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
                         <div class="form-group">
                             <label for="editPlan">Plan <span class="text-danger">*</span></label>
-                            <select class="form-control" id="editPlan" name="plan" required>
+                            <select class="form-control editPlanSelect" id="editPlan" name="plan" required>
                                 <option value="">Select Plan</option>
                                 <?php if(!empty($plans)): ?>
                                     <?php foreach($plans as $plan): ?>
-                                        <option value="<?php echo htmlspecialchars($plan['name']); ?>"><?php echo htmlspecialchars($plan['name']); ?></option>
+                                        <option value="<?php echo htmlspecialchars($plan['name']); ?>" data-price="<?php echo htmlspecialchars($plan['price'] ?? 0); ?>"><?php echo htmlspecialchars($plan['name']); ?></option>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
+                            </select>
+                        </div>
+
+                        <!-- Hidden field for price per student -->
+                        <input type="hidden" id="editPricePerStudent" name="price_per_student" value="">
+
+                        <div class="form-group">
+                            <label for="editBillingCycle">Billing Cycle <span class="text-danger">*</span></label>
+                            <select class="form-control" id="editBillingCycle" name="billing_cycle" required>
+                                <option value="">Select Billing Cycle</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                                <option value="semi-annual">Semi-Annual</option>
+                                <option value="yearly">Yearly</option>
                             </select>
                         </div>
 
@@ -478,6 +528,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             document.getElementById('editStatus').value = schoolData.status;
             document.getElementById('editStartDate').value = schoolData.start_date;
             document.getElementById('editExpiresAt').value = schoolData.expires_at;
+            
+            // Fetch subscription data for this school
+            fetch('get_subscription.php?school_id=' + schoolData.id)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.subscription) {
+                        document.getElementById('editPricePerStudent').value = data.subscription.price_per_student || '';
+                        document.getElementById('editBillingCycle').value = data.subscription.billing_cycle || '';
+                    }
+                })
+                .catch(error => console.error('Error fetching subscription:', error));
         }
 
         function setDeleteId(schoolId) {
@@ -485,4 +546,97 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             const deleteUrl = 'schools.php?action=delete&id=' + schoolId;
             document.getElementById('confirmDeleteBtn').href = deleteUrl;
         }
+
+        // Function to calculate expiry date based on billing cycle
+        function calculateExpiryDate(billingCycle) {
+            const today = new Date();
+            const expiryDate = new Date(today);
+            
+            switch(billingCycle) {
+                case 'monthly':
+                    expiryDate.setMonth(expiryDate.getMonth() + 1);
+                    break;
+                case 'quarterly':
+                    expiryDate.setMonth(expiryDate.getMonth() + 3);
+                    break;
+                case 'semi-annual':
+                    expiryDate.setMonth(expiryDate.getMonth() + 6);
+                    break;
+                case 'yearly':
+                    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+                    break;
+                default:
+                    expiryDate.setMonth(expiryDate.getMonth() + 1); // Default to monthly
+            }
+            
+            return expiryDate.toISOString().split('T')[0];
+        }
+
+        // Function to set dates for Add School modal
+        function setAddSchoolDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('start_date').value = today;
+            
+            const billingCycle = document.getElementById('billing_cycle').value;
+            if (billingCycle) {
+                document.getElementById('expires_at').value = calculateExpiryDate(billingCycle);
+            }
+        }
+
+        // Function to set dates for Edit School modal
+        function setEditSchoolDates() {
+            const billingCycle = document.getElementById('editBillingCycle').value;
+            if (billingCycle) {
+                document.getElementById('editExpiresAt').value = calculateExpiryDate(billingCycle);
+            }
+        }
+
+        // Auto-populate price when plan is selected in Add modal
+        document.getElementById('plan').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const price = selectedOption.getAttribute('data-price');
+            if (price) {
+                document.getElementById('price_per_student').value = price;
+            }
+        });
+
+        // Update expiry date when billing cycle changes in Add modal
+        document.getElementById('billing_cycle').addEventListener('change', function() {
+            setAddSchoolDates();
+        });
+
+        // Auto-populate price when plan is selected in Edit modal
+        document.querySelectorAll('.editPlanSelect').forEach(select => {
+            select.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const price = selectedOption.getAttribute('data-price');
+                if (price) {
+                    document.getElementById('editPricePerStudent').value = price;
+                }
+            });
+        });
+
+        // Update expiry date when billing cycle changes in Edit modal
+        if (document.getElementById('editBillingCycle')) {
+            document.getElementById('editBillingCycle').addEventListener('change', function() {
+                setEditSchoolDates();
+            });
+        }
+
+        // Reset form when modal opens for adding new school
+        document.getElementById('addSchoolModal').addEventListener('show.bs.modal', function() {
+            const form = document.getElementById('addSchoolForm');
+            form.reset();
+            document.getElementById('price_per_student').value = '';
+            // Set today's date and clear expiry
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('start_date').value = today;
+            document.getElementById('expires_at').value = '';
+        });
+
+        // Reset form on close modal
+        document.getElementById('addSchoolModal').addEventListener('hidden.bs.modal', function() {
+            const form = document.getElementById('addSchoolForm');
+            form.reset();
+        });
     </script>
