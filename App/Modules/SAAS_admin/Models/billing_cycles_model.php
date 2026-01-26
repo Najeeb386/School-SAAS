@@ -95,9 +95,9 @@ class BillingCycles
     {
         $stmt = $this->db->prepare(
             "INSERT INTO saas_billing_cycles
-            (school_id, subscription_id, period_start, period_end, due_date, total_amount, paid_amount, status, created_at)
+            (school_id, subscription_id, period_start, period_end, due_date, total_amount, discounted_amount, paid_amount, status, created_at)
             VALUES
-            (:school_id, :subscription_id, :period_start, :period_end, :due_date, :total_amount, :paid_amount, :status, :created_at)"
+            (:school_id, :subscription_id, :period_start, :period_end, :due_date, :total_amount, :discounted_amount, :paid_amount, :status, :created_at)"
         );
 
         $params = [
@@ -107,6 +107,7 @@ class BillingCycles
             ':period_end' => $data['period_end'] ?? null,
             ':due_date' => $data['due_date'] ?? null,
             ':total_amount' => $data['total_amount'] ?? 0,
+            ':discounted_amount' => $data['discounted_amount'] ?? 0,
             ':paid_amount' => $data['paid_amount'] ?? 0,
             ':status' => $data['status'] ?? 'unpaid',
             ':created_at' => date('Y-m-d H:i:s')
@@ -132,6 +133,7 @@ class BillingCycles
                 period_end = :period_end,
                 due_date = :due_date,
                 total_amount = :total_amount,
+                discounted_amount = :discounted_amount,
                 paid_amount = :paid_amount,
                 status = :status
             WHERE billing_id = :billing_id"
@@ -145,6 +147,7 @@ class BillingCycles
             ':period_end' => $data['period_end'] ?? null,
             ':due_date' => $data['due_date'] ?? null,
             ':total_amount' => $data['total_amount'] ?? 0,
+            ':discounted_amount' => $data['discounted_amount'] ?? 0,
             ':paid_amount' => $data['paid_amount'] ?? 0,
             ':status' => $data['status'] ?? 'unpaid'
         ];

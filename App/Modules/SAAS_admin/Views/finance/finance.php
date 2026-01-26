@@ -6,9 +6,101 @@ require_once __DIR__ . '/../../Controllers/billing_cycles_controller.php';
 $db = Database::connect();
 $billingController = new BillingCyclesController($db);
 
+// Handle payment submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_payment') {
+    try {
+        $billingId = intval($_POST['billing_id'] ?? 0);
+        $schoolId = intval($_POST['school_id'] ?? 0);
+        $paidAmount = floatval($_POST['paid_amount'] ?? 0);
+        $paymentMethod = $_POST['payment_method'] ?? null;
+        $referenceNo = $_POST['reference_no'] ?? '';
+        $receivedBy = $_POST['received_by'] ?? '';
+
+        if (!$billingId || !$schoolId || !$paidAmount) {
+            throw new Exception('Missing required payment information');
+        }
+
+        // Get the remaining amount from the billing cycle
+        $getBillingQuery = "SELECT total_amount, paid_amount FROM saas_billing_cycles WHERE billing_id = ?";
+        $stmt = $db->prepare($getBillingQuery);
+        $stmt->execute([$billingId]);
+        $billingData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$billingData) {
+            throw new Exception('Billing cycle not found');
+        }
+
+        // Calculate remaining amount (this becomes total_amount in saas_payments)
+        $remainingAmount = $billingData['total_amount'] - $billingData['paid_amount'];
+
+        // Insert payment record into saas_payments
+        $insertPaymentQuery = "INSERT INTO saas_payments 
+            (billing_id, school_id, total_amount, paid_amount, payment_date, payment_method, reference_no, received_by, created_at) 
+            VALUES (:billing_id, :school_id, :total_amount, :paid_amount, :payment_date, :payment_method, :reference_no, :received_by, NOW())";
+        
+        $stmt = $db->prepare($insertPaymentQuery);
+        $executeResult = $stmt->execute([
+            ':billing_id' => $billingId,
+            ':school_id' => $schoolId,
+            ':total_amount' => $remainingAmount,
+            ':paid_amount' => $paidAmount,
+            ':payment_date' => date('Y-m-d'),
+            ':payment_method' => $paymentMethod,
+            ':reference_no' => $referenceNo,
+            ':received_by' => $receivedBy
+        ]);
+
+        if (!$executeResult) {
+            throw new Exception('Failed to insert payment: ' . json_encode($stmt->errorInfo()));
+        }
+
+        // Update the paid_amount in saas_billing_cycles
+        $updateBillingQuery = "UPDATE saas_billing_cycles 
+            SET paid_amount = paid_amount + ?, 
+                status = CASE 
+                    WHEN (paid_amount + ?) >= total_amount THEN 'paid'
+                    ELSE 'partial'
+                END
+            WHERE billing_id = ?";
+        
+        $stmt = $db->prepare($updateBillingQuery);
+        $updateResult = $stmt->execute([
+            $paidAmount,
+            $paidAmount,
+            $billingId
+        ]);
+
+        if (!$updateResult) {
+            throw new Exception('Failed to update billing: ' . json_encode($stmt->errorInfo()));
+        }
+
+        // Return success response
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => 'Payment recorded successfully']);
+        exit;
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
 // Fetch unpaid billing cycles
 $unpaidBillings = $billingController->getUnpaid();
 $totalUnpaid = $billingController->getTotalUnpaidAmount();
+
+// Fetch all payments
+$paymentsQuery = "SELECT sp.*, s.name as school_name FROM saas_payments sp LEFT JOIN schools s ON sp.school_id = s.id ORDER BY sp.payment_date DESC";
+$paymentsStmt = $db->prepare($paymentsQuery);
+$paymentsStmt->execute();
+$payments = $paymentsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch all billing cycles (not just unpaid)
+$allBillingsQuery = "SELECT bc.*, s.name as school_name FROM saas_billing_cycles bc LEFT JOIN schools s ON bc.school_id = s.id ORDER BY bc.due_date DESC";
+$allBillingsStmt = $db->prepare($allBillingsQuery);
+$allBillingsStmt->execute();
+$allBillings = $allBillingsStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Temporary debug
 file_put_contents('/tmp/debug.log', "Count: " . count($unpaidBillings) . " | Total: " . $totalUnpaid . " | Data: " . json_encode($unpaidBillings) . "\n", FILE_APPEND);
@@ -29,7 +121,7 @@ function calculateDaysOverdue($dueDate) {
 
 // Function to format currency
 function formatCurrency($amount) {
-    return '$' . number_format($amount, 2);
+    return 'Rs ' . number_format($amount, 2);
 }
 ?>
 <!DOCTYPE html>
@@ -238,6 +330,11 @@ function formatCurrency($amount) {
                                                 </a>
                                             </li>
                                             <li class="nav-item" role="presentation">
+                                                <a class="nav-link" id="billing-tab" data-toggle="tab" href="#billing" role="tab" aria-controls="billing" aria-selected="false">
+                                                    <i class="ti ti-invoice"></i> Billing
+                                                </a>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
                                                 <a class="nav-link" id="due-tab" data-toggle="tab" href="#due" role="tab" aria-controls="due" aria-selected="false">
                                                     <i class="ti ti-alert"></i> Due Payments
                                                 </a>
@@ -270,7 +367,9 @@ function formatCurrency($amount) {
                                                                 <tr>
                                                                     <th>Payment ID</th>
                                                                     <th>Student/School</th>
-                                                                    <th>Amount</th>
+                                                                    <th>Total Amount</th>
+                                                                    <th>Paid Amount</th>
+                                                                    <th>Remaining Amount</th>
                                                                     <th>Payment Date</th>
                                                                     <th>Payment Method</th>
                                                                     <th>Reference No</th>
@@ -279,45 +378,38 @@ function formatCurrency($amount) {
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
-                                                                <tr>
-                                                                    <td>#P001</td>
-                                                                    <td>John Doe</td>
-                                                                    <td>$5,000</td>
-                                                                    <td>2026-01-20</td>
-                                                                    <td>Bank Transfer</td>
-                                                                    <td>REF001</td>
-                                                                    <td><span class="badge badge-success">Completed</span></td>
-                                                                    <td>
-                                                                        <button class="btn btn-sm btn-primary">Edit</button>
-                                                                        <button class="btn btn-sm btn-danger">Delete</button>
-                                                                    </td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>#P002</td>
-                                                                    <td>Jane Smith</td>
-                                                                    <td>$3,500</td>
-                                                                    <td>2026-01-19</td>
-                                                                    <td>Cash</td>
-                                                                    <td>REF002</td>
-                                                                    <td><span class="badge badge-success">Completed</span></td>
-                                                                    <td>
-                                                                        <button class="btn btn-sm btn-primary">Edit</button>
-                                                                        <button class="btn btn-sm btn-danger">Delete</button>
-                                                                    </td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>#P003</td>
-                                                                    <td>ABC School</td>
-                                                                    <td>$10,000</td>
-                                                                    <td>2026-01-18</td>
-                                                                    <td>Card</td>
-                                                                    <td>REF003</td>
-                                                                    <td><span class="badge badge-success">Completed</span></td>
-                                                                    <td>
-                                                                        <button class="btn btn-sm btn-primary">Edit</button>
-                                                                        <button class="btn btn-sm btn-danger">Delete</button>
-                                                                    </td>
-                                                                </tr>
+                                                                <?php if (!empty($payments)): ?>
+                                                                    <?php foreach ($payments as $payment): ?>
+                                                                        <?php 
+                                                                            $paymentDate = date('M d, Y', strtotime($payment['payment_date']));
+                                                                            $totalAmount = formatCurrency($payment['total_amount']);
+                                                                            $paidAmount = formatCurrency($payment['paid_amount']);
+                                                                            $remainingAmount = $payment['total_amount'] - $payment['paid_amount'];
+                                                                            $remainingAmountFormatted = formatCurrency($remainingAmount);
+                                                                        ?>
+                                                                        <tr>
+                                                                            <td>#P<?php echo str_pad($payment['payment_id'], 3, '0', STR_PAD_LEFT); ?></td>
+                                                                            <td><?php echo htmlspecialchars($payment['school_name'] ?? 'N/A'); ?></td>
+                                                                            <td><?php echo $totalAmount; ?></td>
+                                                                            <td><?php echo $paidAmount; ?></td>
+                                                                            <td><?php echo $remainingAmountFormatted; ?></td>
+                                                                            <td><?php echo $paymentDate; ?></td>
+                                                                            <td><?php echo ucfirst(htmlspecialchars($payment['payment_method'] ?? 'N/A')); ?></td>
+                                                                            <td><?php echo htmlspecialchars($payment['reference_no'] ?? 'N/A'); ?></td>
+                                                                            <td><span class="badge badge-success">Completed</span></td>
+                                                                            <td>
+                                                                                <button class="btn btn-sm btn-primary">Edit</button>
+                                                                                <button class="btn btn-sm btn-danger">Delete</button>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                <?php else: ?>
+                                                                    <tr>
+                                                                        <td colspan="10" class="text-center text-muted py-4">
+                                                                            <i class="ti ti-inbox"></i> No payments recorded yet
+                                                                        </td>
+                                                                    </tr>
+                                                                <?php endif; ?>
                                                             </tbody>
                                                             <tfoot>
                                                                 <tr>
@@ -327,6 +419,93 @@ function formatCurrency($amount) {
                                                                     <th>Payment Date</th>
                                                                     <th>Payment Method</th>
                                                                     <th>Reference No</th>
+                                                                    <th>Status</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Billing Tab -->
+                                            <div class="tab-pane fade" id="billing" role="tabpanel" aria-labelledby="billing-tab">
+                                                <div class="mt-4">
+                                                    <div class="datatable-wrapper table-responsive">
+                                                        <table id="billingTable" class="display compact table table-striped table-bordered">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Billing ID</th>
+                                                                    <th>School/Client Name</th>
+                                                                    <th>Period Start</th>
+                                                                    <th>Period End</th>
+                                                                    <th>Due Date</th>
+                                                                    <th>Total Amount</th>
+                                                                    <th>Discounted Amount</th>
+                                                                    <th>Payable Amount</th>
+                                                                    <th>Paid Amount</th>
+                                                                    <th>Remaining Amount</th>
+                                                                    <th>Status</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php if (!empty($allBillings)): ?>
+                                                                    <?php foreach ($allBillings as $billing): ?>
+                                                                        <?php 
+                                                                            $periodStart = date('M d, Y', strtotime($billing['period_start']));
+                                                                            $periodEnd = date('M d, Y', strtotime($billing['period_end']));
+                                                            $dueDate = date('M d, Y', strtotime($billing['due_date']));
+                                                                            $totalAmount = $billing['total_amount'];
+                                                                            $discountedAmount = $billing['discounted_amount'] ?? 0;
+                                                                            $payableAmount = $totalAmount - $discountedAmount;
+                                                                            $paidAmount = $billing['paid_amount'];
+                                                                            $remainingAmount = $payableAmount - $paidAmount;
+                                                                            $showPayButton = ($billing['status'] != 'paid') && ($remainingAmount > 0);
+                                                                        ?>
+                                                                        <tr>
+                                                                            <td><?php echo htmlspecialchars($billing['billing_id']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($billing['school_name'] ?? 'N/A'); ?></td>
+                                                                            <td><?php echo $periodStart; ?></td>
+                                                                            <td><?php echo $periodEnd; ?></td>
+                                                                            <td><?php echo $dueDate; ?></td>
+                                                                            <td><?php echo formatCurrency($totalAmount); ?></td>
+                                                                            <td><?php echo formatCurrency($discountedAmount); ?></td>
+                                                                            <td><?php echo formatCurrency($payableAmount); ?></td>
+                                                                            <td><?php echo formatCurrency($paidAmount); ?></td>
+                                                                            <td><?php echo formatCurrency($remainingAmount); ?></td>
+                                                                            <td><span class="badge badge-<?php echo $billing['status'] == 'paid' ? 'success' : ($billing['status'] == 'partial' ? 'warning' : 'danger'); ?>"><?php echo ucfirst(htmlspecialchars($billing['status'])); ?></span></td>
+                                                                            <td>
+                                                                                <?php if ($showPayButton): ?>
+                                                                                    <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#payNowModal" onclick="setPaymentData(<?php echo htmlspecialchars($billing['billing_id']); ?>, <?php echo htmlspecialchars($billing['school_id']); ?>, <?php echo htmlspecialchars($remainingAmount); ?>, <?php echo htmlspecialchars($payableAmount); ?>)">
+                                                                                        <i class="ti ti-check"></i> Pay Now
+                                                                                    </button>
+                                                                                <?php else: ?>
+                                                                                    <span class="badge badge-success">Paid</span>
+                                                                                <?php endif; ?>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                <?php else: ?>
+                                                                    <tr>
+                                                                        <td colspan="12" class="text-center text-muted py-4">
+                                                                            <i class="ti ti-mood-smile"></i> No billing cycles available
+                                                                        </td>
+                                                                    </tr>
+                                                                <?php endif; ?>
+                                                            </tbody>
+                                                            <tfoot>
+                                                                <tr>
+                                                                    <th>Billing ID</th>
+                                                                    <th>School/Client Name</th>
+                                                                    <th>Period Start</th>
+                                                                    <th>Period End</th>
+                                                                    <th>Due Date</th>
+                                                                    <th>Total Amount</th>
+                                                                    <th>Discounted Amount</th>
+                                                                    <th>Payable Amount</th>
+                                                                    <th>Paid Amount</th>
+                                                                    <th>Remaining Amount</th>
                                                                     <th>Status</th>
                                                                     <th>Action</th>
                                                                 </tr>
@@ -674,3 +853,132 @@ function formatCurrency($amount) {
         });
     </script>
     <!-- End Block Confirmation Script -->
+
+    <!-- Pay Now Modal -->
+    <div class="modal fade" id="payNowModal" tabindex="-1" role="dialog" aria-labelledby="payNowModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="payNowModalLabel">
+                        <i class="ti ti-check-circle mr-2"></i> Record Payment
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="paymentForm">
+                        <input type="hidden" id="paymentBillingId" name="billing_id">
+                        <input type="hidden" id="paymentSchoolId" name="school_id">
+                        <input type="hidden" id="paymentTotalAmount" name="total_amount">
+                        
+                        <div class="form-group">
+                            <label>Remaining Amount to Pay</label>
+                            <input type="text" class="form-control" id="remainingDisplay" readonly>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="paymentAmount">Payment Amount (Rs) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" id="paymentAmount" name="paid_amount" placeholder="Enter payment amount" required>
+                            <small class="form-text text-muted">Enter the amount being paid now</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="paymentMethod">Payment Method <span class="text-danger">*</span></label>
+                            <select class="form-control" id="paymentMethod" name="payment_method" required>
+                                <option value="">Select Payment Method</option>
+                                <option value="cash">Cash</option>
+                                <option value="bank">Bank Transfer</option>
+                                <option value="online">Online Payment</option>
+                                <option value="check">Check</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="referenceNo">Reference No</label>
+                            <input type="text" class="form-control" id="referenceNo" name="reference_no" placeholder="e.g., Check Number, Transaction ID">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="receivedBy">Received By</label>
+                            <input type="text" class="form-control" id="receivedBy" name="received_by" placeholder="Name of person who received payment">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="submitPaymentBtn" onclick="submitPayment()">
+                        <i class="ti ti-check"></i> Record Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End Pay Now Modal -->
+
+    <script>
+        // Set payment data when Pay Now button is clicked
+        function setPaymentData(billingId, schoolId, remainingAmount, totalAmount) {
+            document.getElementById('paymentBillingId').value = billingId;
+            document.getElementById('paymentSchoolId').value = schoolId;
+            document.getElementById('paymentTotalAmount').value = totalAmount;
+            document.getElementById('remainingDisplay').value = 'Rs ' + parseFloat(remainingAmount).toFixed(2);
+            document.getElementById('paymentAmount').value = '';
+            document.getElementById('paymentMethod').value = '';
+            document.getElementById('referenceNo').value = '';
+            document.getElementById('receivedBy').value = '';
+        }
+
+        // Submit payment form
+        function submitPayment() {
+            const billingId = document.getElementById('paymentBillingId').value;
+            const schoolId = document.getElementById('paymentSchoolId').value;
+            const totalAmount = document.getElementById('paymentTotalAmount').value;
+            const paidAmount = document.getElementById('paymentAmount').value;
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            const referenceNo = document.getElementById('referenceNo').value;
+            const receivedBy = document.getElementById('receivedBy').value;
+
+            // Validation
+            if (!paidAmount || parseFloat(paidAmount) <= 0) {
+                alert('Please enter a valid payment amount');
+                return;
+            }
+
+            if (!paymentMethod) {
+                alert('Please select a payment method');
+                return;
+            }
+
+            // Send data to server
+            const formData = new FormData();
+            formData.append('action', 'add_payment');
+            formData.append('billing_id', billingId);
+            formData.append('school_id', schoolId);
+            formData.append('total_amount', totalAmount);
+            formData.append('paid_amount', paidAmount);
+            formData.append('payment_method', paymentMethod);
+            formData.append('reference_no', referenceNo);
+            formData.append('received_by', receivedBy);
+
+            fetch('<?php echo $_SERVER['PHP_SELF']; ?>', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Payment recorded successfully!');
+                    $('#payNowModal').modal('hide');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to record payment'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while recording the payment');
+            });
+        }
+    </script>
+    <!-- End Pay Now Script -->

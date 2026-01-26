@@ -340,25 +340,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <option value="">Select Plan</option>
                                 <?php if(!empty($plans)): ?>
                                     <?php foreach($plans as $plan): ?>
-                                        <option value="<?php echo htmlspecialchars($plan['name']); ?>" data-price="<?php echo htmlspecialchars($plan['price'] ?? 0); ?>"><?php echo htmlspecialchars($plan['name']); ?></option>
+                                        <option value="<?php echo htmlspecialchars($plan['name']); ?>" data-price="<?php echo htmlspecialchars($plan['price_per_student_year'] ?? 0); ?>" data-plan-id="<?php echo htmlspecialchars($plan['id']); ?>"><?php echo htmlspecialchars($plan['name']); ?> - Rs <?php echo htmlspecialchars($plan['price_per_student_year']); ?>/student/year</option>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
                             </select>
                         </div>
 
-                        <!-- Hidden field for price per student -->
+                        <!-- Hidden fields for pricing -->
                         <input type="hidden" id="price_per_student" name="price_per_student" value="">
-
-                        <div class="form-group">
-                            <label for="billing_cycle">Billing Cycle <span class="text-danger">*</span></label>
-                            <select class="form-control" id="billing_cycle" name="billing_cycle" required>
-                                <option value="">Select Billing Cycle</option>
-                                <option value="monthly">Monthly</option>
-                                <option value="quarterly">Quarterly</option>
-                                <option value="semi-annual">Semi-Annual</option>
-                                <option value="yearly">Yearly</option>
-                            </select>
-                        </div>
+                        <input type="hidden" id="plan_id" name="plan_id" value="">
 
                         <div class="form-group">
                             <label for="status">Status <span class="text-danger">*</span></label>
@@ -378,6 +368,85 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         <div class="form-group">
                             <label for="expires_at">Expires At <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" id="expires_at" name="expires_at" required>
+                        </div>
+
+                        <!-- Billing Section -->
+                        <hr>
+                        <h6 class="mb-3">Billing Information</h6>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="start_billing" name="start_billing">
+                            <label class="form-check-label" for="start_billing">
+                                Start Billing Now
+                            </label>
+                        </div>
+
+                        <div id="billing_section" style="display: none;">
+                            <div class="form-group">
+                                <label for="total_amount">Total Amount (Readonly) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="total_amount" name="total_amount" placeholder="0.00" readonly step="0.01">
+                                <small class="form-text text-muted">Automatically calculated as: Student Count × Price per Student</small>
+                            </div>
+
+                            <!-- Discount/Concession Section -->
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label for="discount_type">Discount Type</label>
+                                    <select class="form-control" id="discount_type" name="discount_type">
+                                        <option value="">-- No Discount --</option>
+                                        <option value="percentage">Percentage (%)</option>
+                                        <option value="fixed">Fixed Amount (Rs)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label for="discount_value">Discount Value</label>
+                                    <input type="number" class="form-control" id="discount_value" name="discount_value" placeholder="0.00" min="0" step="0.01">
+                                    <small class="form-text text-muted" id="discount_help">Select discount type</small>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="final_total_amount">Final Amount After Discount (Readonly)</label>
+                                <input type="number" class="form-control" id="final_total_amount" name="final_total_amount" placeholder="0.00" readonly step="0.01" style="font-weight: bold; color: green;">
+                                <small class="form-text text-muted">Total Amount - Discount</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="paid_amount">Paid Amount</label>
+                                <input type="number" class="form-control" id="paid_amount" name="paid_amount" placeholder="0.00" min="0" step="0.01">
+                                <small class="form-text text-muted">Leave blank or 0 if payment not received yet</small>
+                            </div>
+
+                            <div class="form-group" id="payment_method_group" style="display: none;">
+                                <label for="payment_method">Payment Method</label>
+                                <select class="form-control" id="payment_method" name="payment_method">
+                                    <option value="">-- Select Method --</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="bank">Bank Transfer</option>
+                                    <option value="online">Online Payment</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" id="reference_no_group" style="display: none;">
+                                <label for="reference_no">Reference No (Transaction ID)</label>
+                                <input type="text" class="form-control" id="reference_no" name="reference_no" placeholder="e.g., TXN123456">
+                            </div>
+
+                            <div class="form-group" id="received_by_group" style="display: none;">
+                                <label for="received_by">Received By</label>
+                                <input type="text" class="form-control" id="received_by" name="received_by" placeholder="Name of person who received payment">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="billing_cycle">Billing Cycle <span class="text-danger">*</span></label>
+                                <select class="form-control" id="billing_cycle" name="billing_cycle" required>
+                                    <option value="">Select Billing Cycle</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="quarterly">Quarterly</option>
+                                    <option value="semi-annual">Semi-Annual</option>
+                                    <option value="yearly">Yearly</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -595,8 +664,112 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         document.getElementById('plan').addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             const price = selectedOption.getAttribute('data-price');
+            const planId = selectedOption.getAttribute('data-plan-id');
             if (price) {
                 document.getElementById('price_per_student').value = price;
+                document.getElementById('plan_id').value = planId;
+                // Recalculate total amount if billing is enabled
+                calculateTotalAmount();
+            }
+        });
+
+        // Handle Start Billing checkbox
+        document.getElementById('start_billing').addEventListener('change', function() {
+            const billingSection = document.getElementById('billing_section');
+            if (this.checked) {
+                billingSection.style.display = 'block';
+                calculateTotalAmount();
+            } else {
+                billingSection.style.display = 'none';
+                document.getElementById('total_amount').value = '';
+                document.getElementById('paid_amount').value = '';
+            }
+        });
+
+        // Handle paid amount change
+        document.getElementById('paid_amount').addEventListener('change', function() {
+            const paidAmount = parseFloat(this.value) || 0;
+            const paymentMethodGroup = document.getElementById('payment_method_group');
+            const referenceNoGroup = document.getElementById('reference_no_group');
+            const receivedByGroup = document.getElementById('received_by_group');
+            
+            if (paidAmount > 0) {
+                paymentMethodGroup.style.display = 'block';
+                referenceNoGroup.style.display = 'block';
+                receivedByGroup.style.display = 'block';
+                document.getElementById('payment_method').setAttribute('required', 'required');
+            } else {
+                paymentMethodGroup.style.display = 'none';
+                referenceNoGroup.style.display = 'none';
+                receivedByGroup.style.display = 'none';
+                document.getElementById('payment_method').removeAttribute('required');
+                document.getElementById('reference_no').value = '';
+                document.getElementById('received_by').value = '';
+            }
+        });
+
+        // Calculate total amount
+        function calculateTotalAmount() {
+            const studentCount = parseInt(document.getElementById('estimated_students').value) || 0;
+            const pricePerStudent = parseFloat(document.getElementById('price_per_student').value) || 0;
+            const totalAmount = studentCount * pricePerStudent;
+            document.getElementById('total_amount').value = totalAmount.toFixed(2);
+            calculateFinalAmount();
+        }
+
+        // Calculate final amount after discount
+        function calculateFinalAmount() {
+            const totalAmount = parseFloat(document.getElementById('total_amount').value) || 0;
+            const discountType = document.getElementById('discount_type').value;
+            const discountValue = parseFloat(document.getElementById('discount_value').value) || 0;
+            
+            let finalAmount = totalAmount;
+            
+            if (discountType === 'percentage') {
+                const discountPercentage = (totalAmount * discountValue) / 100;
+                finalAmount = totalAmount - discountPercentage;
+            } else if (discountType === 'fixed') {
+                finalAmount = totalAmount - discountValue;
+            }
+            
+            // Ensure final amount is not negative
+            finalAmount = Math.max(0, finalAmount);
+            document.getElementById('final_total_amount').value = finalAmount.toFixed(2);
+        }
+
+        // Handle discount type change
+        document.getElementById('discount_type').addEventListener('change', function() {
+            const helpText = document.getElementById('discount_help');
+            const discountValueInput = document.getElementById('discount_value');
+            
+            if (this.value === 'percentage') {
+                helpText.textContent = 'Enter discount percentage (e.g., 10 for 10%)';
+                discountValueInput.placeholder = '10';
+            } else if (this.value === 'fixed') {
+                helpText.textContent = 'Enter fixed discount amount in Rs';
+                discountValueInput.placeholder = '1000';
+            } else {
+                helpText.textContent = 'Select discount type';
+                discountValueInput.placeholder = '0.00';
+            }
+            
+            discountValueInput.value = '';
+            calculateFinalAmount();
+        });
+
+        // Handle discount value change
+        document.getElementById('discount_value').addEventListener('change', function() {
+            calculateFinalAmount();
+        });
+        
+        document.getElementById('discount_value').addEventListener('keyup', function() {
+            calculateFinalAmount();
+        });
+
+        // Handle student count change
+        document.getElementById('estimated_students').addEventListener('change', function() {
+            if (document.getElementById('start_billing').checked) {
+                calculateTotalAmount();
             }
         });
 
@@ -628,6 +801,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             const form = document.getElementById('addSchoolForm');
             form.reset();
             document.getElementById('price_per_student').value = '';
+            document.getElementById('plan_id').value = '';
+            document.getElementById('start_billing').checked = false;
+            document.getElementById('billing_section').style.display = 'none';
             // Set today's date and clear expiry
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('start_date').value = today;
@@ -638,5 +814,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         document.getElementById('addSchoolModal').addEventListener('hidden.bs.modal', function() {
             const form = document.getElementById('addSchoolForm');
             form.reset();
+            document.getElementById('billing_section').style.display = 'none';
         });
     </script>

@@ -2,18 +2,21 @@
 require_once '../../models/school_model.php';
 require_once '../../models/school_subscription_model.php';
 require_once '../../models/plain_model.php';
+require_once __DIR__ . '/../Models/billing_cycles_model.php';
 
 class SchoolController
 {
     private $school;
     private $subscription;
     private $db;
+    private $billingCycles;
 
     public function __construct($db)
     {
         $this->school = new School($db);
         $this->subscription = new SchoolSubscription($db);
         $this->db = $db;
+        $this->billingCycles = new BillingCycles($db);
     }
 
     // List schools
@@ -58,6 +61,63 @@ class SchoolController
                     $subscriptionResult = $this->subscription->create($subscriptionData);
                     
                     if ($subscriptionResult) {
+                        // Get subscription ID
+                        $subscription_id = $this->db->lastInsertId();
+                        
+                        // Handle billing if "Start Billing" is checked
+                        if (isset($_POST['start_billing']) && $_POST['start_billing'] == 'on') {
+                            $totalAmount = floatval($_POST['total_amount'] ?? 0);
+                            $finalTotalAmount = floatval($_POST['final_total_amount'] ?? $totalAmount);
+                            $paidAmount = floatval($_POST['paid_amount'] ?? 0);
+                            $discountType = $_POST['discount_type'] ?? '';
+                            $discountValue = floatval($_POST['discount_value'] ?? 0);
+                            
+                            // Calculate the discounted amount
+                            $discountedAmount = $totalAmount - $finalTotalAmount;
+                            
+                            if ($finalTotalAmount > 0) {
+                                // Calculate billing periods
+                                $startDate = $_POST['start_date'] ?? date('Y-m-d');
+                                $billingCycle = $_POST['billing_cycle'] ?? 'monthly';
+                                
+                                // Calculate period end and due date
+                                $periodEnd = $this->calculatePeriodEnd($startDate, $billingCycle);
+                                $dueDate = $this->calculateDueDate($startDate, $billingCycle);
+                                
+                                // Create billing cycle record with original amount and discounted amount
+                                $billingData = [
+                                    'school_id' => $school_id,
+                                    'subscription_id' => $subscription_id,
+                                    'period_start' => $startDate,
+                                    'period_end' => $periodEnd,
+                                    'due_date' => $dueDate,
+                                    'total_amount' => $totalAmount,
+                                    'discounted_amount' => $discountedAmount,
+                                    'paid_amount' => $paidAmount,
+                                    'status' => $paidAmount > 0 ? 'partial' : 'due'
+                                ];
+                                
+                                $billingResult = $this->billingCycles->create($billingData);
+                                
+                                // If payment was made, create payment record
+                                if ($paidAmount > 0 && $billingResult) {
+                                    $billing_id = $this->db->lastInsertId();
+                                    $this->createPaymentRecord(
+                                        $billing_id,
+                                        $school_id,
+                                        $finalTotalAmount,
+                                        $paidAmount,
+                                        $_POST
+                                    );
+                                }
+                                
+                                if (!$billingResult) {
+                                    $this->db->rollBack();
+                                    return false;
+                                }
+                            }
+                        }
+                        
                         $this->db->commit();
                         return true;
                     } else {
@@ -75,6 +135,66 @@ class SchoolController
             }
         }
         return false;
+    }
+
+    // Calculate period end date based on billing cycle
+    private function calculatePeriodEnd($startDate, $billingCycle)
+    {
+        $date = new DateTime($startDate);
+        switch ($billingCycle) {
+            case 'monthly':
+                $date->add(new DateInterval('P1M'));
+                break;
+            case 'quarterly':
+                $date->add(new DateInterval('P3M'));
+                break;
+            case 'semi-annual':
+                $date->add(new DateInterval('P6M'));
+                break;
+            case 'yearly':
+                $date->add(new DateInterval('P1Y'));
+                break;
+            default:
+                $date->add(new DateInterval('P1M'));
+        }
+        return $date->format('Y-m-d');
+    }
+
+    // Calculate due date based on billing cycle
+    private function calculateDueDate($startDate, $billingCycle)
+    {
+        $date = new DateTime($startDate);
+        // Due date is 7 days after start date
+        $date->add(new DateInterval('P7D'));
+        return $date->format('Y-m-d');
+    }
+
+    // Create payment record
+    private function createPaymentRecord($billing_id, $school_id, $totalAmount, $paidAmount, $postData)
+    {
+        $stmt = $this->db->prepare(
+            "INSERT INTO saas_payments 
+            (billing_id, school_id, total_amount, paid_amount, payment_date, payment_method, reference_no, received_by)
+            VALUES (:billing_id, :school_id, :total_amount, :paid_amount, :payment_date, :payment_method, :reference_no, :received_by)"
+        );
+        
+        $params = [
+            ':billing_id' => $billing_id,
+            ':school_id' => $school_id,
+            ':total_amount' => $totalAmount,
+            ':paid_amount' => $paidAmount,
+            ':payment_date' => date('Y-m-d'),
+            ':payment_method' => $postData['payment_method'] ?? null,
+            ':reference_no' => $postData['reference_no'] ?? null,
+            ':received_by' => $postData['received_by'] ?? null
+        ];
+        
+        try {
+            return $stmt->execute($params);
+        } catch (Exception $e) {
+            error_log("Payment creation error: " . $e->getMessage());
+            return false;
+        }
     }
 
     // Update school with subscription
