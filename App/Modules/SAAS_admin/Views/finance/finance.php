@@ -6,6 +6,171 @@ require_once __DIR__ . '/../../Controllers/billing_cycles_controller.php';
 $db = Database::connect();
 $billingController = new BillingCyclesController($db);
 
+// Determine which action we're handling
+$action = $_POST['action'] ?? null;
+
+// Handle block school action FIRST (before any other processing)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'block_school') {
+    try {
+        $schoolId = intval($_POST['school_id'] ?? 0);
+        
+        if (!$schoolId) {
+            throw new Exception('School ID is required');
+        }
+        
+        error_log("===== BLOCK SCHOOL ACTION =====");
+        error_log("School ID: " . $schoolId);
+        error_log("POST action: " . $_POST['action']);
+        
+        // Verify school exists
+        $verifyQuery = "SELECT id, name, status FROM schools WHERE id = ?";
+        $verifyStmt = $db->prepare($verifyQuery);
+        $verifyStmt->execute([$schoolId]);
+        $schoolData = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$schoolData) {
+            throw new Exception('School not found with ID: ' . $schoolId);
+        }
+        
+        error_log("School found: " . $schoolData['name'] . " | Current status: " . $schoolData['status']);
+        
+        // Execute direct SQL update without prepared statement to ensure it executes
+        $updateSQL = "UPDATE schools SET status = 'blocked' WHERE id = " . $schoolId;
+        error_log("Executing SQL: " . $updateSQL);
+        
+        $rowsAffected = $db->exec($updateSQL);
+        error_log("Rows affected: " . $rowsAffected);
+        
+        if ($rowsAffected === false) {
+            throw new Exception('Database update failed');
+        }
+        
+        // Verify update
+        $verifyStmt2 = $db->prepare("SELECT id, name, status FROM schools WHERE id = ?");
+        $verifyStmt2->execute([$schoolId]);
+        $updatedSchool = $verifyStmt2->fetch(PDO::FETCH_ASSOC);
+        
+        error_log("After update - Status: " . $updatedSchool['status']);
+        
+        if ($updatedSchool['status'] !== 'blocked') {
+            throw new Exception('Status update verification failed. Status is: ' . $updatedSchool['status']);
+        }
+        
+        error_log("✓ School successfully blocked!");
+        
+        // Return success response
+        header('Content-Type: application/json');
+        http_response_code(200);
+        echo json_encode([
+            'success' => true, 
+            'message' => 'School "' . $schoolData['name'] . '" has been successfully blocked!'
+        ]);
+        exit;
+    } catch (Exception $e) {
+        error_log("ERROR blocking school: " . $e->getMessage());
+        header('Content-Type: application/json');
+        http_response_code(400);
+        echo json_encode([
+            'success' => false, 
+            'message' => $e->getMessage()
+        ]);
+        exit;
+    }
+}
+
+// Handle clear balance action (clear all billing cycles for a school)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clear_balance') {
+    try {
+        $schoolId = intval($_POST['school_id'] ?? 0);
+        
+        if (!$schoolId) {
+            throw new Exception('School ID is required');
+        }
+        
+        error_log("===== CLEAR BALANCE ACTION =====");
+        error_log("School ID: " . $schoolId);
+        
+        // Set all billing cycles to paid for this school
+        $clearSQL = "UPDATE saas_billing_cycles SET paid_amount = total_amount, status = 'paid' WHERE school_id = " . $schoolId;
+        error_log("Executing SQL: " . $clearSQL);
+        
+        $rowsAffected = $db->exec($clearSQL);
+        error_log("Rows affected: " . $rowsAffected);
+        
+        // Return success response
+        header('Content-Type: application/json');
+        http_response_code(200);
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Balance cleared successfully for this school!'
+        ]);
+        exit;
+    } catch (Exception $e) {
+        error_log("ERROR clearing balance: " . $e->getMessage());
+        header('Content-Type: application/json');
+        http_response_code(400);
+        echo json_encode([
+            'success' => false, 
+            'message' => $e->getMessage()
+        ]);
+        exit;
+    }
+}
+
+// Handle unblock school action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'unblock_school') {
+    try {
+        $schoolId = intval($_POST['school_id'] ?? 0);
+        
+        if (!$schoolId) {
+            throw new Exception('School ID is required');
+        }
+        
+        error_log("===== UNBLOCK SCHOOL ACTION =====");
+        error_log("School ID: " . $schoolId);
+        
+        // Get school info first
+        $verifyStmt = $db->prepare("SELECT id, name, status FROM schools WHERE id = ?");
+        $verifyStmt->execute([$schoolId]);
+        $schoolData = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$schoolData) {
+            throw new Exception('School not found');
+        }
+        
+        // Update status to active
+        $unblockSQL = "UPDATE schools SET status = 'active' WHERE id = " . $schoolId;
+        error_log("Executing SQL: " . $unblockSQL);
+        
+        $rowsAffected = $db->exec($unblockSQL);
+        error_log("Rows affected: " . $rowsAffected);
+        
+        if ($rowsAffected === false) {
+            throw new Exception('Database update failed');
+        }
+        
+        error_log("✓ School successfully unblocked!");
+        
+        // Return success response
+        header('Content-Type: application/json');
+        http_response_code(200);
+        echo json_encode([
+            'success' => true, 
+            'message' => 'School "' . $schoolData['name'] . '" has been successfully unblocked!'
+        ]);
+        exit;
+    } catch (Exception $e) {
+        error_log("ERROR unblocking school: " . $e->getMessage());
+        header('Content-Type: application/json');
+        http_response_code(400);
+        echo json_encode([
+            'success' => false, 
+            'message' => $e->getMessage()
+        ]);
+        exit;
+    }
+}
+
 // Handle payment submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_payment') {
     try {
@@ -86,6 +251,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Handle block school action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'block_school') {
+    try {
+        $schoolId = intval($_POST['school_id'] ?? 0);
+        
+        if (!$schoolId) {
+            throw new Exception('School ID is required');
+        }
+        
+        error_log("Blocking school ID: " . $schoolId);
+        
+        // Update school status to inactive
+        $blockQuery = "UPDATE schools SET status = 'inactive' WHERE id = ?";
+        $stmt = $db->prepare($blockQuery);
+        
+        if (!$stmt) {
+            throw new Exception('Failed to prepare statement: ' . print_r($db->errorInfo(), true));
+        }
+        
+        $blockResult = $stmt->execute([$schoolId]);
+        
+        error_log("Query result: " . var_export($blockResult, true));
+        error_log("Error info: " . print_r($stmt->errorInfo(), true));
+        error_log("Rows affected: " . $stmt->rowCount());
+        
+        if (!$blockResult) {
+            throw new Exception('Failed to block school: ' . print_r($stmt->errorInfo(), true));
+        }
+        
+        if ($stmt->rowCount() === 0) {
+            throw new Exception('School not found or already inactive');
+        }
+        
+        // Return success response
+        http_response_code(200);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => 'School has been blocked successfully']);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(400);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
 // Fetch unpaid billing cycles
 $unpaidBillings = $billingController->getUnpaid();
 $totalUnpaid = $billingController->getTotalUnpaidAmount();
@@ -101,6 +312,29 @@ $allBillingsQuery = "SELECT bc.*, s.name as school_name FROM saas_billing_cycles
 $allBillingsStmt = $db->prepare($allBillingsQuery);
 $allBillingsStmt->execute();
 $allBillings = $allBillingsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch defaulting billings (due_date < today and outstanding amount exists)
+$defaultersQuery = "SELECT bc.*, s.name as school_name, s.contact_no, s.email 
+                   FROM saas_billing_cycles bc 
+                   LEFT JOIN schools s ON bc.school_id = s.id 
+                   WHERE bc.due_date < CURDATE() 
+                   AND (bc.total_amount - bc.paid_amount - bc.discounted_amount) > 0
+                   ORDER BY bc.due_date ASC";
+$defaultersStmt = $db->prepare($defaultersQuery);
+$defaultersStmt->execute();
+$defaulters = $defaultersStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch blocked schools with their outstanding amounts
+$blockedQuery = "SELECT s.id, s.name, s.email, s.contact_no, s.status, s.created_at,
+                 COALESCE(SUM(bc.total_amount - bc.paid_amount - bc.discounted_amount), 0) as outstanding_amount
+                 FROM schools s
+                 LEFT JOIN saas_billing_cycles bc ON s.id = bc.school_id
+                 WHERE s.status = 'blocked'
+                 GROUP BY s.id
+                 ORDER BY s.created_at DESC";
+$blockedStmt = $db->prepare($blockedQuery);
+$blockedStmt->execute();
+$blockedAccounts = $blockedStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Temporary debug
 file_put_contents('/tmp/debug.log', "Count: " . count($unpaidBillings) . " | Total: " . $totalUnpaid . " | Data: " . json_encode($unpaidBillings) . "\n", FILE_APPEND);
@@ -342,6 +576,11 @@ function formatCurrency($amount) {
                                             <li class="nav-item" role="presentation">
                                                 <a class="nav-link" id="defaulters-tab" data-toggle="tab" href="#defaulters" role="tab" aria-controls="defaulters" aria-selected="false">
                                                     <i class="ti ti-ban"></i> Defaulters
+                                                </a>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <a class="nav-link" id="blockedaccounts-tab" data-toggle="tab" href="#blockedaccounts" role="tab" aria-controls="blockedaccounts" aria-selected="false">
+                                                    <i class="ti ti-lock"></i> Blocked Accounts
                                                 </a>
                                             </li>
                                         </ul>
@@ -614,8 +853,17 @@ function formatCurrency($amount) {
                                                 <div class="mt-4">
                                                     <div class="row mb-3">
                                                         <div class="col-md-12">
+                                                            <?php
+                                                                $totalDefaulters = count($defaulters);
+                                                                $totalAmountAtRisk = 0;
+                                                                foreach ($defaulters as $defaulter) {
+                                                                    $payableAmount = $defaulter['total_amount'] - $defaulter['discounted_amount'];
+                                                                    $outstanding = $payableAmount - $defaulter['paid_amount'];
+                                                                    $totalAmountAtRisk += $outstanding;
+                                                                }
+                                                            ?>
                                                             <div class="alert alert-danger" role="alert">
-                                                                <strong>Total Defaulters:</strong> 8 | <strong>Total Amount at Risk:</strong> $45,000
+                                                                <strong>Total Defaulters:</strong> <?php echo $totalDefaulters; ?> | <strong>Total Amount at Risk:</strong> <?php echo formatCurrency($totalAmountAtRisk); ?>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -623,63 +871,156 @@ function formatCurrency($amount) {
                                                         <table id="defaultersTable" class="display compact table table-striped table-bordered">
                                                             <thead>
                                                                 <tr>
-                                                                    <th>Student/School Name</th>
-                                                                    <th>Outstanding Amount</th>
-                                                                    <th>Last Payment Date</th>
-                                                                    <th>Days Since Last Payment</th>
+                                                                    <th>Billing ID</th>
+                                                                    <th>School Name</th>
                                                                     <th>Contact</th>
                                                                     <th>Email</th>
+                                                                    <th>Due Date</th>
+                                                                    <th>Days Overdue</th>
+                                                                    <th>Total Amount</th>
+                                                                    <th>Discounted</th>
+                                                                    <th>Payable</th>
+                                                                    <th>Paid</th>
+                                                                    <th>Outstanding</th>
                                                                     <th>Risk Level</th>
                                                                     <th>Action</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
-                                                                <tr>
-                                                                    <td>Robert Brown</td>
-                                                                    <td>$15,000</td>
-                                                                    <td>2025-11-15</td>
-                                                                    <td><span class="badge badge-danger">70</span></td>
-                                                                    <td>555-0105</td>
-                                                                    <td>robert@email.com</td>
-                                                                    <td><span class="badge badge-danger">High</span></td>
-                                                                    <td>
-                                                                        <button class="btn btn-sm btn-warning">Take Action</button>
-                                                                    </td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>Global Learning Center</td>
-                                                                    <td>$20,000</td>
-                                                                    <td>2025-11-01</td>
-                                                                    <td><span class="badge badge-danger">84</span></td>
-                                                                    <td>555-0106</td>
-                                                                    <td>info@globallearning.com</td>
-                                                                    <td><span class="badge badge-danger">High</span></td>
-                                                                    <td>
-                                                                        <button class="btn btn-sm btn-warning">Take Action</button>
-                                                                    </td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>Emma Harris</td>
-                                                                    <td>$10,000</td>
-                                                                    <td>2025-10-30</td>
-                                                                    <td><span class="badge badge-danger">86</span></td>
-                                                                    <td>555-0107</td>
-                                                                    <td>emma@email.com</td>
-                                                                    <td><span class="badge badge-danger">Critical</span></td>
-                                                                    <td>
-                                                                        <button class="btn btn-sm btn-warning">Take Action</button>
-                                                                    </td>
-                                                                </tr>
+                                                                <?php if (!empty($defaulters)): ?>
+                                                                    <?php foreach ($defaulters as $defaulter): ?>
+                                                                        <?php
+                                                                            $dueDate = new DateTime($defaulter['due_date']);
+                                                                            $today = new DateTime();
+                                                                            $daysOverdue = $today->diff($dueDate)->days;
+                                                                            
+                                                                            $payableAmount = $defaulter['total_amount'] - $defaulter['discounted_amount'];
+                                                                            $outstanding = $payableAmount - $defaulter['paid_amount'];
+                                                                            
+                                                                            // Determine risk level
+                                                                            if ($daysOverdue >= 90) {
+                                                                                $riskBadge = '<span class="badge badge-danger">Critical</span>';
+                                                                            } elseif ($daysOverdue >= 60) {
+                                                                                $riskBadge = '<span class="badge badge-danger">High</span>';
+                                                                            } elseif ($daysOverdue >= 30) {
+                                                                                $riskBadge = '<span class="badge badge-warning">Medium</span>';
+                                                                            } else {
+                                                                                $riskBadge = '<span class="badge badge-info">Low</span>';
+                                                                            }
+                                                                        ?>
+                                                                        <tr>
+                                                                            <td><?php echo $defaulter['billing_id']; ?></td>
+                                                                            <td><?php echo htmlspecialchars($defaulter['school_name']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($defaulter['contact_no'] ?? 'N/A'); ?></td>
+                                                                            <td><?php echo htmlspecialchars($defaulter['email'] ?? 'N/A'); ?></td>
+                                                                            <td><?php echo date('Y-m-d', strtotime($defaulter['due_date'])); ?></td>
+                                                                            <td><span class="badge badge-danger"><?php echo $daysOverdue; ?> days</span></td>
+                                                                            <td><?php echo formatCurrency($defaulter['total_amount']); ?></td>
+                                                                            <td><?php echo formatCurrency($defaulter['discounted_amount']); ?></td>
+                                                                            <td><?php echo formatCurrency($payableAmount); ?></td>
+                                                                            <td><?php echo formatCurrency($defaulter['paid_amount']); ?></td>
+                                                                            <td><strong><?php echo formatCurrency($outstanding); ?></strong></td>
+                                                                            <td><?php echo $riskBadge; ?></td>
+                                                                            <td>
+                                                                                <button class="btn btn-sm btn-success" onclick="setPaymentData(<?php echo $defaulter['billing_id']; ?>, <?php echo $defaulter['school_id']; ?>, <?php echo $outstanding; ?>, <?php echo $payableAmount; ?>)" data-toggle="modal" data-target="#payNowModal" title="Record Payment">
+                                                                                    <i class="ti ti-dollar"></i> Pay Now
+                                                                                </button>
+                                                                                <button class="btn btn-sm btn-danger" onclick="openBlockConfirm(<?php echo $defaulter['school_id']; ?>, '<?php echo htmlspecialchars($defaulter['school_name']); ?>')" title="Block School">
+                                                                                    <i class="ti ti-ban"></i> Block
+                                                                                </button>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                <?php else: ?>
+                                                                    <tr>
+                                                                        <td colspan="13" class="text-center text-muted py-4">
+                                                                            <i class="ti ti-mood-smile"></i> No defaulters at this time
+                                                                        </td>
+                                                                    </tr>
+                                                                <?php endif; ?>
                                                             </tbody>
                                                             <tfoot>
                                                                 <tr>
-                                                                    <th>Student/School Name</th>
-                                                                    <th>Outstanding Amount</th>
-                                                                    <th>Last Payment Date</th>
-                                                                    <th>Days Since Last Payment</th>
+                                                                    <th>Billing ID</th>
+                                                                    <th>School Name</th>
                                                                     <th>Contact</th>
                                                                     <th>Email</th>
+                                                                    <th>Due Date</th>
+                                                                    <th>Days Overdue</th>
+                                                                    <th>Total Amount</th>
+                                                                    <th>Discounted</th>
+                                                                    <th>Payable</th>
+                                                                    <th>Paid</th>
+                                                                    <th>Outstanding</th>
                                                                     <th>Risk Level</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Blocked Accounts Tab -->
+                                            <div class="tab-pane fade" id="blockedaccounts" role="tabpanel" aria-labelledby="blockedaccounts-tab">
+                                                <div class="mt-4">
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-12">
+                                                            <?php $totalBlockedCount = count($blockedAccounts); ?>
+                                                            <div class="alert alert-info" role="alert">
+                                                                <strong>Total Blocked Accounts:</strong> <?php echo $totalBlockedCount; ?>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="datatable-wrapper table-responsive">
+                                                        <table id="blockedAccountsTable" class="display compact table table-striped table-bordered">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>School ID</th>
+                                                                    <th>School Name</th>
+                                                                    <th>Email</th>
+                                                                    <th>Contact</th>
+                                                                    <th>Outstanding Balance</th>
+                                                                    <th>Blocked Date</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php if (!empty($blockedAccounts)): ?>
+                                                                    <?php foreach ($blockedAccounts as $blocked): ?>
+                                                                        <tr>
+                                                                            <td><?php echo $blocked['id']; ?></td>
+                                                                            <td><?php echo htmlspecialchars($blocked['name']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($blocked['email'] ?? 'N/A'); ?></td>
+                                                                            <td><?php echo htmlspecialchars($blocked['contact_no'] ?? 'N/A'); ?></td>
+                                                                            <td><strong><?php echo formatCurrency($blocked['outstanding_amount']); ?></strong></td>
+                                                                            <td><?php echo date('Y-m-d', strtotime($blocked['created_at'])); ?></td>
+                                                                            <td>
+                                                                                <button class="btn btn-sm btn-warning" onclick="clearBalance(<?php echo $blocked['id']; ?>, '<?php echo htmlspecialchars($blocked['name']); ?>')" title="Clear Balance">
+                                                                                    <i class="ti ti-trash"></i> Clear Balance
+                                                                                </button>
+                                                                                <button class="btn btn-sm btn-success" onclick="unblockSchool(<?php echo $blocked['id']; ?>, '<?php echo htmlspecialchars($blocked['name']); ?>')" title="Unblock School">
+                                                                                    <i class="ti ti-lock-open"></i> Unblock
+                                                                                </button>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                <?php else: ?>
+                                                                    <tr>
+                                                                        <td colspan="7" class="text-center text-muted py-4">
+                                                                            <i class="ti ti-mood-smile"></i> No blocked accounts
+                                                                        </td>
+                                                                    </tr>
+                                                                <?php endif; ?>
+                                                            </tbody>
+                                                            <tfoot>
+                                                                <tr>
+                                                                    <th>School ID</th>
+                                                                    <th>School Name</th>
+                                                                    <th>Email</th>
+                                                                    <th>Contact</th>
+                                                                    <th>Outstanding Balance</th>
+                                                                    <th>Blocked Date</th>
                                                                     <th>Action</th>
                                                                 </tr>
                                                             </tfoot>
@@ -803,56 +1144,13 @@ function formatCurrency($amount) {
             </div>
         </div>
     </div>
-    <!-- End Block Confirmation Modal -->
+    <!-- End Pay Now Modal -->
 
     <!-- plugins -->
     <script src="../../../../../public/assets/js/vendors.js"></script>
 
     <!-- custom app -->
     <script src="../../../../../public/assets/js/app.js"></script>
-
-    <!-- Block Confirmation Script -->
-    <script>
-        var selectedSchoolName = '';
-        
-        // Handle block button click
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.classList.contains('block-school-btn')) {
-                selectedSchoolName = e.target.getAttribute('data-school-name');
-                document.getElementById('schoolNameDisplay').textContent = selectedSchoolName;
-            }
-        });
-        
-        // Handle confirm block button
-        document.getElementById('confirmBlockBtn').addEventListener('click', function() {
-            console.log('School blocked:', selectedSchoolName);
-            
-            // Show success message
-            alert('School "' + selectedSchoolName + '" has been successfully blocked!');
-            
-            // Close modal
-            $('#blockConfirmModal').modal('hide');
-            
-            // Here you can add API call to block the school
-            // Example:
-            // fetch('/api/schools/block', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json'
-            //     },
-            //     body: JSON.stringify({
-            //         schoolName: selectedSchoolName
-            //     })
-            // })
-            // .then(response => response.json())
-            // .then(data => {
-            //     console.log('Success:', data);
-            //     // Refresh the table
-            //     location.reload();
-            // });
-        });
-    </script>
-    <!-- End Block Confirmation Script -->
 
     <!-- Pay Now Modal -->
     <div class="modal fade" id="payNowModal" tabindex="-1" role="dialog" aria-labelledby="payNowModalLabel" aria-hidden="true">
@@ -915,6 +1213,44 @@ function formatCurrency($amount) {
         </div>
     </div>
     <!-- End Pay Now Modal -->
+
+    <!-- Block School Confirmation Modal -->
+    <div class="modal fade" id="blockConfirmModal" tabindex="-1" role="dialog" aria-labelledby="blockConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="blockConfirmModalLabel">
+                        <i class="ti ti-ban mr-2"></i> Confirm Block School
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning" role="alert">
+                        <i class="ti ti-alert-triangle mr-2"></i> <strong>Warning!</strong> This action will deactivate the school and block it from accessing the system.
+                    </div>
+                    <p>Are you sure you want to block the following school?</p>
+                    <div class="card">
+                        <div class="card-body">
+                            <strong>School Name:</strong> <span id="blockSchoolName" class="text-danger"></span>
+                            <input type="hidden" id="blockSchoolId">
+                        </div>
+                    </div>
+                    <p class="mt-3 text-muted">
+                        <i class="ti ti-info-circle mr-2"></i> Once blocked, the school will be unable to log in or access their dashboard until this action is reversed.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmBlockSchool()">
+                        <i class="ti ti-ban"></i> Yes, Block School
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End Block School Confirmation Modal -->
 
     <script>
         // Set payment data when Pay Now button is clicked
@@ -979,6 +1315,131 @@ function formatCurrency($amount) {
                 console.error('Error:', error);
                 alert('An error occurred while recording the payment');
             });
+        }
+
+        // Block School Functions
+        function openBlockConfirm(schoolId, schoolName) {
+            console.log('Opening block confirm for school:', schoolId, schoolName);
+            document.getElementById('blockSchoolId').value = schoolId;
+            document.getElementById('blockSchoolName').textContent = schoolName;
+            $('#blockConfirmModal').modal('show');
+        }
+
+        function confirmBlockSchool() {
+            console.log('confirmBlockSchool called');
+            const schoolId = document.getElementById('blockSchoolId').value;
+            console.log('School ID from element:', schoolId);
+            
+            if (!schoolId) {
+                alert('Invalid school - no ID found');
+                console.log('No school ID found!');
+                return;
+            }
+
+            console.log('Proceeding to block school:', schoolId);
+            const formData = new FormData();
+            formData.append('action', 'block_school');
+            formData.append('school_id', schoolId);
+
+            console.log('Sending AJAX request...');
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('Response Status:', response.status);
+                return response.text().then(text => {
+                    console.log('Response Text:', text);
+                    try {
+                        return JSON.parse(text);
+                    } catch(e) {
+                        throw new Error('Invalid JSON response: ' + text);
+                    }
+                });
+            })
+            .then(data => {
+                console.log('Parsed Data:', data);
+                if (data.success) {
+                    alert('School has been blocked successfully!');
+                    $('#blockConfirmModal').modal('hide');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to block school'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while blocking the school: ' + error.message);
+            });
+        }
+        
+        // Ensure button click works
+        document.addEventListener('DOMContentLoaded', function() {
+            const blockBtn = document.getElementById('confirmBlockBtn');
+            if (blockBtn) {
+                console.log('confirmBlockBtn found, adding event listener');
+                blockBtn.addEventListener('click', function(e) {
+                    console.log('confirmBlockBtn clicked!');
+                    e.preventDefault();
+                    confirmBlockSchool();
+                });
+            } else {
+                console.log('confirmBlockBtn NOT found!');
+            }
+        });
+
+        // Clear balance function
+        function clearBalance(schoolId, schoolName) {
+            if (confirm('Are you sure you want to clear the balance for "' + schoolName + '"?\n\nThis will mark all pending invoices as paid.')) {
+                const formData = new FormData();
+                formData.append('action', 'clear_balance');
+                formData.append('school_id', schoolId);
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Balance cleared successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to clear balance'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred: ' + error.message);
+                });
+            }
+        }
+
+        // Unblock school function
+        function unblockSchool(schoolId, schoolName) {
+            if (confirm('Are you sure you want to unblock "' + schoolName + '"?\n\nThis will restore their access to the system.')) {
+                const formData = new FormData();
+                formData.append('action', 'unblock_school');
+                formData.append('school_id', schoolId);
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('School unblocked successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to unblock school'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred: ' + error.message);
+                });
+            }
         }
     </script>
     <!-- End Pay Now Script -->
