@@ -14,7 +14,7 @@ $planController = new PlanController($DB_con);
 $plans = $planController->index();
 
 // Get school ID from URL
-$schoolId = isset($_GET['id']) ? $_GET['id'] : null;
+$schoolId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if (!$schoolId) {
     $_SESSION['error'] = 'No school ID provided!';
@@ -29,6 +29,29 @@ if (!$school) {
     $_SESSION['error'] = 'School not found!';
     header("Location: schools.php");
     exit;
+}
+
+// Get subscription and billing data
+$subscriptionQuery = "SELECT * FROM saas_school_subscriptions WHERE school_id = ?";
+$subscriptionStmt = $DB_con->prepare($subscriptionQuery);
+$subscriptionStmt->execute([$schoolId]);
+$subscriptions = $subscriptionStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get billing cycles
+$billingQuery = "SELECT * FROM saas_billing_cycles WHERE school_id = ? ORDER BY created_at DESC";
+$billingStmt = $DB_con->prepare($billingQuery);
+$billingStmt->execute([$schoolId]);
+$billings = $billingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get payments
+$paymentQuery = "SELECT * FROM saas_payments WHERE school_id = ? ORDER BY created_at DESC";
+$paymentStmt = $DB_con->prepare($paymentQuery);
+$paymentStmt->execute([$schoolId]);
+$payments = $paymentStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Currency formatter
+function formatCurrency($amount) {
+    return 'Rs ' . number_format($amount, 2);
 }
 
 // Handle POST request for updating school from details page
@@ -164,6 +187,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
             <a class="nav-link active" data-toggle="tab" href="#overview">Overview</a>
         </li>
         <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#subscriptions">Subscriptions</a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link" data-toggle="tab" href="#usage">Usage & Limits</a>
         </li>
         <li class="nav-item">
@@ -207,7 +233,36 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
             </div>
         </div>
 
-        <!-- ================= USAGE & LIMITS ================= -->
+        <!-- ================= SUBSCRIPTIONS ================= -->
+        <div class="tab-pane fade" id="subscriptions">
+            <?php if (!empty($subscriptions)): ?>
+            <div class="row">
+                <?php foreach ($subscriptions as $sub): ?>
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5><?php echo htmlspecialchars($sub['plan_name']); ?></h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless">
+                                <tr><th width="50%">Subscription ID</th><td><?php echo $sub['subscription_id']; ?></td></tr>
+                                <tr><th>Plan Name</th><td><?php echo htmlspecialchars($sub['plan_name']); ?></td></tr>
+                                <tr><th>Price Per Student</th><td><?php echo formatCurrency($sub['price_per_student']); ?></td></tr>
+                                <tr><th>Students Count</th><td><?php echo $sub['students_count']; ?></td></tr>
+                                <tr><th>Billing Cycle</th><td><span class="badge badge-info"><?php echo ucfirst($sub['billing_cycle']); ?></span></td></tr>
+                                <tr><th>Status</th><td><span class="badge badge-<?php echo ($sub['status'] === 'active') ? 'success' : 'warning'; ?>"><?php echo htmlspecialchars($sub['status']); ?></span></td></tr>
+                                <tr><th>Start Date</th><td><?php echo date('M d, Y', strtotime($sub['start_date'])); ?></td></tr>
+                                <tr><th>End Date</th><td><?php echo date('M d, Y', strtotime($sub['end_date'])); ?></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="alert alert-info">No subscriptions found for this school.</div>
+            <?php endif; ?>
+        </div>
         <div class="tab-pane fade" id="usage">
             <div class="row">
 
@@ -270,26 +325,97 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
 
         <!-- ================= BILLING ================= -->
         <div class="tab-pane fade" id="billing">
-            <div class="card">
+            
+            <!-- Billing Cycles -->
+            <?php if (!empty($billings)): ?>
+            <div class="card mb-4">
                 <div class="card-header">
-                    <h5>Billing Information</h5>
+                    <h5>Billing Cycles</h5>
                 </div>
                 <div class="card-body">
-                    <table class="table">
-                        <tr><th>Current Plan</th><td>Basic</td></tr>
-                        <tr><th>Amount</th><td>PKR 180 / Student / Year</td></tr>
-                        <tr><th>Last payment date</th><td>25-Jan-2026</td></tr>
-                        <tr><th>Upcoming payment Date</th><td>25-Jan-2026</td></tr>
-                        <tr><th>Due Date</th><td>25-Jan-2026</td></tr>
-                        <tr><th>Payment Status</th><td><span class="badge badge-warning">Due</span></td></tr>
-                    </table>
-
-                    <div class="text-right">
-                        <button class="btn btn-primary btn-sm">Mark as Paid</button>
-                        <button class="btn btn-danger btn-sm">Suspend Portal</button>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Billing ID</th>
+                                    <th>Period</th>
+                                    <th>Due Date</th>
+                                    <th>Total Amount</th>
+                                    <th>Discounted</th>
+                                    <th>Payable</th>
+                                    <th>Paid</th>
+                                    <th>Outstanding</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach (array_slice($billings, 0, 10) as $bill): ?>
+                                <tr>
+                                    <td><?php echo $bill['billing_id']; ?></td>
+                                    <td>
+                                        <?php echo date('M d', strtotime($bill['period_start'])); ?> - 
+                                        <?php echo date('M d, Y', strtotime($bill['period_end'])); ?>
+                                    </td>
+                                    <td><?php echo date('M d, Y', strtotime($bill['due_date'])); ?></td>
+                                    <td><?php echo formatCurrency($bill['total_amount']); ?></td>
+                                    <td><?php echo formatCurrency($bill['discounted_amount']); ?></td>
+                                    <td><?php echo formatCurrency($bill['total_amount'] - $bill['discounted_amount']); ?></td>
+                                    <td><?php echo formatCurrency($bill['paid_amount']); ?></td>
+                                    <td><?php echo formatCurrency($bill['total_amount'] - $bill['paid_amount'] - $bill['discounted_amount']); ?></td>
+                                    <td><span class="badge badge-<?php echo ($bill['status'] === 'paid') ? 'success' : ($bill['status'] === 'partial' ? 'warning' : 'danger'); ?>"><?php echo ucfirst($bill['status']); ?></span></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
+            <?php else: ?>
+            <div class="alert alert-info">No billing cycles found for this school.</div>
+            <?php endif; ?>
+
+            <!-- Payment History -->
+            <?php if (!empty($payments)): ?>
+            <div class="card">
+                <div class="card-header">
+                    <h5>Payment History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Payment ID</th>
+                                    <th>Billing ID</th>
+                                    <th>Payment Date</th>
+                                    <th>Total Amount</th>
+                                    <th>Paid Amount</th>
+                                    <th>Payment Method</th>
+                                    <th>Reference</th>
+                                    <th>Received By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach (array_slice($payments, 0, 10) as $pay): ?>
+                                <tr>
+                                    <td><?php echo $pay['payment_id']; ?></td>
+                                    <td><?php echo $pay['billing_id']; ?></td>
+                                    <td><?php echo date('M d, Y', strtotime($pay['payment_date'])); ?></td>
+                                    <td><?php echo formatCurrency($pay['total_amount']); ?></td>
+                                    <td><strong><?php echo formatCurrency($pay['paid_amount']); ?></strong></td>
+                                    <td><span class="badge badge-primary"><?php echo ucfirst($pay['payment_method']); ?></span></td>
+                                    <td><?php echo htmlspecialchars($pay['reference_no'] ?? 'N/A'); ?></td>
+                                    <td><?php echo htmlspecialchars($pay['received_by'] ?? 'N/A'); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <?php else: ?>
+            <div class="alert alert-info">No payments found for this school.</div>
+            <?php endif; ?>
         </div>
 
     </div>

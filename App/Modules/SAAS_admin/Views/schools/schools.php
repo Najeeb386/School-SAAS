@@ -233,6 +233,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                                 <td><?php echo htmlspecialchars($school['start_date']); ?></td>
                                                                 <td><?php echo htmlspecialchars($school['expires_at']); ?></td>
                                                                 <td>
+                                                                    <a href="school_details.php?id=<?php echo htmlspecialchars($school['id']); ?>" class="btn btn-sm btn-info" title="View Details">
+                                                                        <i class="ti ti-info-circle"></i> Details
+                                                                    </a>
                                                                     <button class="btn btn-sm btn-primary" onclick="editSchool(<?php echo htmlspecialchars(json_encode($school)); ?>)" data-toggle="modal" data-target="#editSchoolModal">Edit</button>
                                                                     <button class="btn btn-sm btn-danger" onclick="setDeleteId(<?php echo htmlspecialchars($school['id']); ?>)" data-toggle="modal" data-target="#deleteConfirmModal">Delete</button>
                                                                 </td>
@@ -357,6 +360,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                                 <option value="pending">Pending</option>
+                                <option value="blocked">Blocked</option>
+                                <option value="suspended">Suspended</option>
                             </select>
                         </div>
 
@@ -531,6 +536,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                                 <option value="pending">Pending</option>
+                                <option value="blocked">Blocked</option>
+                                <option value="suspended">Suspended</option>
                             </select>
                         </div>
 
@@ -586,22 +593,37 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <!-- Modal Script -->
     <script>
         function editSchool(schoolData) {
+            console.log('Edit School Data:', schoolData);
+            
             // Populate the edit modal with school data
-            document.getElementById('editSchoolId').value = schoolData.id;
-            document.getElementById('editName').value = schoolData.name;
-            document.getElementById('editSubdomain').value = schoolData.subdomain;
-            document.getElementById('editEmail').value = schoolData.email;
-            document.getElementById('editContactNo').value = schoolData.contact_no;
-            document.getElementById('editEstimatedStudents').value = schoolData.estimated_students;
-            document.getElementById('editPlan').value = schoolData.plan;
-            document.getElementById('editStatus').value = schoolData.status;
-            document.getElementById('editStartDate').value = schoolData.start_date;
-            document.getElementById('editExpiresAt').value = schoolData.expires_at;
+            document.getElementById('editSchoolId').value = schoolData.id || '';
+            document.getElementById('editName').value = schoolData.name || '';
+            document.getElementById('editSubdomain').value = schoolData.subdomain || '';
+            document.getElementById('editEmail').value = schoolData.email || '';
+            document.getElementById('editContactNo').value = schoolData.contact_no || '';
+            document.getElementById('editEstimatedStudents').value = schoolData.estimated_students || '';
+            document.getElementById('editPlan').value = schoolData.plan || '';
+            document.getElementById('editStatus').value = schoolData.status || 'active';
+            
+            // Format and populate dates (remove time portion if present)
+            const startDate = schoolData.start_date ? schoolData.start_date.split(' ')[0] : '';
+            const expiresAt = schoolData.expires_at ? schoolData.expires_at.split(' ')[0] : '';
+            
+            console.log('Start Date:', startDate);
+            console.log('Expires At:', expiresAt);
+            
+            document.getElementById('editStartDate').value = startDate;
+            document.getElementById('editExpiresAt').value = expiresAt;
+            
+            console.log('Status set to:', schoolData.status);
+            console.log('Start Date set to:', startDate);
+            console.log('Expires At set to:', expiresAt);
             
             // Fetch subscription data for this school
             fetch('get_subscription.php?school_id=' + schoolData.id)
                 .then(response => response.json())
                 .then(data => {
+                    console.log('Subscription data:', data);
                     if (data.success && data.subscription) {
                         document.getElementById('editPricePerStudent').value = data.subscription.price_per_student || '';
                         document.getElementById('editBillingCycle').value = data.subscription.billing_cycle || '';
