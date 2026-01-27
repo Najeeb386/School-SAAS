@@ -17,6 +17,8 @@
                             <li><a href="../../views/expenses/expenses.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">expenses</span></a> </li>
                             <li><a href="../../views/plans/plans.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Plans</span></a> </li>
                             <li><a href="../../views/subscription/subscription.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Subscriptions</span></a> </li>
+                            <li><a href="../../views/reports/reports.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Reports</span></a> </li>
+                        
                         </ul>
                     </div>
                     <!-- end sidebar-nav -->

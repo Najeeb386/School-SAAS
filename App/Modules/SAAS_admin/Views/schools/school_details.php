@@ -329,12 +329,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
             <!-- Billing Cycles -->
             <?php if (!empty($billings)): ?>
             <div class="card mb-4">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5>Billing Cycles</h5>
+                    <div style="gap: 8px; display: flex;">
+                        <button class="btn btn-sm btn-primary" onclick="printBillingTable()"><i class="ti ti-printer"></i> Print</button>
+                        <button class="btn btn-sm btn-danger" onclick="saveBillingPDF()"><i class="ti ti-file-pdf"></i> PDF</button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-sm table-striped">
+                        <table class="table table-sm table-striped" id="billingTable">
                             <thead>
                                 <tr>
                                     <th>Billing ID</th>
@@ -349,7 +353,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach (array_slice($billings, 0, 10) as $bill): ?>
+                                <?php 
+                                    $totalAmount = 0;
+                                    $totalDiscounted = 0;
+                                    $totalPayable = 0;
+                                    $totalPaid = 0;
+                                    $totalOutstanding = 0;
+                                    foreach (array_slice($billings, 0, 10) as $bill): 
+                                        $payable = $bill['total_amount'] - $bill['discounted_amount'];
+                                        $outstanding = $bill['total_amount'] - $bill['paid_amount'] - $bill['discounted_amount'];
+                                        $totalAmount += $bill['total_amount'];
+                                        $totalDiscounted += $bill['discounted_amount'];
+                                        $totalPayable += $payable;
+                                        $totalPaid += $bill['paid_amount'];
+                                        $totalOutstanding += $outstanding;
+                                ?>
                                 <tr>
                                     <td><?php echo $bill['billing_id']; ?></td>
                                     <td>
@@ -359,13 +377,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
                                     <td><?php echo date('M d, Y', strtotime($bill['due_date'])); ?></td>
                                     <td><?php echo formatCurrency($bill['total_amount']); ?></td>
                                     <td><?php echo formatCurrency($bill['discounted_amount']); ?></td>
-                                    <td><?php echo formatCurrency($bill['total_amount'] - $bill['discounted_amount']); ?></td>
+                                    <td><?php echo formatCurrency($payable); ?></td>
                                     <td><?php echo formatCurrency($bill['paid_amount']); ?></td>
-                                    <td><?php echo formatCurrency($bill['total_amount'] - $bill['paid_amount'] - $bill['discounted_amount']); ?></td>
+                                    <td><?php echo formatCurrency($outstanding); ?></td>
                                     <td><span class="badge badge-<?php echo ($bill['status'] === 'paid') ? 'success' : ($bill['status'] === 'partial' ? 'warning' : 'danger'); ?>"><?php echo ucfirst($bill['status']); ?></span></td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
+                            <tfoot>
+                                <tr style="background-color: #f0f0f0; font-weight: bold;">
+                                    <td colspan="3" class="text-right">TOTAL:</td>
+                                    <td><?php echo formatCurrency($totalAmount); ?></td>
+                                    <td><?php echo formatCurrency($totalDiscounted); ?></td>
+                                    <td><?php echo formatCurrency($totalPayable); ?></td>
+                                    <td><?php echo formatCurrency($totalPaid); ?></td>
+                                    <td><?php echo formatCurrency($totalOutstanding); ?></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -377,12 +406,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
             <!-- Payment History -->
             <?php if (!empty($payments)): ?>
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5>Payment History</h5>
+                    <div style="gap: 8px; display: flex;">
+                        <button class="btn btn-sm btn-primary" onclick="printPaymentTable()"><i class="ti ti-printer"></i> Print</button>
+                        <button class="btn btn-sm btn-danger" onclick="savePaymentPDF()"><i class="ti ti-file-pdf"></i> PDF</button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-sm table-striped">
+                        <table class="table table-sm table-striped" id="paymentTable">
                             <thead>
                                 <tr>
                                     <th>Payment ID</th>
@@ -396,7 +429,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach (array_slice($payments, 0, 10) as $pay): ?>
+                                <?php 
+                                    $paymentTotal = 0;
+                                    $paymentPaid = 0;
+                                    foreach (array_slice($payments, 0, 10) as $pay): 
+                                        $paymentTotal += $pay['total_amount'];
+                                        $paymentPaid += $pay['paid_amount'];
+                                ?>
                                 <tr>
                                     <td><?php echo $pay['payment_id']; ?></td>
                                     <td><?php echo $pay['billing_id']; ?></td>
@@ -409,6 +448,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
+                            <tfoot>
+                                <tr style="background-color: #f0f0f0; font-weight: bold;">
+                                    <td colspan="3" class="text-right">TOTAL:</td>
+                                    <td><?php echo formatCurrency($paymentTotal); ?></td>
+                                    <td><?php echo formatCurrency($paymentPaid); ?></td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -585,6 +632,85 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
 
     <!-- custom app -->
     <script src="../../../../../public/assets/js/app.js"></script>
+
+    <!-- html2pdf library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        // Print Billing Table
+        function printBillingTable() {
+            const printWindow = window.open('', '', 'height=600,width=800');
+            const billingTable = document.getElementById('billingTable');
+            printWindow.document.write('<html><head><title>Billing Cycles Report</title>');
+            printWindow.document.write('<style>');
+            printWindow.document.write('body { font-family: Arial, sans-serif; margin: 20px; }');
+            printWindow.document.write('table { width: 100%; border-collapse: collapse; }');
+            printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }');
+            printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+            printWindow.document.write('tfoot tr { background-color: #f9f9f9; font-weight: bold; }');
+            printWindow.document.write('</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write('<h2>Billing Cycles Report</h2>');
+            printWindow.document.write(billingTable.outerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 100);
+        }
+
+        // Print Payment Table
+        function printPaymentTable() {
+            const printWindow = window.open('', '', 'height=600,width=800');
+            const paymentTable = document.getElementById('paymentTable');
+            printWindow.document.write('<html><head><title>Payment History Report</title>');
+            printWindow.document.write('<style>');
+            printWindow.document.write('body { font-family: Arial, sans-serif; margin: 20px; }');
+            printWindow.document.write('table { width: 100%; border-collapse: collapse; }');
+            printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }');
+            printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+            printWindow.document.write('tfoot tr { background-color: #f9f9f9; font-weight: bold; }');
+            printWindow.document.write('</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write('<h2>Payment History Report</h2>');
+            printWindow.document.write(paymentTable.outerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 100);
+        }
+
+        // Save Billing Table as PDF
+        function saveBillingPDF() {
+            const element = document.getElementById('billingTable');
+            const schoolName = document.querySelector('.page-title h1').textContent;
+            const filename = 'Billing-Cycles-' + schoolName + '-' + new Date().toISOString().split('T')[0] + '.pdf';
+            
+            const opt = {
+                margin: 5,
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
+            };
+            
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // Save Payment Table as PDF
+        function savePaymentPDF() {
+            const element = document.getElementById('paymentTable');
+            const schoolName = document.querySelector('.page-title h1').textContent;
+            const filename = 'Payment-History-' + schoolName + '-' + new Date().toISOString().split('T')[0] + '.pdf';
+            
+            const opt = {
+                margin: 5,
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
+            };
+            
+            html2pdf().set(opt).from(element).save();
+        }
+    </script>
 </body>
 
 
