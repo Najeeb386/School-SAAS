@@ -165,7 +165,31 @@ $schools = $subscriptionModel->getAllSchools();
                                                                     ?>
                                                                 </td>
                                                                 <td>
-                                                                    <button class="btn btn-sm btn-primary renew-btn" data-school-id="<?php echo $school['id']; ?>" data-school-name="<?php echo htmlspecialchars($school['name']); ?>" data-plan="<?php echo htmlspecialchars($school['plan']); ?>" data-toggle="modal" data-target="#renewModal">Renew</button>
+                                                                    <?php 
+                                                                        $today = new DateTime();
+                                                                        $expiryDate = new DateTime($school['expires_at']);
+                                                                        $interval = $today->diff($expiryDate);
+                                                                        $daysLeft = (int)$interval->format('%r%a');
+                                                                        
+                                                                        // Show renew button with warning if expiring in 7 days or less
+                                                                        if ($daysLeft >= 0 && $daysLeft <= 7) {
+                                                                            echo '<button class="btn btn-sm btn-danger renew-btn" 
+                                                                                    data-school-id="' . htmlspecialchars($school['id']) . '" 
+                                                                                    data-school-name="' . htmlspecialchars($school['name']) . '" 
+                                                                                    data-estimated-students="' . htmlspecialchars($school['estimated_students']) . '"
+                                                                                    data-plan="' . htmlspecialchars($school['plan']) . '" 
+                                                                                    data-toggle="modal" 
+                                                                                    data-target="#renewModal">Renew (' . $daysLeft . ' days)</button> ';
+                                                                        } else {
+                                                                            echo '<button class="btn btn-sm btn-warning renew-btn" 
+                                                                                    data-school-id="' . htmlspecialchars($school['id']) . '" 
+                                                                                    data-school-name="' . htmlspecialchars($school['name']) . '" 
+                                                                                    data-estimated-students="' . htmlspecialchars($school['estimated_students']) . '"
+                                                                                    data-plan="' . htmlspecialchars($school['plan']) . '" 
+                                                                                    data-toggle="modal" 
+                                                                                    data-target="#renewModal">Renew</button> ';
+                                                                        }
+                                                                    ?>
                                                                     <button class="btn btn-sm btn-info extend-btn" data-school-id="<?php echo $school['id']; ?>" data-school-name="<?php echo htmlspecialchars($school['name']); ?>" data-toggle="modal" data-target="#extendModal">Extend</button>
                                                                 </td>
                                                             </tr>
@@ -223,7 +247,7 @@ $schools = $subscriptionModel->getAllSchools();
 
     <!-- Renew Subscription Modal -->
     <div class="modal fade" id="renewModal" tabindex="-1" role="dialog" aria-labelledby="renewModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="renewModalLabel">Renew Subscription</h5>
@@ -231,19 +255,176 @@ $schools = $subscriptionModel->getAllSchools();
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to renew the subscription for <strong id="renewSchoolName"></strong>?</p>
-                    <p>Plan: <strong id="renewPlan"></strong></p>
-                    <p>This will extend the subscription by <strong id="renewDuration">1 year</strong> from today.</p>
-                    
-                    <div class="alert alert-info mt-3">
-                        <i class="ti ti-info-circle"></i> Current expiry date will be replaced with the new renewal date.
+                <form id="renewForm" method="POST" action="">
+                    <div class="modal-body">
+                        <input type="hidden" id="renewSchoolId" name="school_id" value="">
+                        <input type="hidden" id="renewAction" name="action" value="renew">
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>School Name</label>
+                                    <input type="text" class="form-control" id="renewSchoolNameField" disabled>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewPlanField">Plan <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="renewPlanField" name="plan" required>
+                                        <option value="">Select Plan</option>
+                                        <?php 
+                                        require_once '../../Controllers/plain_controller.php';
+                                        $planController = new PlanController($DB_con);
+                                        $plans = $planController->index();
+                                        if(!empty($plans)): 
+                                            foreach($plans as $plan): 
+                                                echo '<option value="' . htmlspecialchars($plan['name']) . '">' . htmlspecialchars($plan['name']) . '</option>';
+                                            endforeach;
+                                        endif;
+                                        ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewCurrentStudents">Current Students (Estimated) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="renewCurrentStudents" name="current_students" placeholder="0" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewBillingStudents">Billing Students <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="renewBillingStudents" name="billing_students" placeholder="0" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewPricePerStudent">Price Per Student <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="renewPricePerStudent" name="price_per_student" placeholder="0.00" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewBillingCycle">Billing Cycle <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="renewBillingCycle" name="billing_cycle" required>
+                                        <option value="">Select Cycle</option>
+                                        <option value="monthly">Monthly</option>
+                                        <option value="quarterly">Quarterly</option>
+                                        <option value="semi-annual">Semi-Annual</option>
+                                        <option value="yearly">Yearly</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Total Amount (Readonly) <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="renewTotalAmount" value="0.00" readonly style="background-color: #e9ecef;">
+                                    <small class="form-text text-muted">Automatically calculated as: Student Count × Price per Student</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Discount Section -->
+                        <h6 class="mb-3"><strong>Discount (Optional)</strong></h6>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewDiscountType">Discount Type</label>
+                                    <select class="form-control" id="renewDiscountType" name="discount_type">
+                                        <option value="none">None</option>
+                                        <option value="percentage">Percentage (%)</option>
+                                        <option value="fixed">Fixed Amount</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewDiscountValue">Discount Value</label>
+                                    <input type="number" class="form-control" id="renewDiscountValue" name="discount_value" placeholder="e.g., 10 for 10%" step="0.01" value="0">
+                                    <small class="form-text text-muted">Enter discount percentage (e.g., 10 for 10%)</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Final Amount After Discount (Readonly) <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="renewFinalAmount" value="0.00" readonly style="background-color: #e9ecef; font-weight: bold; color: green;">
+                                    <small class="form-text text-muted">Total Amount - Discount</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Payment Section -->
+                        <h6 class="mb-3"><strong>Payment Information</strong></h6>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewPaidAmount">Paid Amount</label>
+                                    <input type="number" class="form-control" id="renewPaidAmount" name="paid_amount" placeholder="0.00" step="0.01" value="0">
+                                    <small class="form-text text-muted">Leave blank or 0 if payment not received yet</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewPaymentMethod">Payment Method <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="renewPaymentMethod" name="payment_method" required>
+                                        <option value="">Select Payment Method</option>
+                                        <option value="cash">Cash</option>
+                                        <option value="bank">Bank Transfer</option>
+                                        <option value="card">Credit/Debit Card</option>
+                                        <option value="online">Online Payment</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewReferenceNo">Reference No (Transaction ID)</label>
+                                    <input type="text" class="form-control" id="renewReferenceNo" name="reference_no" placeholder="e.g., TXN123456">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="renewReceivedBy">Received By</label>
+                                    <input type="text" class="form-control" id="renewReceivedBy" name="received_by" placeholder="Name of person who received payment">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="renewPaymentDate">Payment Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="renewPaymentDate" name="payment_date" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="renewNotes">Notes</label>
+                            <textarea class="form-control" id="renewNotes" name="notes" rows="2" placeholder="Additional notes..."></textarea>
+                        </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="confirmRenewBtn">Confirm Renew</button>
-                </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Process Renewal</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -305,32 +486,140 @@ $schools = $subscriptionModel->getAllSchools();
     <script>
         let selectedSchoolId = '';
         let selectedSchoolName = '';
+        let selectedEstimatedStudents = '';
+        let selectedPricePerStudent = 0;
 
         $(document).ready(function() {
+            // Set today's date as default payment date
+            const today = new Date().toISOString().split('T')[0];
+            $('#renewPaymentDate').val(today);
+
             // Handle Renew button click
             $(document).on('click', '.renew-btn', function() {
                 selectedSchoolId = $(this).data('school-id');
                 selectedSchoolName = $(this).data('school-name');
-                let plan = $(this).data('plan');
+                selectedEstimatedStudents = $(this).data('estimated-students');
+                const plan = $(this).data('plan');
+
+                // Populate modal
+                $('#renewSchoolId').val(selectedSchoolId);
+                $('#renewSchoolNameField').val(selectedSchoolName);
+                $('#renewPlanField').val(plan);
+                $('#renewCurrentStudents').val(selectedEstimatedStudents);
+                $('#renewBillingStudents').val(selectedEstimatedStudents);
+
+                // Fetch subscription details to get price and billing cycle
+                $.ajax({
+                    url: '../schools/get_subscription.php?school_id=' + selectedSchoolId,
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success && response.subscription) {
+                            selectedPricePerStudent = response.subscription.price_per_student || 0;
+                            $('#renewPricePerStudent').val(selectedPricePerStudent);
+                            $('#renewBillingCycle').val(response.subscription.billing_cycle || 'yearly');
+                            calculateTotalAmount();
+                        }
+                    },
+                    error: function(err) {
+                        console.error('Error fetching subscription:', err);
+                        $('#renewPricePerStudent').val(0);
+                        $('#renewBillingCycle').val('yearly');
+                    }
+                });
+            });
+
+            // Calculate total amount when billing students or price changes
+            function calculateTotalAmount() {
+                const billingStudents = parseInt($('#renewBillingStudents').val()) || 0;
+                const pricePerStudent = parseFloat($('#renewPricePerStudent').val()) || 0;
+                const totalAmount = (billingStudents * pricePerStudent).toFixed(2);
+                $('#renewTotalAmount').val(totalAmount);
+                calculateFinalAmount();
+            }
+
+            // Calculate final amount with discount
+            function calculateFinalAmount() {
+                const totalAmount = parseFloat($('#renewTotalAmount').val()) || 0;
+                const discountType = $('#renewDiscountType').val();
+                const discountValue = parseFloat($('#renewDiscountValue').val()) || 0;
                 
-                $('#renewSchoolName').text(selectedSchoolName);
-                $('#renewPlan').text(plan);
-                
-                // Set renewal duration based on plan
-                let duration = '1 year';
-                if (plan.toLowerCase() === 'monthly') {
-                    duration = '1 month';
-                } else if (plan.toLowerCase() === 'quarterly') {
-                    duration = '3 months';
+                let discountAmount = 0;
+                if (discountType === 'percentage' && discountValue > 0) {
+                    discountAmount = (totalAmount * discountValue / 100).toFixed(2);
+                } else if (discountType === 'fixed' && discountValue > 0) {
+                    discountAmount = discountValue.toFixed(2);
                 }
-                $('#renewDuration').text(duration);
+                
+                const finalAmount = (totalAmount - discountAmount).toFixed(2);
+                $('#renewFinalAmount').val(finalAmount);
+            }
+
+            $(document).on('change keyup', '#renewBillingStudents, #renewPricePerStudent', function() {
+                calculateTotalAmount();
+            });
+
+            $(document).on('change keyup', '#renewDiscountType, #renewDiscountValue', function() {
+                calculateFinalAmount();
+            });
+
+            // Handle plan change in renewal modal - fetch price from plans table
+            $(document).on('change', '#renewPlanField', function() {
+                const planName = $(this).val();
+                if (planName) {
+                    $.ajax({
+                        url: 'get_plan_price.php?plan_name=' + encodeURIComponent(planName),
+                        method: 'GET',
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.success) {
+                                const price = response.price || 0;
+                                $('#renewPricePerStudent').val(price);
+                                selectedPricePerStudent = price;
+                                calculateTotalAmount();
+                            }
+                        },
+                        error: function(err) {
+                            console.error('Error fetching plan price:', err);
+                        }
+                    });
+                }
+            });
+
+            // Handle Renew form submission
+            $('#renewForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                
+                // Send renewal data to server
+                $.ajax({
+                    url: 'process_renewal.php',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    dataType: 'json',
+                    success: function(data) {
+                        if (data.success) {
+                            alert('Subscription renewed successfully!');
+                            $('#renewModal').modal('hide');
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (data.message || 'Unknown error'));
+                        }
+                    },
+                    error: function(err) {
+                        console.error('Error:', err);
+                        alert('Error processing renewal');
+                    }
+                });
             });
 
             // Handle Extend button click
             $(document).on('click', '.extend-btn', function() {
                 selectedSchoolId = $(this).data('school-id');
                 selectedSchoolName = $(this).data('school-name');
-                
                 $('#extendSchoolName').text(selectedSchoolName);
                 $('#extendDays').val('');
                 $('input[name="preset"][value="30"]').prop('checked', true);
@@ -339,31 +628,6 @@ $schools = $subscriptionModel->getAllSchools();
             // Handle preset duration selection
             $(document).on('change', 'input[name="preset"]', function() {
                 $('#extendDays').val($(this).val());
-            });
-
-            // Handle Confirm Renew
-            $('#confirmRenewBtn').click(function() {
-                $.ajax({
-                    url: './handle_subscription.php',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        action: 'renew',
-                        schoolId: selectedSchoolId
-                    }),
-                    success: function(response) {
-                        if (response.success) {
-                            alert('Subscription renewed successfully!');
-                            $('#renewModal').modal('hide');
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    },
-                    error: function() {
-                        alert('Error renewing subscription');
-                    }
-                });
             });
 
             // Handle Confirm Extend
