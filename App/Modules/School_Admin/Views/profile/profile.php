@@ -1,19 +1,39 @@
 <?php
 /**
- * School Admin Dashboard - Protected Page
- * User must be logged in to access this page
+ * School Profile View
+ * Pure display logic - all business logic handled by controller
  */
 require_once __DIR__ . '/../../../../Config/auth_check.php';
+
+// Initialize MVC
+require_once __DIR__ . '/../../../../../autoloader.php';
+
+use App\Modules\School_Admin\Controllers\SchoolProfileController;
+
+$school_id = $_SESSION['school_id'] ?? null;
+if (!$school_id) {
+    die('School ID not found in session');
+}
+
+// Create controller and handle requests
+$controller = new SchoolProfileController($school_id);
+$controller->handleRequest();
+
+// Get data from controller
+$school = $controller->getSchoolData();
+$storage_info = $controller->getStorageInfo();
+$success_message = $controller->getSuccessMessage();
+$error_message = $controller->getErrorMessage();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 
 <head>
-    <title>School Admin Dashboard</title>
+    <title>School Profile</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <meta name="description" content="School Admin Dashboard - Manage your school" />
+    <meta name="description" content="School Profile - Manage your school information" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <!-- app favicon -->
     <link rel="shortcut icon" href="../../../../../public/assets/img/favicon.ico">
@@ -23,6 +43,42 @@ require_once __DIR__ . '/../../../../Config/auth_check.php';
     <link rel="stylesheet" type="text/css" href="../../../../../public/assets/css/vendors.css" />
     <!-- app style -->
     <link rel="stylesheet" type="text/css" href="../../../../../public/assets/css/style.css" />
+    <style>
+        html, body {
+            height: 100%;
+        }
+        .app {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .app-wrap {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .app-container {
+            flex: 1;
+            display: flex;
+        }
+        .app-main {
+            flex: 1;
+            padding-bottom: 30px;
+        }
+        .footer {
+            margin-top: auto;
+            background: #f5f5f5;
+            border-top: 1px solid #e8e8e8;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .card-body {
+            padding: 40px;
+            min-height: 400px;
+        }
+    </style>
 </head>
 
 <body>
@@ -42,14 +98,14 @@ require_once __DIR__ . '/../../../../Config/auth_check.php';
             <!-- begin app-header -->
             <header class="app-header top-bar">
                 <!-- begin navbar -->
-                <?php include_once __DIR__ . '../../../include/navbar.php'; ?>
+                <?php include_once __DIR__ . '/../../include/navbar.php'; ?>
                 <!-- end navbar -->
             </header>
             <!-- end app-header -->
             <!-- begin app-container -->
             <div class="app-container">
-                <!-- begin app-nabar -->
-                <?php include_once __DIR__ . '../../../include/sidebar.php'; ?>
+                <!-- begin app-navbar -->
+                <?php include_once __DIR__ . '/../../include/sidebar.php'; ?>
                 <!-- end app-navbar -->
                 <!-- begin app-main -->
                 <div class="app-main" id="main">
@@ -61,706 +117,303 @@ require_once __DIR__ . '/../../../../Config/auth_check.php';
                                 <!-- begin page title -->
                                 <div class="d-block d-lg-flex flex-nowrap align-items-center">
                                     <div class="page-title mr-4 pr-4 border-right">
-                                        <h1>Dashboard</h1>
+                                        <h1>School Profile</h1>
                                     </div>
                                     <div class="breadcrumb-bar align-items-center">
                                         <nav>
                                             <ol class="breadcrumb p-0 m-b-0">
                                                 <li class="breadcrumb-item">
-                                                    <a href="index.html"><i class="ti ti-home"></i></a>
+                                                    <a href="../dashboard/index.php"><i class="ti ti-home"></i></a>
                                                 </li>
                                                 <li class="breadcrumb-item">
-                                                    Dashboard
+                                                    School Admin
                                                 </li>
-                                                <li class="breadcrumb-item active text-primary" aria-current="page">Default</li>
+                                                <li class="breadcrumb-item active text-primary" aria-current="page">Profile</li>
                                             </ol>
                                         </nav>
-                                    </div>
-                                    <div class="ml-auto d-flex align-items-center secondary-menu text-center">
-                                        <a href="javascript:void(0);" class="tooltip-wrapper" data-toggle="tooltip" data-placement="top" title="" data-original-title="Todo list">
-                                            <i class="fe fe-edit btn btn-icon text-primary"></i>
-                                        </a>
-                                        <a href="javascript:void(0);" class="tooltip-wrapper" data-toggle="tooltip" data-placement="top" title="" data-original-title="Projects">
-                                            <i class="fa fa-lightbulb-o btn btn-icon text-success"></i>
-                                        </a>
-                                        <a href="javascript:void(0);" class="tooltip-wrapper" data-toggle="tooltip" data-placement="top" title="" data-original-title="Task">
-                                            <i class="fa fa-check btn btn-icon text-warning"></i>
-                                        </a>
-                                        <a href="javascript:void(0);" class="tooltip-wrapper" data-toggle="tooltip" data-placement="top" title="" data-original-title="Calendar">
-                                            <i class="fa fa-calendar-o btn btn-icon text-cyan"></i>
-                                        </a>
-                                        <a href="javascript:void(0);" class="tooltip-wrapper" data-toggle="tooltip" data-placement="top" title="" data-original-title="Analytics">
-                                            <i class="fa fa-bar-chart-o btn btn-icon text-danger"></i>
-                                        </a>
                                     </div>
                                 </div>
                                 <!-- end page title -->
                             </div>
                         </div>
-                        <!-- Notification -->
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="alert border-0 alert-primary bg-gradient m-b-30 alert-dismissible fade show border-radius-none" role="alert">
-                                    <strong>Holy guacamole!</strong> You should check in on some of those
-                                    fields below.
-                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                        <i class="ti ti-close"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                         <!-- end row -->
-                        <!-- begin row -->
-                        <div class="row">
-                            <div class="col-sm-12">
-                                <div class="card card-statistics">
-                                    <div class="row no-gutters">
-                                        <div class="col-xxl-3 col-lg-6">
-                                            <div class="p-20 border-lg-right border-bottom border-xxl-bottom-0">
-                                                <div class="d-flex m-b-10">
-                                                    <p class="mb-0 font-regular text-muted font-weight-bold">Total Visits</p>
-                                                    <a class="mb-0 ml-auto font-weight-bold" href="#"><i class="ti ti-more-alt"></i> </a>
-                                                </div>
-                                                <div class="d-block d-sm-flex h-100 align-items-center">
-                                                    <div class="apexchart-wrapper">
-                                                        <div id="analytics7"></div>
-                                                    </div>
-                                                    <div class="statistics mt-3 mt-sm-0 ml-sm-auto text-center text-sm-right">
-                                                        <h3 class="mb-0"><i class="icon-arrow-up-circle"></i> 15,640</h3>
-                                                        <p>Monthly visitor</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-xxl-3 col-lg-6">
-                                            <div class="p-20 border-xxl-right border-bottom border-xxl-bottom-0">
-                                                <div class="d-flex m-b-10">
-                                                    <p class="mb-0 font-regular text-muted font-weight-bold">Total Cost</p>
-                                                    <a class="mb-0 ml-auto font-weight-bold" href="#"><i class="ti ti-more-alt"></i> </a>
-                                                </div>
-                                                <div class="d-block d-sm-flex h-100 align-items-center">
-                                                    <div class="apexchart-wrapper">
-                                                        <div id="analytics8"></div>
-                                                    </div>
-                                                    <div class="statistics mt-3 mt-sm-0 ml-sm-auto text-center text-sm-right">
-                                                        <h3 class="mb-0"><i class="icon-arrow-up-circle"></i> 16,656</h3>
-                                                        <p>This month</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-xxl-3 col-lg-6">
-                                            <div class="p-20 border-lg-right border-bottom border-lg-bottom-0">
-                                                <div class="d-flex m-b-10">
-                                                    <p class="mb-0 font-regular text-muted font-weight-bold">Total Sales</p>
-                                                    <a class="mb-0 ml-auto font-weight-bold" href="#"><i class="ti ti-more-alt"></i> </a>
-                                                </div>
-                                                <div class="d-block d-sm-flex h-100 align-items-center">
-                                                    <div class="apexchart-wrapper">
-                                                        <div id="analytics9"></div>
-                                                    </div>
-                                                    <div class="statistics mt-3 mt-sm-0 ml-sm-auto text-center text-sm-right">
-                                                        <h3 class="mb-0"><i class="icon-arrow-up-circle"></i>569</h3>
-                                                        <p>Avg. Sales per day</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-xxl-3 col-lg-6">
-                                            <div class="p-20">
-                                                <div class="d-block d-sm-flex h-100 align-items-center">
-                                                    <div class="apexchart-wrapper">
-                                                        <div id="analytics10"></div>
-                                                    </div>
-                                                    <div class="statistics ml-sm-auto mt-4 mt-sm-0 pr-sm-5">
-                                                        <ul class="list-style-none p-0">
-                                                            <li class="d-flex py-1">
-                                                                <span><i class="fa fa-circle text-primary pr-2"></i> Redirect Visits</span> <span class="pl-2 font-weight-bold">456</span></li>
-                                                            <li class="d-flex py-1"><span><i class="fa fa-circle text-warning pr-2"></i> New Visits</span> <span class="pl-2 font-weight-bold">256</span></li>
-                                                            <li class="d-flex py-1"><span><i class="fa fa-circle text-info pr-2"></i> Direct Visits</span> <span class="pl-2 font-weight-bold">128</span></li>
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-xxl-7 m-b-30">
-                                <div class="card card-statistics h-100 mb-0 apexchart-tool-force-top">
-                                    <div class="card-header d-flex justify-content-between">
-                                        <div class="card-heading">
-                                            <h4 class="card-title">Site activity</h4>
-                                        </div>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-6 col-xs-6 col-lg-3">
-                                                <div class="row mb-2 pb-3 align-items-end">
-                                                    <div class="col">
-                                                        <p>Users</p>
-                                                        <h3 class="tex-dark mb-0">8.6K</h3>
-                                                    </div>
-                                                    <div class="col ml-auto">
-                                                        <span><i class="fa fa-arrow-down"></i> 2.5%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-6 col-xs-6 col-lg-3">
-                                                <div class="row mb-2 pb-3 align-items-end">
-                                                    <div class="col">
-                                                        <p>Revenue</p>
-                                                        <h3 class="tex-dark mb-0">176K</h3>
-                                                    </div>
-                                                    <div class="col ml-auto">
-                                                        <span><i class="fa fa-arrow-up"></i> 15%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-6 col-xs-6 col-lg-3">
-                                                <div class="row mb-2 pb-3 align-items-end">
-                                                    <div class="col">
-                                                        <p>Rate</p>
-                                                        <h3 class="tex-dark mb-0">6.2K</h3>
-                                                    </div>
-                                                    <div class="col ml-auto">
-                                                        <span><i class="fa fa-arrow-down"></i> 6.5%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-6 col-xs-6 col-lg-3">
-                                                <div class="row mb-2 pb-3 align-items-end">
-                                                    <div class="col">
-                                                        <p>Sessions</p>
-                                                        <h3 class="tex-dark mb-0">44K</h3>
-                                                    </div>
-                                                    <div class="col ml-auto">
-                                                        <span><i class="fa fa-arrow-down"></i> 1.8%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-12 px-0">
-                                                <div class="apexchart-wrapper p-inherit">
-                                                    <div id="analytics1"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-xxl-5 m-b-30">
-                                <div class="card card-statistics h-100 mb-0">
-                                    <div class="card-header d-flex justify-content-between">
-                                        <div class="card-heading">
-                                            <h4 class="card-title">Income Analysis</h4>
-                                        </div>
-                                        <div class="dropdown">
-                                            <a class="p-2" href="#!" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                <i class="fe fe-circle"></i>
-                                            </a>
-                                            <div class="dropdown-menu custom-dropdown dropdown-menu-right p-4">
-                                                <h6 class="mb-1">Action</h6>
-                                                <a class="dropdown-item" href="#!"><i class="fa-fw fa fa-file-o pr-2"></i>View reports</a>
-                                                <a class="dropdown-item" href="#!"><i class="fa-fw fa fa-edit pr-2"></i>Edit reports</a>
-                                                <a class="dropdown-item" href="#!"><i class="fa-fw fa fa-bar-chart-o pr-2"></i>Statistics</a>
-                                                <h6 class="mb-1 mt-3">Export</h6>
-                                                <a class="dropdown-item" href="#!"><i class="fa-fw fa fa-file-pdf-o pr-2"></i>Export to PDF</a>
-                                                <a class="dropdown-item" href="#!"><i class="fa-fw fa fa-file-excel-o pr-2"></i>Export to CSV</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-xs-6">
-                                                <h2>3.8k</h2>
-                                                <span class="d-block mb-2 font-16">AVG sessions</span>
-                                                <span class="d-block mb-2 mb-sm-5"><b class="text-primary">-65.88%</b> vs last 1 months</span>
-                                                <p class="mb-3">Sapiente corporis fugiat, doloremque eveniet nostrum id molestiae quaerat!</p>
-                                                <a class="btn btn-round btn-inverse-primary mb-3 mb-sm-0" href="#"><b>View details </b></a>
-                                            </div>
-                                            <div class="col-xs-6">
-                                                <div class="apexchart-wrapper">
-                                                    <div id="analytics2" class="chart-fit"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="border-top my-4"></div>
-                                        <h4 class="card-title">Income by department</h4>
-                                        <div class="row">
-                                            <div class="col-12 col-md-3">
-                                                <span>FCBK: <b>$1,475</b></span>
-                                                <div class="progress my-3" style="height: 4px;">
-                                                    <div class="progress-bar" role="progressbar" style="width: 80%;" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-                                                </div>
-                                            </div>
-                                            <div class="col-12 col-md-3">
-                                                <span>GGL: <b>$23,475</b></span>
-                                                <div class="progress my-3" style="height: 4px;">
-                                                    <div class="progress-bar bg-success" role="progressbar" style="width: 66%;" aria-valuenow="66" aria-valuemin="0" aria-valuemax="100"></div>
-                                                </div>
-                                            </div>
-                                            <div class="col-12 col-md-3">
-                                                <span>APL: <b>$1,658</b></span>
-                                                <div class="progress my-3" style="height: 4px;">
-                                                    <div class="progress-bar bg-danger" role="progressbar" style="width: 78%;" aria-valuenow="78" aria-valuemin="0" aria-valuemax="100"></div>
-                                                </div>
-                                            </div>
-                                            <div class="col-12 col-md-3">
-                                                <span>SMG: <b>$12,489</b></span>
-                                                <div class="progress my-3" style="height: 4px;">
-                                                    <div class="progress-bar bg-info" role="progressbar" style="width: 55%;" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-6 col-xxl-4 m-b-30">
-                                <div class="card card-statistics h-100 mb-0">
-                                    <div class="card-header d-flex justify-content-between">
-                                        <div class="card-heading">
-                                            <h4 class="card-title">Support Ticket</h4>
-                                        </div>
-                                        <div class="dropdown">
-                                            <a class="btn btn-round btn-inverse-primary btn-xs" href="#">View all </a>
-                                        </div>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row active-task m-b-20">
-                                            <div class="col-xs-1">
-                                                <div class="bg-type mb-1 mb-xs-0 mt-1">
-                                                    <span>PP</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-11">
-                                                <small class="d-block mb-1">Car dealer</small>
-                                                <h5 class="mb-0"><a href="#">Unread utf-8 in more quick overview</a></h5>
-                                                <ul class="list-unstyled list-inline">
-                                                    <li class="list-inline-item">
-                                                        <small> Created by Lizzy Halfman</small>
-                                                    </li>
-                                                    <li class="list-inline-item">|</li>
-                                                    <li class="list-inline-item">
-                                                        <small>Saturday, March 17 2019</small>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="row active-task m-b-20">
-                                            <div class="col-xs-1">
-                                                <div class="bg-type bg-pink mb-1 mb-xs-0 mt-1">
-                                                    <span>SL</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-11">
-                                                <small class="d-block mb-1">Webster HTML5 </small>
-                                                <h5 class="mb-0"><a href="#">I get an error "No Direct Access Allowed!" when I enter purchase</a></h5>
-                                                <ul class="list-unstyled list-inline">
-                                                    <li class="list-inline-item">
-                                                        <small> Created by Samuel Woods</small>
-                                                    </li>
-                                                    <li class="list-inline-item">|</li>
-                                                    <li class="list-inline-item">
-                                                        <small>Sunday, March 19 2019</small>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="row active-task m-b-20">
-                                            <div class="col-xs-1">
-                                                <div class="bg-type bg-success mb-1 mb-xs-0 mt-1">
-                                                    <span>MP</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-11">
-                                                <small class="d-block mb-1">The corps</small>
-                                                <h5 class="mb-0"><a href="#">OAuth Credentials not generating the key</a></h5>
-                                                <ul class="list-unstyled list-inline">
-                                                    <li class="list-inline-item">
-                                                        <small> Created by Andrew nico</small>
-                                                    </li>
-                                                    <li class="list-inline-item">|</li>
-                                                    <li class="list-inline-item">
-                                                        <small>Monday, March 21 2019</small>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="row active-task m-b-20">
-                                            <div class="col-xs-1">
-                                                <div class="bg-type bg-orange mb-1 mb-xs-0 mt-1">
-                                                    <span>SP</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-11">
-                                                <small class="d-block mb-1">Sam martin vCard</small>
-                                                <h5 class="mb-0"><a href="#">Pre-Buy Questions : For bakery Shop (Mentor Android Application)</a></h5>
-                                                <ul class="list-unstyled list-inline">
-                                                    <li class="list-inline-item">
-                                                        <small> Created by Jimmy Falicon</small>
-                                                    </li>
-                                                    <li class="list-inline-item">|</li>
-                                                    <li class="list-inline-item">
-                                                        <small>Friday, March 22 2019</small>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="row active-task m-b-20">
-                                            <div class="col-xs-1">
-                                                <div class="bg-type bg-info mb-1 mb-xs-0 mt-1">
-                                                    <span>AP</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-11">
-                                                <small class="d-block mb-1">Mentor admin </small>
-                                                <h5 class="mb-0"><a href="#">I need a payment option, for each seller per item</a></h5>
-                                                <ul class="list-unstyled list-inline">
-                                                    <li class="list-inline-item">
-                                                        <small> Created by Brian Joedon</small>
-                                                    </li>
-                                                    <li class="list-inline-item">|</li>
-                                                    <li class="list-inline-item">
-                                                        <small>Saturday, March 17 2019</small>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-6 col-xxl-4 m-b-30">
-                                <div class="card card-statistics h-100 mb-0">
-                                    <div class="card-header d-flex justify-content-between">
-                                        <div class="card-heading">
-                                            <h4 class="card-title">Project Activity</h4>
-                                        </div>
-                                        <div class="dropdown">
-                                            <a class="p-2" href="#!" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                <i class="fe fe-more-horizontal"></i>
-                                            </a>
-                                            <div class="dropdown-menu custom-dropdown dropdown-menu-right p-4">
-                                                <h6 class="mb-1">Action</h6>
-                                                <a class="dropdown-item" href="#!"><i class="fa-fw fa fa-file-o pr-2"></i>View reports</a>
-                                                <a class="dropdown-item" href="#!"><i class="fa-fw fa fa-edit pr-2"></i>Edit reports</a>
-                                                <a class="dropdown-item" href="#!"><i class="fa-fw fa fa-bar-chart-o pr-2"></i>Statistics</a>
-                                                <h6 class="mb-1 mt-3">Export</h6>
-                                                <a class="dropdown-item" href="#!"><i class="fa-fw fa fa-file-pdf-o pr-2"></i>Export to PDF</a>
-                                                <a class="dropdown-item" href="#!"><i class="fa-fw fa fa-file-excel-o pr-2"></i>Export to CSV</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="card-body">
-                                        <ul class="activity">
-                                            <li class="activity-item primary">
-                                                <div class="activity-info">
-                                                    <h5 class="mb-0">Meeting with Amanda and team.</h5>
-                                                    <span>10:30 Jan</span>
-                                                </div>
-                                            </li>
-                                            <li class="activity-item info">
-                                                <div class="activity-info">
-                                                    <h5 class="mb-0"> Assign task for Smith. </h5>
-                                                    <span>
-                                                                Wed, 10 Mar
-                                                            </span>
-                                                </div>
-                                            </li>
-                                            <li class="activity-item success">
-                                                <div class="activity-info">
-                                                    <h5 class="mb-0"> Complete milestone 3 and update. </h5>
-                                                    <span>
-                                                                Mon, 14 Jun
-                                                            </span>
-                                                </div>
-                                            </li>
-                                            <li class="activity-item danger">
-                                                <div class="activity-info">
-                                                    <h5 class="mb-0">Start new task with mark. </h5>
-                                                    <span>
-                                                                Sat, 01 May
-                                                            </span>
-                                                </div>
-                                            </li>
-                                            <li class="activity-item warning">
-                                                <div class="activity-info">
-                                                    <h5 class="mb-0">You have created a new task</h5>
-                                                    <span>9:30</span>
-                                                </div>
-                                            </li>
-                                            <li class="activity-item info">
-                                                <div class="activity-info">
-                                                    <h5 class="mb-0"> Meeting with client and CEO.</h5>
-                                                    <span>
-                                                                Fri, 10 Aug
-                                                            </span>
-                                                </div>
-                                            </li>
-                                            <li class="activity-item success">
-                                                <div class="activity-info">
-                                                    <h5 class="mb-0">Meeting with Amanda and team.</h5>
-                                                    <span>
-                                                                Fri, 01 Dec
-                                                            </span>
-                                                </div>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-xxl-4 m-b-30">
-                                <div class="card card-statistics h-100 mb-0">
-                                    <div class="card-header d-flex justify-content-between">
-                                        <div class="card-heading">
-                                            <h4 class="card-title">Sales</h4>
-                                        </div>
-                                        <div class="dropdown">
-                                            <select class="custom-select custom-select-sm" id="inputGroupSelect01">
-                                                <option selected>Last 24hr</option>
-                                                <option value="1">Last week</option>
-                                                <option value="2">Last 6 month</option>
-                                                <option value="3">Last year</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="border-bottom pb-2 pb-xxs-4">
-                                            <div class="row">
-                                                <div class="col-xxs-6 mb-3 mb-xxs-0">
-                                                    <span class="font-17">Total revenue</span>
-                                                    <h3 class="mt-1 mb-1">$45,541</h3>
-                                                    <span class="d-block"> <i class="fa fa-arrow-down text-primary"></i> <b class="text-primary">+23%</b> Vs last months </span>
-                                                </div>
-                                                <div class="col-xxs-6 mb-3 mb-xxs-0">
-                                                    <span class="font-17">Total cost</span>
-                                                    <h3 class="mt-1 mb-1">$6,456</h3>
-                                                    <span class="d-block"> <i class="fa fa-arrow-down text-cyan"></i> <b class="text-cyan">+65%</b> Vs last months </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-xxs-6 pt-2 pt-xxs-4">
-                                                <div class="d-flex justify-content-between">
-                                                    <span class="font-16"><b>86</b> Deals added</span>
-                                                    <span class="font-16"><b>65%</b> of goal</span>
-                                                </div>
-                                                <div class="progress my-3" style="height: 6px;">
-                                                    <div class="progress-bar bg-primary" role="progressbar" style="width: 66%;" aria-valuenow="66" aria-valuemin="0" aria-valuemax="100"></div>
-                                                </div>
-                                            </div>
-                                            <div class="col-xxs-6 pt-2 pt-xxs-4">
-                                                <div class="d-flex justify-content-between">
-                                                    <span class="font-16"><b>78</b> Project closed</span>
-                                                    <span class="font-16"><b>45%</b> of goal</span>
-                                                </div>
-                                                <div class="progress my-3" style="height: 6px;">
-                                                    <div class="progress-bar bg-cyan" role="progressbar" style="width: 66%;" aria-valuenow="66" aria-valuemin="0" aria-valuemax="100"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="apexchart-wrapper">
-                                            <div id="analytics3" class="chart-fit"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                        <div class="row">
-                            <div class="col-xxl-8">
-                                <div class="card card-statistics analytics-contant">
-                                    <div class="card-body">
-                                        <div class="row no-gutters">
-                                            <div class="col-xl-4">
-                                                <h4 class="card-title mb-3">Site Visitors</h4>
-                                                <p class="mb-4 ">Architecto expedita sequi nisi a excepturi error provident, repellendus quisquam unde aut.</p>
-                                                <div class="row">
-                                                    <div class="col-12 mb-3">
-                                                        <span>United states: </span><b class="float-right">80%</b>
-                                                        <div class="progress my-2" style="height: 5px;">
-                                                            <div class="progress-bar" role="progressbar" style="width: 80%;" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-12 mb-3">
-                                                        <span>India: </span><b class="float-right">75%</b>
-                                                        <div class="progress my-2" style="height: 5px;">
-                                                            <div class="progress-bar bg-success" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-12 mb-3">
-                                                        <span>Australia: </span><b class="float-right">65%</b>
-                                                        <div class="progress my-2" style="height: 5px;">
-                                                            <div class="progress-bar bg-danger" role="progressbar" style="width: 65%;" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-12 mb-3">
-                                                        <span>Germany: </span><b class="float-right">55%</b>
-                                                        <div class="progress my-2" style="height: 5px;">
-                                                            <div class="progress-bar bg-info" role="progressbar" style="width: 55%;" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-12 mb-3">
-                                                        <span>United kingdom: </span><b class="float-right">80%</b>
-                                                        <div class="progress my-2" style="height: 5px;">
-                                                            <div class="progress-bar bg-warning" role="progressbar" style="width: 80%;" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-12">
-                                                        <a class="btn btn-link pl-0" href="#"><b>View details </b></a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-xl-8">
-                                                <div class="vectormap-wrapper">
-                                                    <div id="world" class="vmap"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-xxl-4 m-b-30">
-                                <div class="card card-statistics h-100 mb-0 o-hidden">
-                                    <div class="card-header">
-                                        <h4 class="card-title">Received all time</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-6 col-xxs-4 col-md-4 mb-3 mb-sm-0">
-                                                <h3 class="mb-1 mb-xxs-0">25,456</h3>
-                                                <span class="d-block"> <i class="fa fa-arrow-up text-success"></i> <b class="text-success">+23%</b> Views  </span>
-                                            </div>
-                                            <div class="col-6 col-xxs-4 col-md-4 mb-3 mb-sm-0">
-                                                <h3 class="mb-1 mb-xxs-0">45,541</h3>
-                                                <span class="d-block"> <i class="fa fa-arrow-up text-success"></i> <b class="text-success">+15%</b> Likes </span>
-                                            </div>
-                                            <div class="col-12 col-xxs-4 col-md-4 mb-3 mb-sm-0">
-                                                <h3 class="mb-1 mb-xxs-0">78,462</h3>
-                                                <span class="d-block"> <i class="fa fa-arrow-up text-success"></i> <b class="text-success">+32%</b> Comments </span>
-                                            </div>
-                                        </div>
-                                        <div class="mt-2 mt-xxs-4">
-                                            <p>You're scheduled earn <span class="badge  badge-success-inverse">$2,350 today</span></p>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <div class="tab nav-border-bottom">
-                                            <ul class="nav nav-tabs" role="tablist">
-                                                <li class="nav-item">
-                                                    <a class="nav-link py-2 active show" id="home-02-tab" data-toggle="tab" href="#home-02" role="tab" aria-controls="home-02" aria-selected="true">Views</a>
-                                                </li>
-                                                <li class="nav-item">
-                                                    <a class="nav-link py-2" id="profile-02-tab" data-toggle="tab" href="#profile-02" role="tab" aria-controls="profile-02" aria-selected="false">Likes </a>
-                                                </li>
-                                                <li class="nav-item">
-                                                    <a class="nav-link py-2" id="portfolio-02-tab" data-toggle="tab" href="#portfolio-02" role="tab" aria-controls="portfolio-02" aria-selected="false">Comments </a>
-                                                </li>
-                                            </ul>
-                                            <div class="tab-content mt-5">
-                                                <div class="tab-pane fade active show" id="home-02" role="tabpanel" aria-labelledby="home-02-tab">
-                                                    <div class="apexchart-wrapper">
-                                                        <div id="analytics4" class="chart-fit mb-minus"></div>
-                                                    </div>
-                                                </div>
-                                                <div class="tab-pane fade" id="profile-02" role="tabpanel" aria-labelledby="profile-02-tab">
-                                                    <div class="apexchart-wrapper">
-                                                        <div id="analytics5" class="chart-fit mb-minus"></div>
-                                                    </div>
-                                                </div>
-                                                <div class="tab-pane fade" id="portfolio-02" role="tabpanel" aria-labelledby="portfolio-02-tab">
-                                                    <div class="apexchart-wrapper">
-                                                        <div id="analytics6" class="chart-fit mb-minus"></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="card card-statistics">
-                                    <div class="card-header">
-                                        <div class="card-heading">
-                                            <h4 class="card-title">Event Calendar</h4>
-                                        </div>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-lg-3">
-                                                <div id='external-events'>
-                                                    <button class="btn btn-primary btn-block" data-toggle="modal" data-target="#eventModal">Add New Event</button>
-                                                    <p class="mt-3">
-                                                        Drag and drop your event or click in the calendar.
-                                                    </p>
-                                                    <div class='fc-event fc-event-primary' data-color="fc-event-primary"><span></span> Family
-                                                        Vacation</div>
-                                                    <div class='fc-event fc-event-warning' data-color="fc-event-warning"><span></span> Meeting In
-                                                        Office</div>
-                                                    <div class='fc-event fc-event-danger' data-color="fc-event-danger"><span></span> Client Call</div>
-                                                    <div class='fc-event fc-event-success' data-color="fc-event-success"><span></span> Interview</div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" value="" id="defaultCheck1">
-                                                        <label class="form-check-label" for="defaultCheck1">
-                                                            Remove After Drop
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-lg-9">
-                                                <div class="event-calendar">
-                                                    <div id="event-calendar"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- end row -->
-                        <!-- event Modal -->
-                        <div class="modal fade" id="eventModal" tabindex="-1" role="dialog" aria-labelledby="verticalCenterTitle" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered" role="document">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="verticalCenterTitle">Add New Event</h5>
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        
+                        <!-- Update Message -->
+                        <?php if ($controller->hasSuccess()): ?>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                        <i class="fa fa-check-circle mr-2"></i><?php echo htmlspecialchars($success_message); ?>
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
                                         </button>
                                     </div>
-                                    <div class="modal-body">
-                                        <form>
-                                            <div class="form-group">
-                                                <label for="modelemail">Event Name</label>
-                                                <input type="email" class="form-control" id="modelemail">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Choose Event Color</label>
-                                                <select class="form-control">
-                                                    <option>Primary</option>
-                                                    <option>Warning</option>
-                                                    <option>Success</option>
-                                                    <option>Danger</option>
-                                                </select>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ($controller->hasError()): ?>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                        <i class="fa fa-exclamation-circle mr-2"></i><?php echo htmlspecialchars($error_message); ?>
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <!-- begin row - School Info with Tabs -->
+                        <div class="row">
+                            <div class="col-lg-12 m-b-30">
+                                <div class="card card-statistics">
+                                    <!-- Nav tabs -->
+                                    <div class="card-header">
+                                        <ul class="nav nav-tabs nav-border-bottom" role="tablist">
+                                            <li class="nav-item">
+                                                <a class="nav-link active" id="info-tab" data-toggle="tab" href="#info" role="tab" aria-controls="info" aria-selected="true">
+                                                    <i class="fa fa-info-circle mr-2"></i>School Information
+                                                </a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" id="plan-tab" data-toggle="tab" href="#plan" role="tab" aria-controls="plan" aria-selected="false">
+                                                    <i class="fa fa-cube mr-2"></i>Plan & Subscription
+                                                </a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" id="storage-tab" data-toggle="tab" href="#storage" role="tab" aria-controls="storage" aria-selected="false">
+                                                    <i class="fa fa-database mr-2"></i>Storage & Usage
+                                                </a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" id="security-tab" data-toggle="tab" href="#security" role="tab" aria-controls="security" aria-selected="false">
+                                                    <i class="fa fa-lock mr-2"></i>Security
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Tab Content -->
+                                    <div class="card-body">
+                                        <div class="tab-content">
+                                            <!-- School Information Tab -->
+                                            <div class="tab-pane fade active show" id="info" role="tabpanel" aria-labelledby="info-tab">
+                                                <form method="POST" class="form-horizontal">
+                                                    <input type="hidden" name="action" value="update_school">
+                                                    
+                                                    <div class="form-group row">
+                                                        <label class="col-sm-3 control-label">School Name</label>
+                                                        <div class="col-sm-6">
+                                                            <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($school['name']); ?>" required>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-group row">
+                                                        <label class="col-sm-3 control-label">Email</label>
+                                                        <div class="col-sm-6">
+                                                            <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($school['email']); ?>" required>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-group row">
+                                                        <label class="col-sm-3 control-label">Contact Number</label>
+                                                        <div class="col-sm-6">
+                                                            <input type="text" name="contact_no" class="form-control" value="<?php echo htmlspecialchars($school['contact_no'] ?? ''); ?>">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-group row">
+                                                        <label class="col-sm-3 control-label">Address</label>
+                                                        <div class="col-sm-6">
+                                                            <textarea name="address" class="form-control" rows="3"><?php echo htmlspecialchars($school['address'] ?? ''); ?></textarea>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-group row">
+                                                        <label class="col-sm-3 control-label">City</label>
+                                                        <div class="col-sm-6">
+                                                            <input type="text" name="city" class="form-control" value="<?php echo htmlspecialchars($school['city'] ?? ''); ?>">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-group row">
+                                                        <label class="col-sm-3 control-label">Boards</label>
+                                                        <div class="col-sm-6">
+                                                            <input type="text" name="boards" class="form-control" placeholder="e.g., CBSE, ICSE" value="<?php echo htmlspecialchars($school['boards'] ?? ''); ?>">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-group row">
+                                                        <label class="col-sm-3 control-label">Subdomain</label>
+                                                        <div class="col-sm-6">
+                                                            <input type="text" class="form-control" value="<?php echo htmlspecialchars($school['subdomain'] ?? ''); ?>" disabled>
+                                                            <small class="form-text text-muted">Subdomain cannot be changed</small>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-group row">
+                                                        <label class="col-sm-3 control-label">Status</label>
+                                                        <div class="col-sm-6">
+                                                            <span class="badge badge-<?php echo $school['status'] === 'active' ? 'success' : 'danger'; ?>">
+                                                                <?php echo ucfirst($school['status']); ?>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-group row">
+                                                        <div class="col-sm-6 offset-sm-3">
+                                                            <button type="submit" class="btn btn-primary">
+                                                                <i class="fa fa-save mr-2"></i>Save Changes
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </form>
                                             </div>
 
-                                        </form>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
-                                        <button type="button" class="btn btn-success">Save changes</button>
+                                            <!-- Plan & Subscription Tab -->
+                                            <div class="tab-pane fade" id="plan" role="tabpanel" aria-labelledby="plan-tab">
+                                                <div class="row">
+                                                    <div class="col-md-8">
+                                                        <h4>Current Plan: <strong><?php echo ucfirst($school['plan']); ?></strong></h4>
+                                                        <hr>
+                                                        
+                                                        <div class="plan-details">
+                                                            <div class="row">
+                                                                <div class="col-md-6">
+                                                                    <p><strong>Start Date:</strong></p>
+                                                                    <p><?php echo !empty($school['start_date']) ? date('d-M-Y', strtotime($school['start_date'])) : 'N/A'; ?></p>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <p><strong>Expiry Date:</strong></p>
+                                                                    <p><?php echo !empty($school['expires_at']) ? date('d-M-Y', strtotime($school['expires_at'])) : 'N/A'; ?></p>
+                                                                </div>
+                                            </div>
+
+                                                            <div class="row mt-3">
+                                                                <div class="col-md-6">
+                                                                    <p><strong>Estimated Students:</strong></p>
+                                                                    <p><?php echo $school['estimated_students'] ?? 'N/A'; ?></p>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <p><strong>Current Students:</strong></p>
+                                                                    <p><?php echo $school['total_student'] ?? 'N/A'; ?></p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="card bg-light">
+                                                            <div class="card-body">
+                                                                <h5 class="card-title">Plan Details</h5>
+                                                                <p class="card-text">Manage your subscription, view billing history, and upgrade or downgrade your plan.</p>
+                                                                <a href="#" class="btn btn-primary btn-sm">Manage Plan</a>
+                                                                <a href="../billing/history.php" target="_blank" class="btn btn-secondary btn-sm">Billing History</a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Storage & Usage Tab -->
+                                            <div class="tab-pane fade" id="storage" role="tabpanel" aria-labelledby="storage-tab">
+                                                <div class="row">
+                                                    <div class="col-md-8">
+                                                        <h4>Storage Usage</h4>
+                                                        <hr>
+                                                        
+                                                        <div class="storage-info">
+                                                            <div class="mb-3">
+                                                                <p><strong>Total Storage Used: <?php echo number_format($storage_info['total_usage'], 2); ?> GB</strong></p>
+                                                                <div class="progress" style="height: 25px;">
+                                                                    <div class="progress-bar bg-primary" role="progressbar" style="width: <?php echo min($storage_info['percentage'], 100); ?>%;" aria-valuenow="<?php echo $storage_info['percentage']; ?>" aria-valuemin="0" aria-valuemax="100">
+                                                                        <?php echo number_format($storage_info['percentage'], 1); ?>%
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="row mt-4">
+                                                                <div class="col-md-6">
+                                                                    <p><strong>File Storage:</strong></p>
+                                                                    <p><?php echo number_format($storage_info['storage_used'], 2); ?> GB</p>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <p><strong>Database Size:</strong></p>
+                                                                    <p><?php echo number_format($storage_info['db_size'], 2); ?> GB</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="card bg-light">
+                                                            <div class="card-body">
+                                                                <h5 class="card-title">Storage Info</h5>
+                                                                <p class="card-text">Monitor your storage usage and upgrade when needed.</p>
+                                                                <a href="#" class="btn btn-primary btn-sm">View Details</a>
+                                                                <a href="#" class="btn btn-secondary btn-sm">Upgrade Storage</a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Security Tab -->
+                                            <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">
+                                                <div class="row">
+                                                    <div class="col-md-8">
+                                                        <h4>Security Settings</h4>
+                                                        <hr>
+                                                        
+                                                        <div class="security-options">
+                                                            <div class="row mb-4">
+                                                                <div class="col-md-6">
+                                                                    <h5>Change Password</h5>
+                                                                    <p class="text-muted">Update your school admin password</p>
+                                                                    <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#changePasswordModal">Change Password</button>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <h5>Two-Factor Authentication</h5>
+                                                                    <p class="text-muted">Add an extra layer of security</p>
+                                                                    <a href="#" class="btn btn-secondary btn-sm">Enable 2FA</a>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="row mb-4">
+                                                                <div class="col-md-6">
+                                                                    <h5>Login History</h5>
+                                                                    <p class="text-muted">View your login activity</p>
+                                                                    <a href="#" class="btn btn-secondary btn-sm">View History</a>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <h5>Active Sessions</h5>
+                                                                    <p class="text-muted">Manage your active sessions</p>
+                                                                    <a href="#" class="btn btn-secondary btn-sm">Manage Sessions</a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="card bg-light">
+                                                            <div class="card-body">
+                                                                <h5 class="card-title">Security Tips</h5>
+                                                                <ul class="list-unstyled">
+                                                                    <li><i class="fa fa-check text-success mr-2"></i>Use strong passwords</li>
+                                                                    <li><i class="fa fa-check text-success mr-2"></i>Enable 2FA</li>
+                                                                    <li><i class="fa fa-check text-success mr-2"></i>Monitor login history</li>
+                                                                    <li><i class="fa fa-check text-success mr-2"></i>Regular backups</li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        <!-- end row -->
                     </div>
                     <!-- end container-fluid -->
                 </div>
@@ -771,10 +424,10 @@ require_once __DIR__ . '/../../../../Config/auth_check.php';
             <footer class="footer">
                 <div class="row">
                     <div class="col-12 col-sm-6 text-center text-sm-left">
-                        <p>&copy; Copyright 2019. All rights reserved.</p>
+                        <p>&copy; Copyright 2026. All rights reserved.</p>
                     </div>
-                   <div class="col  col-sm-6 ml-sm-auto text-center text-sm-right">
-                        <p><a target="_blank" href="https://www.templateshub.net">Templates Hub</a></p>
+                    <div class="col col-sm-6 ml-sm-auto text-center text-sm-right">
+                        <p><a target="_blank" href="#">School SAAS</a></p>
                     </div>
                 </div>
             </footer>
@@ -789,6 +442,144 @@ require_once __DIR__ . '/../../../../Config/auth_check.php';
 
     <!-- custom app -->
     <script src="../../../../../public/assets/js/app.js"></script>
+
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" role="dialog" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changePasswordModalLabel">Change Password</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="changePasswordForm" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="update_password">
+                        
+                        <!-- Alert Messages -->
+                        <div id="passwordModalAlert" class="alert d-none" role="alert"></div>
+
+                        <div class="form-group">
+                            <label for="currentPassword">Current Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="currentPassword" name="current_password" placeholder="Enter your current password" required>
+                            <small class="form-text text-muted">Enter your current password to verify your identity</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="newPassword">New Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="newPassword" name="new_password" placeholder="Enter new password" required>
+                            <small class="form-text text-muted">Password must be at least 8 characters long</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirm_password" placeholder="Confirm new password" required>
+                            <small class="form-text text-muted">Re-enter your new password</small>
+                        </div>
+
+                        <div class="alert alert-info" role="alert">
+                            <strong>Password Requirements:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Minimum 8 characters long</li>
+                                <li>Current password must match</li>
+                                <li>New passwords must match</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            const passwordModalAlert = document.getElementById('passwordModalAlert');
+
+            if (changePasswordForm) {
+                changePasswordForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const currentPassword = document.getElementById('currentPassword').value;
+                    const newPassword = document.getElementById('newPassword').value;
+                    const confirmPassword = document.getElementById('confirmPassword').value;
+
+                    // Clear previous alerts
+                    passwordModalAlert.classList.add('d-none');
+                    passwordModalAlert.innerHTML = '';
+                    passwordModalAlert.className = 'alert d-none';
+
+                    // Validation
+                    if (!currentPassword) {
+                        showAlert('Current password is required', 'danger');
+                        return;
+                    }
+
+                    if (!newPassword || !confirmPassword) {
+                        showAlert('New password fields are required', 'danger');
+                        return;
+                    }
+
+                    if (newPassword !== confirmPassword) {
+                        showAlert('New passwords do not match', 'danger');
+                        return;
+                    }
+
+                    if (newPassword.length < 8) {
+                        showAlert('Password must be at least 8 characters long', 'danger');
+                        return;
+                    }
+
+                    // Submit form
+                    const formData = new FormData(changePasswordForm);
+                    
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        // Check if success message is in the response
+                        if (html.includes('Password updated successfully')) {
+                            showAlert('Password updated successfully! Logging out...', 'success');
+                            // Call logout function after 1 second
+                            setTimeout(function() {
+                                logout();
+                            }, 1000);
+                        } else if (html.includes('did not match') || html.includes('Current password')) {
+                            showAlert('Current password did not match. Please try again.', 'danger');
+                        } else {
+                            showAlert('An error occurred. Please try again.', 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showAlert('An error occurred. Please try again.', 'danger');
+                    });
+                });
+
+                function showAlert(message, type) {
+                    passwordModalAlert.innerHTML = message;
+                    passwordModalAlert.className = 'alert alert-' + type;
+                    passwordModalAlert.classList.remove('d-none');
+                }
+            }
+        });
+
+        // Logout function
+        function logout() {
+            const logoutForm = document.createElement('form');
+            logoutForm.method = 'POST';
+            logoutForm.innerHTML = '<input type="hidden" name="action" value="logout">';
+            document.body.appendChild(logoutForm);
+            logoutForm.submit();
+        }
+    </script>
 </body>
 
 

@@ -17,7 +17,7 @@ $school = $subdomainContext->getContext();
 // Check if already logged in
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     if (isset($_SESSION['school_id'])) {
-        header('Location: /School-SAAS/App/Modules/School_Admin/Views/index.php');
+        header('Location: /School-SAAS/App/Modules/School_Admin/Views/dashboard/index.php');
     }
     exit;
 }
@@ -270,7 +270,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($userRole === 'super_admin') {
                     header('Location: /School-SAAS/App/Modules/SAAS_admin/Views/dashboard/index.php');
                 } else {
-                    header('Location: /School-SAAS/App/Modules/School_Admin/Views/index.php');
+                    header('Location: /School-SAAS/App/Modules/School_Admin/Views/dashboard/index.php');
                 }
                 exit;
             }
