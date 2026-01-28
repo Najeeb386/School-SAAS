@@ -184,12 +184,8 @@ try {
                                                 </div>
                                                 <div class="form-group col-md-3 pl-2">
                                                     <label for="empRole">Role</label>
-                                                    <select id="empRole" name="role_id" class="form-control">
-                                                        <option value="0">-- Select Role --</option>
-                                                        <?php foreach ($rolesList as $rid => $rname): ?>
-                                                            <option value="<?= $rid ?>"><?= htmlspecialchars($rname) ?></option>
-                                                        <?php endforeach; ?>
-                                                    </select>
+                                                    
+                                                    <input id="empRole" name="role_id" type="text" class="form-control" placeholder="Enter role (id or name)">
                                                 </div>
                                             </div>
                                             <hr>
