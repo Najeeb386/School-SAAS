@@ -151,5 +151,82 @@ class SchoolModel
             throw new \Exception('Error fetching payments: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Upload and save school logo
+     */
+    public function uploadLogo($school_id, $file)
+    {
+        try {
+            // Validate file
+            $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!in_array($file['type'], $allowed_types)) {
+                throw new \Exception('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.');
+            }
+
+            $max_size = 5 * 1024 * 1024; // 5MB
+            if ($file['size'] > $max_size) {
+                throw new \Exception('File size exceeds 5MB limit.');
+            }
+
+            // Create upload directory structure: School-SAAS/Storage/uploads/schools/school_{id}/
+            $base_upload_dir = __DIR__ . '/../../../../Storage/uploads/schools/';
+            $school_dir = $base_upload_dir . 'school_' . $school_id . '/';
+            
+            if (!is_dir($base_upload_dir)) {
+                mkdir($base_upload_dir, 0755, true);
+            }
+            
+            if (!is_dir($school_dir)) {
+                mkdir($school_dir, 0755, true);
+            }
+
+            // Generate unique filename for logo
+            $file_ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $filename = 'logo_' . time() . '.' . $file_ext;
+            $file_path = $school_dir . $filename;
+
+            // Move uploaded file
+            if (!move_uploaded_file($file['tmp_name'], $file_path)) {
+                throw new \Exception('Failed to upload logo file.');
+            }
+
+            // Delete old logo if exists
+            $school = $this->getById($school_id);
+            if ($school && !empty($school['logo_path'])) {
+                $old_path = $school_dir . $school['logo_path'];
+                if (file_exists($old_path)) {
+                    unlink($old_path);
+                }
+            }
+
+            // Update database with new logo path (store only filename)
+            $stmt = $this->db->prepare("UPDATE schools SET logo_path = :logo_path, updated_at = NOW() WHERE id = :school_id");
+            $stmt->execute([
+                'logo_path' => $filename,
+                'school_id' => $school_id
+            ]);
+
+            return $filename;
+        } catch (\Exception $e) {
+            throw new \Exception('Logo upload error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get logo URL for school
+     */
+    public function getLogoUrl($school_id)
+    {
+        try {
+            $school = $this->getById($school_id);
+            if ($school && !empty($school['logo_path'])) {
+                return '../../../Storage/uploads/schools/school_' . $school_id . '/' . $school['logo_path'];
+            }
+            return null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
     
 }

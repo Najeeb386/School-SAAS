@@ -49,6 +49,8 @@ class SchoolProfileController
                 $this->updateSchoolInfo();
             } elseif ($action === 'update_password') {
                 $this->updatePassword();
+            } elseif ($action === 'upload_logo') {
+                $this->uploadLogo();
             } elseif ($action === 'logout') {
                 $this->logoutUser();
                 header('Location: ../../../../../index.php?login=true');
@@ -121,6 +123,25 @@ class SchoolProfileController
         // Destroy session
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_destroy();
+        }
+    }
+
+    /**
+     * Upload school logo
+     */
+    private function uploadLogo()
+    {
+        try {
+            if (!isset($_FILES['logo']) || $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
+                throw new \Exception('No file uploaded or upload error occurred.');
+            }
+
+            $filename = $this->school_model->uploadLogo($this->school_id, $_FILES['logo']);
+            $this->messages['success'] = 'Logo uploaded successfully!';
+            // Reload data to get updated logo path
+            $this->loadSchoolData();
+        } catch (\Exception $e) {
+            $this->messages['error'] = $e->getMessage();
         }
     }
 

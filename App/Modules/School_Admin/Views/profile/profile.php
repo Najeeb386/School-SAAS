@@ -164,7 +164,7 @@ $error_message = $controller->getErrorMessage();
                                 </div>
                             </div>
                         <?php endif; ?>
-                        
+
                         <!-- begin row - School Info with Tabs -->
                         <div class="row">
                             <div class="col-lg-12 m-b-30">
@@ -200,76 +200,116 @@ $error_message = $controller->getErrorMessage();
                                         <div class="tab-content">
                                             <!-- School Information Tab -->
                                             <div class="tab-pane fade active show" id="info" role="tabpanel" aria-labelledby="info-tab">
-                                                <form method="POST" class="form-horizontal">
-                                                    <input type="hidden" name="action" value="update_school">
-                                                    
-                                                    <div class="form-group row">
-                                                        <label class="col-sm-3 control-label">School Name</label>
-                                                        <div class="col-sm-6">
-                                                            <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($school['name']); ?>" required>
+                                                <!-- School Logo Section -->
+                                                <div class="row mb-4">
+                                                    <div class="col-md-4">
+                                                        <div class="card">
+                                                            <div class="card-body text-center">
+                                                                <h5 class="card-title">School Logo</h5>
+                                                                <div style="margin: 20px 0; min-height: 150px; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc; border-radius: 5px;">
+                                                                    <?php 
+                                                                        $school_id = $_SESSION['school_id'] ?? null;
+                                                                        $logo_path = null;
+                                                                        $school_logo = $school['logo_path'] ?? null;
+                                                                        
+                                                                        if ($school_id && $school_logo) {
+                                                                            // Build proper file check path with consistent separators
+                                                                            $storage_path = realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Storage');
+                                                                            $school_dir = $storage_path . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'schools' . DIRECTORY_SEPARATOR . 'school_' . $school_id;
+                                                                            $file_check = $school_dir . DIRECTORY_SEPARATOR . $school_logo;
+                                                                            
+                                                                            if (file_exists($file_check)) {
+                                                                                // Use simple relative path
+                                                                                $logo_path = '../../../../../Storage/uploads/schools/school_' . $school_id . '/' . $school_logo;
+                                                                            }
+                                                                        }
+                                                                        
+                                                                        if ($logo_path):
+                                                                    ?>
+                                                                        <img src="<?php echo htmlspecialchars($logo_path); ?>" alt="School Logo" style="max-width: 100%; max-height: 150px; object-fit: contain;">
+                                                                    <?php else: ?>
+                                                                        <div class="text-muted">
+                                                                            <i class="fa fa-image fa-3x mb-2"></i>
+                                                                            <p>No logo uploaded</p>
+                                                                        </div>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                                <form method="POST" enctype="multipart/form-data" id="logoUploadForm">
+                                                                    <input type="hidden" name="action" value="upload_logo">
+                                                                    <div class="form-group">
+                                                                        <input type="file" name="logo" id="logoInput" class="form-control-file" accept="image/*" onchange="previewLogo(event)">
+                                                                        <small class="form-text text-muted">JPG, PNG, GIF, WebP (Max 5MB)</small>
+                                                                    </div>
+                                                                    <button type="submit" class="btn btn-primary btn-sm">Upload Logo</button>
+                                                                </form>
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                    <div class="col-md-8">
+                                                        <form method="POST" class="form-horizontal">
+                                                            <input type="hidden" name="action" value="update_school">
+                                                            
+                                                            <div class="form-group row">
+                                                                <label class="col-sm-3 control-label">School Name</label>
+                                                                <div class="col-sm-9">
+                                                                    <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($school['name']); ?>" required>
+                                                                </div>
+                                                            </div>
 
-                                                    <div class="form-group row">
-                                                        <label class="col-sm-3 control-label">Email</label>
-                                                        <div class="col-sm-6">
-                                                            <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($school['email']); ?>" required>
-                                                        </div>
-                                                    </div>
+                                                            <div class="form-group row">
+                                                                <label class="col-sm-3 control-label">Email</label>
+                                                                <div class="col-sm-9">
+                                                                    <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($school['email']); ?>" required>
+                                                                </div>
+                                                            </div>
 
-                                                    <div class="form-group row">
-                                                        <label class="col-sm-3 control-label">Contact Number</label>
-                                                        <div class="col-sm-6">
-                                                            <input type="text" name="contact_no" class="form-control" value="<?php echo htmlspecialchars($school['contact_no'] ?? ''); ?>">
-                                                        </div>
-                                                    </div>
+                                                            <div class="form-group row">
+                                                                <label class="col-sm-3 control-label">Contact Number</label>
+                                                                <div class="col-sm-9">
+                                                                    <input type="text" name="contact_no" class="form-control" value="<?php echo htmlspecialchars($school['contact_no'] ?? ''); ?>">
+                                                                </div>
+                                                            </div>
 
-                                                    <div class="form-group row">
-                                                        <label class="col-sm-3 control-label">Address</label>
-                                                        <div class="col-sm-6">
-                                                            <textarea name="address" class="form-control" rows="3"><?php echo htmlspecialchars($school['address'] ?? ''); ?></textarea>
-                                                        </div>
-                                                    </div>
+                                                            <div class="form-group row">
+                                                                <label class="col-sm-3 control-label">Address</label>
+                                                                <div class="col-sm-9">
+                                                                    <textarea name="address" class="form-control" rows="3"><?php echo htmlspecialchars($school['address'] ?? ''); ?></textarea>
+                                                                </div>
+                                                            </div>
 
-                                                    <div class="form-group row">
-                                                        <label class="col-sm-3 control-label">City</label>
-                                                        <div class="col-sm-6">
-                                                            <input type="text" name="city" class="form-control" value="<?php echo htmlspecialchars($school['city'] ?? ''); ?>">
-                                                        </div>
-                                                    </div>
+                                                            <div class="form-group row">
+                                                                <label class="col-sm-3 control-label">City</label>
+                                                                <div class="col-sm-9">
+                                                                    <input type="text" name="city" class="form-control" value="<?php echo htmlspecialchars($school['city'] ?? ''); ?>">
+                                                                </div>
+                                                            </div>
 
-                                                    <div class="form-group row">
-                                                        <label class="col-sm-3 control-label">Boards</label>
-                                                        <div class="col-sm-6">
-                                                            <input type="text" name="boards" class="form-control" placeholder="e.g., CBSE, ICSE" value="<?php echo htmlspecialchars($school['boards'] ?? ''); ?>">
-                                                        </div>
-                                                    </div>
+                                                            <div class="form-group row">
+                                                                <label class="col-sm-3 control-label">Boards</label>
+                                                                <div class="col-sm-9">
+                                                                    <input type="text" name="boards" class="form-control" placeholder="e.g., CBSE, ICSE" value="<?php echo htmlspecialchars($school['boards'] ?? ''); ?>">
+                                                                </div>
+                                                            </div>
 
-                                                    <div class="form-group row">
-                                                        <label class="col-sm-3 control-label">Subdomain</label>
-                                                        <div class="col-sm-6">
-                                                            <input type="text" class="form-control" value="<?php echo htmlspecialchars($school['subdomain'] ?? ''); ?>" disabled>
-                                                            <small class="form-text text-muted">Subdomain cannot be changed</small>
-                                                        </div>
-                                                    </div>
+                                                            <div class="form-group row">
+                                                                <label class="col-sm-3 control-label">Subdomain</label>
+                                                                <div class="col-sm-9">
+                                                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($school['subdomain'] ?? ''); ?>" disabled>
+                                                                    <small class="form-text text-muted">Subdomain cannot be changed</small>
+                                                                </div>
+                                                            </div>
 
-                                                    <div class="form-group row">
-                                                        <label class="col-sm-3 control-label">Status</label>
-                                                        <div class="col-sm-6">
-                                                            <span class="badge badge-<?php echo $school['status'] === 'active' ? 'success' : 'danger'; ?>">
-                                                                <?php echo ucfirst($school['status']); ?>
-                                                            </span>
-                                                        </div>
+                                                            <div class="form-group row">
+                                                                <label class="col-sm-3"></label>
+                                                                <div class="col-sm-9">
+                                                                    <button type="submit" class="btn btn-primary">Update Information</button>
+                                                                </div>
+                                                            </div>
+                                                        </form>
                                                     </div>
+                                                </div>
 
-                                                    <div class="form-group row">
-                                                        <div class="col-sm-6 offset-sm-3">
-                                                            <button type="submit" class="btn btn-primary">
-                                                                <i class="fa fa-save mr-2"></i>Save Changes
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </form>
+                                               
                                             </div>
 
                                             <!-- Plan & Subscription Tab -->
@@ -578,6 +618,35 @@ $error_message = $controller->getErrorMessage();
             logoutForm.innerHTML = '<input type="hidden" name="action" value="logout">';
             document.body.appendChild(logoutForm);
             logoutForm.submit();
+        }
+
+        // Logo preview function
+        function previewLogo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Check file type
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.');
+                event.target.value = '';
+                return;
+            }
+
+            // Check file size (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size exceeds 5MB limit.');
+                event.target.value = '';
+                return;
+            }
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewContainer = document.querySelector('[style*="border: 2px dashed"]');
+                previewContainer.innerHTML = '<img src="' + e.target.result + '" alt="Logo Preview" style="max-width: 100%; max-height: 150px;">';
+            };
+            reader.readAsDataURL(file);
         }
     </script>
 </body>
