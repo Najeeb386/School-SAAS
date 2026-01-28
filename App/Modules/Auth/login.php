@@ -236,14 +236,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // If authenticated, set session and redirect
             if ($authenticated && $userData) {
-                $_SESSION['logged_in'] = true;
-                $_SESSION['user_id'] = $userData['id'];
-                $_SESSION['email'] = $userData['email'];
-                $_SESSION['role'] = $userRole;
-                $_SESSION['last_activity'] = time();
+                // Distinguish between SAAS admin and School admin sessions to avoid shared login state
+                if ($userRole === 'super_admin') {
+                    // Set SAAS-specific session keys only
+                    $_SESSION['saas_logged_in'] = true;
+                    $_SESSION['saas_admin_id'] = $userData['id'];
+                    $_SESSION['saas_email'] = $userData['email'];
+                    $_SESSION['saas_user_type'] = 'saas_admin';
+                    $_SESSION['saas_last_activity'] = time();
+                } else {
+                    // Normal school admin session keys
+                    $_SESSION['logged_in'] = true;
+                    $_SESSION['user_id'] = $userData['id'];
+                    $_SESSION['email'] = $userData['email'];
+                    $_SESSION['role'] = $userRole;
+                    $_SESSION['last_activity'] = time();
+                    $_SESSION['user_type'] = 'school';
 
-                // Add school-specific session data if available
-                if ($userRole === 'school_admin') {
+                    // Add school-specific session data
                     $_SESSION['school_id'] = $userData['school_id'];
                     $_SESSION['school_name'] = $userData['school_name'];
                     $_SESSION['subdomain'] = $userData['subdomain'];

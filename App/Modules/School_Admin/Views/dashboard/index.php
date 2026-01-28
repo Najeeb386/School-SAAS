@@ -1,9 +1,9 @@
 <?php
 /**
  * School Admin Dashboard - Protected Page
- * User must be logged in to access this page
+ * User must be logged in as School Admin to access this page
  */
-require_once __DIR__ . '/../../../../Config/auth_check.php';
+require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">

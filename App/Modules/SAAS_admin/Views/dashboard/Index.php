@@ -1,12 +1,6 @@
 <?php
-// Start session and check authentication
-session_start();
-
-// Require authentication
-if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header('Location: /School-SAAS/App/Modules/Auth/login.php');
-    exit;
-}
+// Use SAAS-specific auth check to isolate sessions from school admin
+require_once __DIR__ . '/../../../../Config/auth_check_saas_admin.php';
 
 // Prevent caching - force browser to reload on back button
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
