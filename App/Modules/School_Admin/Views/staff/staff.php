@@ -4,6 +4,14 @@
  * User must be logged in as School Admin to access this page
  */
 require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
+// load DB and teacher controller/model
+require_once __DIR__ . '/../../../../Config/connection.php';
+require_once __DIR__ . '/../../Controllers/TeacherController.php';
+require_once __DIR__ . '/../../Models/TeacherModel.php';
+use App\Modules\School_Admin\Controllers\TeacherController;
+
+$teacherCtrl = new TeacherController($DB_con);
+$staffs = $teacherCtrl->list();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -20,8 +28,16 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet">
     <!-- plugin stylesheets -->
     <link rel="stylesheet" type="text/css" href="../../../../../public/assets/css/vendors.css" />
+    <!-- DataTables CSS (CDN) -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <!-- app style -->
     <link rel="stylesheet" type="text/css" href="../../../../../public/assets/css/style.css" />
+    <style>
+        /* Creative modal header */
+        .staff-modal-header { background: linear-gradient(90deg,#4e73df,#1cc88a); color:#fff; }
+        .staff-avatar-preview { width:84px; height:84px; border-radius:8px; object-fit:cover; border:2px solid #fff; }
+        .dt-search-wrapper { display:flex; gap:0.5rem; align-items:center; }
+    </style>
 </head>
 
 <body>
@@ -66,22 +82,9 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                                         </div>
 
                                         <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <div class="btn-group" role="group" aria-label="Staff filter">
-                                                    <button type="button" class="btn btn-outline-secondary filter-btn active" data-role="all">All</button>
-                                                    <button type="button" class="btn btn-outline-secondary filter-btn" data-role="teacher">Teachers</button>
-                                                    <button type="button" class="btn btn-outline-secondary filter-btn" data-role="accountant">Accountant</button>
-                                                    <button type="button" class="btn btn-outline-secondary filter-btn" data-role="admin">Admin</button>
-                                                    <button type="button" class="btn btn-outline-secondary filter-btn" data-role="other">Other</button>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="input-group">
-                                                    <input id="staffSearch" type="text" class="form-control" placeholder="Search by name or email">
-                                                    <div class="input-group-append">
-                                                        <button id="clearSearch" class="btn btn-outline-secondary" type="button">Clear</button>
-                                                    </div>
-                                                </div>
+                                            <div class="col-md-6 dt-search-wrapper">
+                                                <input id="staffSearch" type="text" class="form-control" placeholder="Search by name or email">
+                                                <button id="clearSearch" class="btn btn-outline-secondary" type="button">Clear</button>
                                             </div>
                                         </div>
 
@@ -105,7 +108,30 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                                                                 $name = isset($staff['name']) ? htmlspecialchars($staff['name']) : '-';
                                                                 $email = isset($staff['email']) ? htmlspecialchars($staff['email']) : '-';
                                                                 $phone = isset($staff['phone']) ? htmlspecialchars($staff['phone']) : '-';
-                                                                $photoUrl = isset($staff['photo']) && $staff['photo'] !== '' ? $staff['photo'] : '../../../../../public/assets/img/avatar.png';
+                                                                // determine photo path (model stores in 'photo_path')
+                                                                $photoUrl = '../../../../../public/assets/img/avatar.png';
+                                                                $candidate = null;
+                                                                if (isset($staff['photo_path']) && !empty($staff['photo_path'])) {
+                                                                    $candidate = $staff['photo_path'];
+                                                                } elseif (isset($staff['photo']) && !empty($staff['photo'])) {
+                                                                    $candidate = $staff['photo'];
+                                                                }
+                                                                if ($candidate) {
+                                                                    // if candidate is a relative project path like 'Storage/..', prefix with proper upward path
+                                                                    if (strpos($candidate, 'Storage/') === 0) {
+                                                                        $rel = '../../../../../' . $candidate;
+                                                                    } else {
+                                                                        $rel = $candidate;
+                                                                    }
+                                                                    // verify file exists on disk before exposing URL
+                                                                    $fsPath = realpath(__DIR__ . '/../../../../..') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, ltrim($candidate, '/'));
+                                                                    if ($fsPath && file_exists($fsPath)) {
+                                                                        $photoUrl = $rel;
+                                                                    } else {
+                                                                        // fallback: try the prefixed path anyway
+                                                                        $photoUrl = $rel;
+                                                                    }
+                                                                }
                                                             ?>
                                                             <tr data-role="<?= $role ?>">
                                                                 <td style="width:60px;"><img src="<?= $photoUrl ?>" alt="photo" class="rounded" style="width:48px;height:48px;object-fit:cover;"></td>
@@ -116,12 +142,19 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                                                                 <td>
                                                                     <a href="edit_staff.php?id=<?= isset($staff['id']) ? intval($staff['id']) : 0 ?>" class="btn btn-sm btn-outline-primary">Edit</a>
                                                                     <a href="delete_staff.php?id=<?= isset($staff['id']) ? intval($staff['id']) : 0 ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this staff member?');">Delete</a>
+                                                                    <a href="view_finances.php?staff_id=<?= isset($staff['id']) ? intval($staff['id']) : 0 ?>" class="btn btn-sm btn-outline-success ml-1">View Finances</a>
+                                                                    <a href="assign_classes.php?staff_id=<?= isset($staff['id']) ? intval($staff['id']) : 0 ?>" class="btn btn-sm btn-outline-info ml-1">Assign Classes</a>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>
                                                     <?php else: ?>
                                                         <tr>
-                                                            <td colspan="6" class="text-center">No staff found. Use the "Add Staff" button to create new staff records.</td>
+                                                            <td class="text-center" colspan="1">No staff found.</td>
+                                                            <td></td>
+                                                            <td></td>
+                                                            <td></td>
+                                                            <td></td>
+                                                            <td class="text-center">Use the "Add Staff" button to create new staff records.</td>
                                                         </tr>
                                                     <?php endif; ?>
                                                 </tbody>
@@ -132,47 +165,71 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                             </div>
                         </div>
 
-                        <!-- Add Staff Modal -->
+                        <!-- Add Staff Modal (Creative) -->
                         <div class="modal fade" id="addStaffModal" tabindex="-1" role="dialog" aria-labelledby="addStaffModalLabel" aria-hidden="true">
-                            <div class="modal-dialog" role="document">
+                            <div class="modal-dialog modal-lg" role="document">
                                 <div class="modal-content">
                                     <form method="post" action="add_staff.php" enctype="multipart/form-data">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="addStaffModalLabel">Add Staff</h5>
-                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <div class="modal-header staff-modal-header">
+                                            <div class="d-flex align-items-center">
+                                                <img id="previewAvatar" src="../../../../../public/assets/img/avatar.png" alt="avatar" class="staff-avatar-preview mr-3">
+                                                <div>
+                                                    <h5 class="modal-title" id="addStaffModalLabel">Add Teacher</h5>
+                                                    <div class="small">Create a new teacher account — fill required fields and upload a picture.</div>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                                                 <span aria-hidden="true">&times;</span>
                                             </button>
                                         </div>
                                         <div class="modal-body">
-                                            <div class="form-group">
-                                                <label for="staffName">Full Name</label>
-                                                <input id="staffName" name="name" type="text" class="form-control" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="staffEmail">Email</label>
-                                                <input id="staffEmail" name="email" type="email" class="form-control">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="staffRole">Role</label>
-                                                <select id="staffRole" name="role" class="form-control">
-                                                    <option value="teacher">Teacher</option>
-                                                    <option value="accountant">Accountant</option>
-                                                    <option value="admin">Admin</option>
-                                                    <option value="other">Other</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="staffPhone">Phone</label>
-                                                <input id="staffPhone" name="phone" type="text" class="form-control">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="staffPhoto">Photo</label>
-                                                <input id="staffPhoto" name="photo" type="file" class="form-control-file">
+                                            <div class="row">
+                                                <div class="col-md-7">
+                                                    <div class="form-group">
+                                                        <label for="staffName">Full Name</label>
+                                                        <input id="staffName" name="name" type="text" class="form-control" required>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="staffEmail">Email</label>
+                                                        <input id="staffEmail" name="email" type="email" class="form-control">
+                                                    </div>
+                                                    <div class="form-row">
+                                                        <div class="form-group col-md-6">
+                                                            <label for="staffPhone">Phone</label>
+                                                            <input id="staffPhone" name="phone" type="text" class="form-control">
+                                                        </div>
+                                                        <div class="form-group col-md-6">
+                                                            <label for="staffIdNo">NIC / Passport (optional)</label>
+                                                            <input id="staffIdNo" name="id_no" type="text" class="form-control">
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="staffRole">Role</label>
+                                                        <select id="staffRole" name="role" class="form-control">
+                                                            <option value="teacher">Teacher</option>
+                                                            <option value="accountant">Accountant</option>
+                                                            <option value="admin">Admin</option>
+                                                            <option value="other">Other</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="form-group" id="otherRoleWrap" style="display:none;">
+                                                        <label for="staffRoleOther">Specify role</label>
+                                                        <input id="staffRoleOther" name="role_other" type="text" class="form-control" placeholder="Enter role name">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <div class="form-group">
+                                                        <label for="staffPhoto">Photo</label>
+                                                        <input id="staffPhoto" name="photo" type="file" accept="image/*" class="form-control-file">
+                                                        <div id="photoName" class="small text-muted mt-2" style="display:none;"></div>
+                                                    </div>
+                                                    <div class="mt-3 text-muted small">Accepted formats: JPG, PNG. Max 2MB recommended.</div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                            <button type="submit" class="btn btn-primary">Save</button>
+                                            <button type="button" class="btn btn-outline-light" data-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-light">Save Teacher</button>
                                         </div>
                                     </form>
                                 </div>
@@ -204,6 +261,8 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
 
     <!-- plugins -->
     <script src="../../../../../public/assets/js/vendors.js"></script>
+    <!-- DataTables JS (CDN) -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
     <!-- custom app -->
     <script src="../../../../../public/assets/js/app.js"></script>
@@ -226,49 +285,74 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                 loader.style.display = 'none';
             }
         });
-    </script>
-    <script>
-        (function() {
-            function applyFilters() {
-                var activeBtn = document.querySelector('.filter-btn.active');
-                var role = activeBtn ? activeBtn.getAttribute('data-role') : 'all';
-                var q = (document.getElementById('staffSearch').value || '').toLowerCase().trim();
-                var rows = document.querySelectorAll('#staffTable tbody tr');
-                rows.forEach(function(r) {
-                    var rRole = r.getAttribute('data-role') || 'other';
-                    var name = (r.children[1] && r.children[1].textContent || '').toLowerCase();
-                    var email = (r.children[3] && r.children[3].textContent || '').toLowerCase();
-                    var roleMatch = (role === 'all') || (rRole === role);
-                    var searchMatch = q === '' || name.indexOf(q) !== -1 || email.indexOf(q) !== -1;
-                    r.style.display = (roleMatch && searchMatch) ? '' : 'none';
-                });
-            }
-
-            document.addEventListener('DOMContentLoaded', function() {
-                var filterButtons = document.querySelectorAll('.filter-btn');
-                filterButtons.forEach(function(btn) {
-                    btn.addEventListener('click', function() {
-                        filterButtons.forEach(function(b){ b.classList.remove('active'); });
-                        btn.classList.add('active');
-                        applyFilters();
-                    });
+        // Initialize DataTable and live search
+        (function(){
+            var tableEl = document.getElementById('staffTable');
+            if (tableEl && window.jQuery && typeof jQuery.fn.dataTable === 'function') {
+                var dt = jQuery(tableEl).DataTable({
+                    pageLength: 10,
+                    responsive: true,
+                    destroy: true,
+                    autoWidth: false,
+                    columnDefs: [{ orderable: false, targets: [0,5] }]
                 });
 
                 var searchInput = document.getElementById('staffSearch');
-                if (searchInput) {
-                    searchInput.addEventListener('input', function() { applyFilters(); });
-                }
-
                 var clearBtn = document.getElementById('clearSearch');
-                if (clearBtn) {
-                    clearBtn.addEventListener('click', function() { document.getElementById('staffSearch').value = ''; applyFilters(); });
+                if (searchInput) {
+                    searchInput.addEventListener('input', function(){ dt.search(this.value).draw(); });
                 }
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', function(){ if (searchInput) { searchInput.value=''; dt.search('').draw(); } });
+                }
+            }
 
-                // Initial filter pass
-                applyFilters();
-            });
+            // toggle other role input
+            var staffRole = document.getElementById('staffRole');
+            var otherWrap = document.getElementById('otherRoleWrap');
+            var staffRoleOther = document.getElementById('staffRoleOther');
+            if (staffRole) {
+                staffRole.addEventListener('change', function(){
+                    if (this.value === 'other') { otherWrap.style.display = 'block'; } else { otherWrap.style.display = 'none'; staffRoleOther.value=''; }
+                });
+            }
+
+            // Photo preview handling (simple file input)
+            var photoInput = document.getElementById('staffPhoto');
+            var preview = document.getElementById('previewAvatar');
+            var photoNameEl = document.getElementById('photoName');
+            var defaultAvatar = '../../../../../public/assets/img/avatar.png';
+
+            function previewFile(file) {
+                if (!file) {
+                    if (preview) preview.src = defaultAvatar;
+                    if (photoNameEl) photoNameEl.style.display = 'none';
+                    return;
+                }
+                if (file.size && file.size > 2 * 1024 * 1024) {
+                    alert('Selected file is larger than 2MB. Please choose a smaller image.');
+                    return;
+                }
+                if (photoNameEl) {
+                    photoNameEl.textContent = file.name;
+                    photoNameEl.style.display = 'block';
+                }
+                if (preview) {
+                    var reader = new FileReader();
+                    reader.onload = function(ev){ preview.src = ev.target.result; };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            if (photoInput) {
+                photoInput.addEventListener('change', function(e){
+                    var f = e.target.files && e.target.files[0];
+                    previewFile(f);
+                });
+            }
         })();
     </script>
+    
 </body>
 
 </html>

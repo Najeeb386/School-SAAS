@@ -24,14 +24,8 @@ if (!isset($employees)) {
     }
 }
 
-// Load roles for the role select
-require_once __DIR__ . '/../../../../Config/connection.php';
-$rolesList = [];
-try {
-    $stmt = $DB_con->query('SELECT id, name FROM roles ORDER BY name ASC');
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($rows as $r) $rolesList[intval($r['id'])] = $r['name'];
-} catch (Exception $e) { $rolesList = []; }
+// Note: roles are handled in the `employees` table as runtime role text (no separate roles table required).
+// If you still have a `roles` table it will be ignored by this view.
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -131,7 +125,7 @@ try {
                                                             <tr>
                                                                 <td><?= htmlspecialchars($e['name']) ?></td>
                                                                 <td><?= htmlspecialchars($e['email']) ?></td>
-                                                                <td><?= isset($rolesList[intval($e['role_id'])]) ? htmlspecialchars($rolesList[intval($e['role_id'])]) : '-' ?></td>
+                                                                <td><?= htmlspecialchars($e['role_id'] ?? '-') ?></td>
                                                                 <td>
                                                                     <?php if (!empty($e['permissions'])): foreach ($e['permissions'] as $p): ?>
                                                                         <span class="badge badge-info mr-1 text-capitalize"><?= htmlspecialchars($p) ?></span>
@@ -140,7 +134,7 @@ try {
                                                                     <?php endif; ?>
                                                                 </td>
                                                                 <td>
-                                                                    <button class="btn btn-sm btn-outline-primary edit-employee" data-id="<?= $e['id'] ?>" data-name="<?= htmlspecialchars($e['name'], ENT_QUOTES,'UTF-8') ?>" data-email="<?= htmlspecialchars($e['email'], ENT_QUOTES,'UTF-8') ?>" data-role="<?= intval($e['role_id']) ?>" data-perms="<?= htmlspecialchars(json_encode($e['permissions']), ENT_QUOTES,'UTF-8') ?>">Edit</button>
+                                                                    <button class="btn btn-sm btn-outline-primary edit-employee" data-id="<?= $e['id'] ?>" data-name="<?= htmlspecialchars($e['name'], ENT_QUOTES,'UTF-8') ?>" data-email="<?= htmlspecialchars($e['email'], ENT_QUOTES,'UTF-8') ?>" data-role="<?= htmlspecialchars($e['role_id'] ?? '', ENT_QUOTES,'UTF-8') ?>" data-perms="<?= htmlspecialchars(json_encode($e['permissions']), ENT_QUOTES,'UTF-8') ?>">Edit</button>
                                                                     <a href="delete_employee.php?id=<?= $e['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this employee?');">Delete</a>
                                                                 </td>
                                                             </tr>
