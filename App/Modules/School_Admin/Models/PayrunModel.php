@@ -102,11 +102,6 @@ class PayrunModel {
             $params[':approved_by'] = $extra_data['approved_by'];
         }
         
-        if ($status === 'paid' && isset($extra_data['payment_date'])) {
-            $fields[] = 'payment_date = :payment_date';
-            $params[':payment_date'] = $extra_data['payment_date'];
-        }
-        
         $sql = 'UPDATE school_payruns SET ' . implode(', ', $fields) . ', updated_at = NOW() WHERE id = :id AND school_id = :sid';
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($params);
