@@ -9,15 +9,31 @@ class StaffSalaryModel {
     }
 
     public function getAll($school_id, $session_id = null) {
-        $sql = 'SELECT * FROM school_staff_salaries WHERE school_id = :sid AND deleted_at IS NULL';
+        $sql = 'SELECT 
+                    s.*,
+                    CASE 
+                        WHEN s.staff_type = "employee" THEN e.name
+                        WHEN s.staff_type = "teacher" THEN t.name
+                        ELSE NULL
+                    END AS staff_name,
+                    CASE 
+                        WHEN s.staff_type = "employee" THEN e.role_id
+                        WHEN s.staff_type = "teacher" THEN t.role
+                        ELSE NULL
+                    END AS staff_role
+                FROM school_staff_salaries s
+                LEFT JOIN employees e ON s.staff_type = "employee" AND s.staff_id = e.id AND e.school_id = :sid
+                LEFT JOIN school_teachers t ON s.staff_type = "teacher" AND s.staff_id = t.id AND t.school_id = :sid
+                WHERE s.school_id = :sid AND s.deleted_at IS NULL';
+        
         $params = [':sid' => $school_id];
         
         if ($session_id) {
-            $sql .= ' AND session_id = :session_id';
+            $sql .= ' AND s.session_id = :session_id';
             $params[':session_id'] = $session_id;
         }
         
-        $sql .= ' ORDER BY id DESC';
+        $sql .= ' ORDER BY s.id DESC';
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);

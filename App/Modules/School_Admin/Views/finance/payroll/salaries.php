@@ -49,6 +49,18 @@ if (isset($_GET['edit'])) {
         }
         /* tighten table spacing on small screens */
         #salariesTable th, #salariesTable td { white-space: nowrap; }
+        
+        /* Print media query to hide Actions column */
+        @media print {
+            .no-print, #salariesTable th:last-child, #salariesTable td:last-child { 
+                display: none !important; 
+            }
+            body { margin: 0; padding: 0; }
+            .app, .app-wrap { padding: 0 !important; }
+            .container-fluid { max-width: 100%; padding: 0.5rem !important; }
+            .card { border: 1px solid #ddd; }
+            #salariesTable { font-size: 0.8rem; margin-top: 1rem; }
+        }
     </style>
 </head>
 
@@ -78,15 +90,25 @@ if (isset($_GET['edit'])) {
                                 </ol>
                             </nav>
                         </div>
-                        <div class="col-1 mt-5"><a href="" class="btn btn-sm btn-outline-secondary">Back</a></div>
+                        <div class="col-1 mt-5 no-print"><button onclick="history.back()" class="btn btn-sm btn-outline-secondary">Back</button></div>
                     </div>
 
-                    <div class="row mb-3">
+                    <div class="row mb-3 no-print">
                         <div class="col-12 d-flex flex-wrap justify-content-between align-items-center">
                             <div class="mb-2 mb-md-0">
                                 <button id="btnAddSalary" class="btn btn-primary">Add Salary</button>
                                 <button id="btnImport" class="btn btn-outline-secondary">Bulk Import</button>
-                                <button id="btnExport" class="btn btn-outline-secondary">Export</button>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Export
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        <a class="dropdown-item" href="#" id="btnExportExcel">Export to Excel</a>
+                                        <a class="dropdown-item" href="#" id="btnExportPdf">Export to PDF</a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item" href="#" id="btnPrint">Print</a>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-inline flex-wrap">
                                 <label class="mr-2 text-muted d-none d-md-inline">Filter:</label>
@@ -133,8 +155,8 @@ if (isset($_GET['edit'])) {
                                                         <tr>
                                                             <td><?php echo $i++; ?></td>
                                                             <td><?php echo htmlspecialchars($stype . '-' . str_pad($staff_id, 3, '0', STR_PAD_LEFT)); ?></td>
-                                                            <td><?php echo htmlspecialchars($sal['staff_id']); ?></td>
-                                                            <td><?php echo htmlspecialchars($stype); ?></td>
+                                                            <td><?php echo htmlspecialchars($sal['staff_name'] ?? 'N/A'); ?></td>
+                                                            <td><?php echo htmlspecialchars($sal['staff_role'] ?? '-'); ?></td>
                                                             <td>-</td>
                                                             <td><?php echo number_format($sal['basic_salary'], 2); ?></td>
                                                             <td><?php echo number_format($sal['allowance'], 2); ?></td>
@@ -165,11 +187,7 @@ if (isset($_GET['edit'])) {
                         </div>
                     </div>
 
-                    <div class="row mt-4">
-                        <div class="col-12 text-right">
-                            <button class="btn btn-outline-dark">Save Changes</button>
-                        </div>
-                    </div>
+                
 
                 </div>
             </div>
@@ -331,6 +349,73 @@ if (isset($_GET['edit'])) {
                 var grade = r.cells[4].innerText.toLowerCase();
                 r.style.display = grade.indexOf(val.replace('grade', 'grade ')) > -1 ? '' : 'none';
             });
+        });
+
+        // Export to Excel
+        document.getElementById('btnExportExcel').addEventListener('click', function(e){
+            e.preventDefault();
+            var table = document.getElementById('salariesTable');
+            var csv = [];
+            
+            // Get header (exclude last column - Actions)
+            var headers = [];
+            table.querySelectorAll('thead tr th').forEach(function(th, idx) {
+                if (idx < table.querySelectorAll('thead tr th').length - 1) {
+                    headers.push(th.innerText);
+                }
+            });
+            csv.push(headers.join(','));
+            
+            // Get rows (exclude last column - Actions)
+            table.querySelectorAll('tbody tr').forEach(function(tr) {
+                if (tr.style.display !== 'none') {
+                    var row = [];
+                    tr.querySelectorAll('td').forEach(function(td, idx) {
+                        if (idx < tr.querySelectorAll('td').length - 1) {
+                            row.push('"' + td.innerText.replace(/"/g, '""') + '"');
+                        }
+                    });
+                    if (row.length > 0) csv.push(row.join(','));
+                }
+            });
+            
+            var csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv.join('\n'));
+            var link = document.createElement('a');
+            link.setAttribute('href', csvContent);
+            link.setAttribute('download', 'salaries_' + new Date().toISOString().split('T')[0] + '.csv');
+            link.click();
+        });
+
+        // Export to PDF
+        document.getElementById('btnExportPdf').addEventListener('click', function(e){
+            e.preventDefault();
+            // Load jsPDF and html2canvas libraries from CDN
+            var script1 = document.createElement('script');
+            script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+            script1.onload = function() {
+                var element = document.getElementById('salariesTable').cloneNode(true);
+                // Remove Actions column
+                element.querySelectorAll('th:last-child, td:last-child').forEach(function(el) {
+                    el.remove();
+                });
+                
+                var opt = {
+                    margin: 10,
+                    filename: 'salaries_' + new Date().toISOString().split('T')[0] + '.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
+                };
+                
+                html2pdf().set(opt).from(element).save();
+            };
+            document.head.appendChild(script1);
+        });
+
+        // Print
+        document.getElementById('btnPrint').addEventListener('click', function(e){
+            e.preventDefault();
+            window.print();
         });
 
         // Hide loader on load
