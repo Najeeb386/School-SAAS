@@ -52,6 +52,42 @@ class TeacherController {
         return false;
     }
 
+    public function updateFromRequest() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') return false;
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if ($id <= 0) { $_SESSION['flash_error'] = 'Invalid staff id.'; return false; }
+
+        $data = [];
+        $data['name'] = isset($_POST['name']) ? trim($_POST['name']) : '';
+        if ($data['name'] === '') { $_SESSION['flash_error'] = 'Name is required.'; return false; }
+        $data['email'] = isset($_POST['email']) ? trim($_POST['email']) : null;
+        $data['phone'] = isset($_POST['phone']) ? trim($_POST['phone']) : null;
+        $data['id_no'] = isset($_POST['id_no']) ? trim($_POST['id_no']) : null;
+        $role = isset($_POST['role']) ? trim($_POST['role']) : 'teacher';
+        if ($role === 'other' && !empty($_POST['role_other'])) {
+            $role = trim($_POST['role_other']);
+        }
+        $data['role'] = $role;
+        if (isset($_POST['permissions'])) {
+            $data['permissions'] = is_array($_POST['permissions']) ? json_encode($_POST['permissions']) : trim($_POST['permissions']);
+        }
+
+        // handle photo upload if provided
+        if (!empty($_FILES['photo']) && isset($_FILES['photo']['tmp_name']) && is_uploaded_file($_FILES['photo']['tmp_name'])) {
+            $uploadRes = $this->handleUpload($_FILES['photo'], $role);
+            if ($uploadRes['success']) $data['photo_path'] = $uploadRes['path'];
+            else { $_SESSION['flash_error'] = $uploadRes['error']; }
+        }
+
+        $updated = $this->model->update($id, $this->school_id, $data);
+        if ($updated) {
+            $_SESSION['flash_success'] = 'Staff updated.';
+            return true;
+        }
+        $_SESSION['flash_error'] = 'Failed to update staff.';
+        return false;
+    }
+
     protected function handleUpload($file, $role = 'faculty') {
         // basic validation
         if ($file['error'] !== UPLOAD_ERR_OK) return ['success'=>false,'error'=>'Upload error'];

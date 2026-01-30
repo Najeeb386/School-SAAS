@@ -140,7 +140,15 @@ $staffs = $teacherCtrl->list();
                                                                 <td><?= $email ?></td>
                                                                 <td><?= $phone ?></td>
                                                                 <td>
-                                                                    <a href="edit_staff.php?id=<?= isset($staff['id']) ? intval($staff['id']) : 0 ?>" class="btn btn-sm btn-outline-primary">Edit</a>
+                                                                    <button type="button" class="btn btn-sm btn-outline-primary btn-edit"
+                                                                        data-id="<?= isset($staff['id']) ? intval($staff['id']) : 0 ?>"
+                                                                        data-name="<?= isset($staff['name']) ? htmlspecialchars($staff['name'], ENT_QUOTES) : '' ?>"
+                                                                        data-email="<?= isset($staff['email']) ? htmlspecialchars($staff['email'], ENT_QUOTES) : '' ?>"
+                                                                        data-phone="<?= isset($staff['phone']) ? htmlspecialchars($staff['phone'], ENT_QUOTES) : '' ?>"
+                                                                        data-idno="<?= isset($staff['id_no']) ? htmlspecialchars($staff['id_no'], ENT_QUOTES) : '' ?>"
+                                                                        data-role="<?= isset($staff['role']) ? htmlspecialchars($staff['role'], ENT_QUOTES) : 'teacher' ?>"
+                                                                        data-photo="<?= isset($photoUrl) ? htmlspecialchars($photoUrl, ENT_QUOTES) : '' ?>"
+                                                                    >Edit</button>
                                                                     <a href="delete_staff.php?id=<?= isset($staff['id']) ? intval($staff['id']) : 0 ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this staff member?');">Delete</a>
                                                                     <a href="view_finances.php?staff_id=<?= isset($staff['id']) ? intval($staff['id']) : 0 ?>" class="btn btn-sm btn-outline-success ml-1">View Finances</a>
                                                                     <a href="assign_classes.php?staff_id=<?= isset($staff['id']) ? intval($staff['id']) : 0 ?>" class="btn btn-sm btn-outline-info ml-1">Assign Classes</a>
@@ -165,6 +173,77 @@ $staffs = $teacherCtrl->list();
                             </div>
                         </div>
 
+                            <!-- Edit Staff Modal -->
+                            <div class="modal fade" id="editStaffModal" tabindex="-1" role="dialog" aria-labelledby="editStaffModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg" role="document">
+                                    <div class="modal-content">
+                                        <form method="post" action="edit_staff.php" enctype="multipart/form-data">
+                                            <input type="hidden" name="id" id="editStaffId" value="">
+                                            <div class="modal-header staff-modal-header">
+                                                <div class="d-flex align-items-center">
+                                                    <img id="editPreviewAvatar" src="../../../../../public/assets/img/avatar.png" alt="avatar" class="staff-avatar-preview mr-3">
+                                                    <div>
+                                                        <h5 class="modal-title" id="editStaffModalLabel">Edit Staff</h5>
+                                                        <div class="small">Update teacher details and optionally upload a new picture.</div>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="row">
+                                                    <div class="col-md-7">
+                                                        <div class="form-group">
+                                                            <label for="editStaffName">Full Name</label>
+                                                            <input id="editStaffName" name="name" type="text" class="form-control" required>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label for="editStaffEmail">Email</label>
+                                                            <input id="editStaffEmail" name="email" type="email" class="form-control">
+                                                        </div>
+                                                        <div class="form-row">
+                                                            <div class="form-group col-md-6">
+                                                                <label for="editStaffPhone">Phone</label>
+                                                                <input id="editStaffPhone" name="phone" type="text" class="form-control">
+                                                            </div>
+                                                            <div class="form-group col-md-6">
+                                                                <label for="editStaffIdNo">NIC / Passport (optional)</label>
+                                                                <input id="editStaffIdNo" name="id_no" type="text" class="form-control">
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label for="editStaffRole">Role</label>
+                                                            <select id="editStaffRole" name="role" class="form-control">
+                                                                <option value="teacher">Teacher</option>
+                                                                <option value="accountant">Accountant</option>
+                                                                <option value="admin">Admin</option>
+                                                                <option value="other">Other</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="form-group" id="editOtherRoleWrap" style="display:none;">
+                                                            <label for="editStaffRoleOther">Specify role</label>
+                                                            <input id="editStaffRoleOther" name="role_other" type="text" class="form-control" placeholder="Enter role name">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-5">
+                                                        <div class="form-group">
+                                                            <label for="editStaffPhoto">Photo</label>
+                                                            <input id="editStaffPhoto" name="photo" type="file" accept="image/*" class="form-control-file">
+                                                            <div id="editPhotoName" class="small text-muted mt-2" style="display:none;"></div>
+                                                        </div>
+                                                        <div class="mt-3 text-muted small">Accepted formats: JPG, PNG. Max 2MB recommended.</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-outline-light" data-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-light">Save Changes</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         <!-- Add Staff Modal (Creative) -->
                         <div class="modal fade" id="addStaffModal" tabindex="-1" role="dialog" aria-labelledby="addStaffModalLabel" aria-hidden="true">
                             <div class="modal-dialog modal-lg" role="document">
@@ -350,6 +429,46 @@ $staffs = $teacherCtrl->list();
                     previewFile(f);
                 });
             }
+            // Edit button handler: populate edit modal
+            function bindEditButtons() {
+                var editButtons = document.querySelectorAll('.btn-edit');
+                var modal = document.getElementById('editStaffModal');
+                if (!editButtons || !modal) return;
+                editButtons.forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        var id = this.getAttribute('data-id');
+                        var name = this.getAttribute('data-name') || '';
+                        var email = this.getAttribute('data-email') || '';
+                        var phone = this.getAttribute('data-phone') || '';
+                        var idno = this.getAttribute('data-idno') || '';
+                        var role = this.getAttribute('data-role') || 'teacher';
+                        var photo = this.getAttribute('data-photo') || '../../../../../public/assets/img/avatar.png';
+
+                        document.getElementById('editStaffId').value = id;
+                        document.getElementById('editStaffName').value = name;
+                        document.getElementById('editStaffEmail').value = email;
+                        document.getElementById('editStaffPhone').value = phone;
+                        document.getElementById('editStaffIdNo').value = idno;
+                        var roleSel = document.getElementById('editStaffRole');
+                        if (roleSel) roleSel.value = role;
+                        var otherWrap = document.getElementById('editOtherRoleWrap');
+                        var roleOther = document.getElementById('editStaffRoleOther');
+                        if (role === 'other') { otherWrap.style.display = 'block'; if (roleOther) roleOther.value = ''; } else { otherWrap.style.display = 'none'; if (roleOther) roleOther.value = ''; }
+
+                        var preview = document.getElementById('editPreviewAvatar');
+                        if (preview) preview.src = photo;
+                        // reset file input label
+                        var fileInput = document.getElementById('editStaffPhoto');
+                        var photoNameEl = document.getElementById('editPhotoName');
+                        if (fileInput) fileInput.value = null;
+                        if (photoNameEl) { photoNameEl.style.display = 'none'; photoNameEl.textContent = ''; }
+
+                        // show modal using jQuery/Bootstrap
+                        if (window.jQuery) jQuery('#editStaffModal').modal('show');
+                    });
+                });
+            }
+            bindEditButtons();
         })();
     </script>
     
