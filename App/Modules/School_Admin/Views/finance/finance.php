@@ -56,11 +56,11 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                     <div class="container-fluid">
                         <div class="row mb-4">
                             <div class="col-12">
-                                <h3 class="mb-3">Settings</h3>
+                                <h3 class="mb-3">Finance</h3>
                                 <nav aria-label="breadcrumb">
                                     <ol class="breadcrumb p-0 bg-transparent">
                                         <li class="breadcrumb-item"><a href="../dashboard/index.php">Overview</a></li>
-                                        <li class="breadcrumb-item active" aria-current="page">Settings</li>
+                                        <li class="breadcrumb-item active" aria-current="page">Finance</li>
                                     </ol>
                                 </nav>
                             </div>
@@ -68,14 +68,15 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
 
                         <div class="row">
                             <div class="col-md-3 mb-4">
-                                <a href="../profile/profile.php" class="text-dark text-decoration-none">
+                                <a href="payroll/payroll.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">
-                                                <i class="fa fa-graduation-cap fa-2x text-primary"></i>
+                                                <i class="fa fa-money fa-2x text-primary"></i>
                                             </div>
                                             <div>
-                                                <h6 class="mb-0">School Info</h6>
+                                                <h6 class="mb-0">Payrolls</h6>
+                                                <small class="text-muted">Manage staff salaries</small>
                                             </div>
                                         </div>
                                     </div>
@@ -83,14 +84,15 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                             </div>
 
                             <div class="col-md-3 mb-4">
-                                <a href="../sessions/sessions.php" class="text-dark text-decoration-none">
+                                <a href="fees.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">
-                                                <i class="fa fa-clock-o fa-2x text-info"></i>
+                                                <i class="fa fa-credit-card fa-2x text-success"></i>
                                             </div>
                                             <div>
-                                                <h6 class="mb-0">Sessions</h6>
+                                                <h6 class="mb-0">Fees</h6>
+                                                <small class="text-muted">Student billing & invoices</small>
                                             </div>
                                         </div>
                                     </div>
@@ -98,60 +100,81 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                             </div>
 
                             <div class="col-md-3 mb-4">
-                                <a href="employees.php" class="text-dark text-decoration-none">
+                                <a href="expenses.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">
-                                                <i class="fa fa-users fa-2x text-success"></i>
+                                                <i class="fa fa-file-text-o fa-2x text-warning"></i>
                                             </div>
                                             <div>
-                                                <h6 class="mb-0">Employees</h6>
+                                                <h6 class="mb-0">Expenses</h6>
+                                                <small class="text-muted">Record outgoing payments</small>
                                             </div>
                                         </div>
                                     </div>
                                 </a>
                             </div>
+
                             <div class="col-md-3 mb-4">
-                                <a href="../employee/employee.php" class="text-dark text-decoration-none">
+                                <a href="invoices.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">
-                                                <i class="fa fa-graduation-cap fa-2x text-primary"></i>
+                                                <i class="fa fa-file-invoice fa-2x text-info"></i>
                                             </div>
                                             <div>
-                                                <h6 class="mb-0">Roles</h6>
+                                                <h6 class="mb-0">Invoices</h6>
+                                                <small class="text-muted">Create and send invoices</small>
                                             </div>
                                         </div>
                                     </div>
                                 </a>
                             </div>
-                           
                         </div>
 
                         <div class="row">
-                             <div class="col-md-3 mb-4">
-                                <a href="funds.php" class="text-dark text-decoration-none">
+                            <div class="col-md-3 mb-4">
+                                <a href="transactions.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">
-                                                <i class="fa fa-line-chart fa-2x text-warning"></i>
+                                                <i class="fa fa-exchange fa-2x text-secondary"></i>
                                             </div>
                                             <div>
-                                                <h6 class="mb-0">Funds</h6>
+                                                <h6 class="mb-0">Transactions</h6>
+                                                <small class="text-muted">All financial movements</small>
                                             </div>
                                         </div>
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-md-4 mb-4">
-                                <a href="activity_log.php" class="text-dark text-decoration-none">
+
+                            <div class="col-md-3 mb-4">
+                                <a href="reports.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">
-                                                <i class="fa fa-list-alt fa-2x text-secondary"></i>
+                                                <i class="fa fa-bar-chart fa-2x text-danger"></i>
                                             </div>
                                             <div>
-                                                <h6 class="mb-0">Activity Log</h6>
+                                                <h6 class="mb-0">Reports</h6>
+                                                <small class="text-muted">Financial summaries & exports</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+
+                            <div class="col-md-3 mb-4">
+                                <a href="finance_settings.php" class="text-dark text-decoration-none">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-body d-flex align-items-center">
+                                            <div class="mr-3">
+                                                <i class="fa fa-cog fa-2x text-muted"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">Settings</h6>
+                                                <small class="text-muted">Finance configuration</small>
                                             </div>
                                         </div>
                                     </div>
