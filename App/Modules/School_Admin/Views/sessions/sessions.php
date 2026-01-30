@@ -135,10 +135,23 @@ if (isset($_GET['edit'])) {
                                                                 <td><?php echo htmlspecialchars(isset($sess->name) ? $sess->name : (is_array($sess) && isset($sess['name']) ? $sess['name'] : '')); ?></td>
                                                                 <td><?php echo htmlspecialchars(isset($sess->start_date) ? $sess->start_date : (is_array($sess) && isset($sess['start_date']) ? $sess['start_date'] : '')); ?></td>
                                                                 <td><?php echo htmlspecialchars(isset($sess->end_date) ? $sess->end_date : (is_array($sess) && isset($sess['end_date']) ? $sess['end_date'] : '')); ?></td>
-                                                                <td><?php echo (!empty($sess->is_active) || (!is_object($sess) && !empty($sess['is_active']))) ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-secondary">No</span>'; ?></td>
+                                                                <td><?php echo (!empty($sess->is_active) || (!is_object($sess) && !empty($sess['is_active']))) ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-danger">No</span>'; ?></td>
                                                                 <td>
-                                                                    <a href="edit_session.php?id=<?php echo isset($sess->id) ? $sess->id : $sess['id']; ?>" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                                                    <a href="delete_session.php?id=<?php echo isset($sess->id) ? $sess->id : $sess['id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete session?')">Delete</a>
+                                                                    <?php $sid = isset($sess->id) ? $sess->id : $sess['id'];
+                                                                          $sname = isset($sess->name) ? $sess->name : (is_array($sess) && isset($sess['name']) ? $sess['name'] : '');
+                                                                          $sstart = isset($sess->start_date) ? $sess->start_date : (is_array($sess) && isset($sess['start_date']) ? $sess['start_date'] : '');
+                                                                          $send = isset($sess->end_date) ? $sess->end_date : (is_array($sess) && isset($sess['end_date']) ? $sess['end_date'] : '');
+                                                                          $sactive = (!empty($sess->is_active) || (!is_object($sess) && !empty($sess['is_active']))) ? 1 : 0;
+                                                                    ?>
+                                                                    <button type="button" class="btn btn-sm btn-primary btn-edit-session"
+                                                                        data-id="<?php echo $sid; ?>"
+                                                                        data-name="<?php echo htmlspecialchars($sname, ENT_QUOTES); ?>"
+                                                                        data-start="<?php echo $sstart; ?>"
+                                                                        data-end="<?php echo $send; ?>"
+                                                                        data-active="<?php echo $sactive; ?>">
+                                                                        Edit
+                                                                    </button>
+                                                                    <a href="delete_session.php?id=<?php echo $sid; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete session?')">Delete</a>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>
@@ -171,6 +184,90 @@ if (isset($_GET['edit'])) {
 
     <script src="../../../../../public/assets/js/vendors.js"></script>
     <script src="../../../../../public/assets/js/app.js"></script>
+        <!-- Edit session modal -->
+        <div class="modal fade" id="sessionEditModal" tabindex="-1" role="dialog" aria-labelledby="sessionEditModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="sessionEditModalLabel">Edit Session</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <form method="post" action="save_session.php" id="sessionEditForm">
+                        <div class="modal-body">
+                            <input type="hidden" name="id" id="modal_session_id">
+                            <input type="hidden" name="school_id" value="<?php echo htmlspecialchars($school_id); ?>">
+
+                            <div class="form-group">
+                                <label for="modal_name">Session Name</label>
+                                <input type="text" class="form-control" id="modal_name" name="name" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label for="modal_start">Start Date</label>
+                                    <input type="date" class="form-control" id="modal_start" name="start_date" required>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label for="modal_end">End Date</label>
+                                    <input type="date" class="form-control" id="modal_end" name="end_date" required>
+                                </div>
+                            </div>
+                            <div class="form-group form-check">
+                                <input type="checkbox" class="form-check-input" id="modal_active" name="is_active" value="1">
+                                <label class="form-check-label" for="modal_active">Set as active</label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+                (function(){
+                        // when edit buttons are clicked, populate modal and show it
+                        function showModal() {
+                                var btns = document.querySelectorAll('.btn-edit-session');
+                                if (!btns) return;
+                                btns.forEach(function(b){
+                                        b.addEventListener('click', function(e){
+                                                var id = this.getAttribute('data-id');
+                                                var name = this.getAttribute('data-name');
+                                                var start = this.getAttribute('data-start');
+                                                var end = this.getAttribute('data-end');
+                                                var active = this.getAttribute('data-active');
+
+                                                document.getElementById('modal_session_id').value = id;
+                                                document.getElementById('modal_name').value = name;
+                                                document.getElementById('modal_start').value = start;
+                                                document.getElementById('modal_end').value = end;
+                                                document.getElementById('modal_active').checked = (active == '1');
+
+                                                // show bootstrap modal (support jQuery or bootstrap 5 APIs)
+                                                try {
+                                                        if (window.jQuery && typeof jQuery('#sessionEditModal').modal === 'function') {
+                                                                jQuery('#sessionEditModal').modal('show');
+                                                        } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                                                                var m = new bootstrap.Modal(document.getElementById('sessionEditModal'));
+                                                                m.show();
+                                                        } else {
+                                                                // fallback: display block
+                                                                document.getElementById('sessionEditModal').style.display = 'block';
+                                                        }
+                                                } catch(err) { console.error(err); }
+                                        });
+                                });
+                        }
+
+                        document.addEventListener('DOMContentLoaded', function(){
+                                showModal();
+                        });
+                })();
+        </script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {

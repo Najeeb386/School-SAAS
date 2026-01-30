@@ -82,7 +82,29 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                                                 echo $school_name;
                                             ?> 👋
                                         </h2>
-                                        <p style="font-size: 14px; opacity: 0.9; margin: 0; color: #fff;">Here's what's happening in your school today.</p>
+                                        <p style="font-size: 14px; opacity: 0.9; margin: 0; color: #fff;">
+                                            Here's what's happening in your school today.
+                                            <?php
+                                                $active_session = 'No active session';
+                                                if ($school_id) {
+                                                    try {
+                                                        if (!isset($db)) {
+                                                            require_once __DIR__ . '/../../../../Core/database.php';
+                                                            $db = \Database::connect();
+                                                        }
+                                                        $stmt = $db->prepare("SELECT name FROM school_sessions WHERE school_id = :sid AND is_active = 1 AND deleted_at IS NULL LIMIT 1");
+                                                        $stmt->execute(['sid' => $school_id]);
+                                                        $session = $stmt->fetch(PDO::FETCH_ASSOC);
+                                                        if ($session && !empty($session['name'])) {
+                                                            $active_session = htmlspecialchars($session['name']);
+                                                        }
+                                                    } catch (Exception $e) {
+                                                        // Use default
+                                                    }
+                                                }
+                                            ?>
+                                            <br><strong>Active Session:</strong> <?php echo $active_session; ?>
+                                        </p>
                                     </div>
                                 </div>
                             </div>
