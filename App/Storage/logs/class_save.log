@@ -1,0 +1,10 @@
+2026-01-31 16:59:18 - === Save Class Request Started ===
+2026-01-31 16:59:18 - School ID: 10
+2026-01-31 16:59:18 - Raw input length: 139
+2026-01-31 16:59:18 - Data decoded: {"name":"Play Group 1","code":"","grade":"Play Group 1","session":"1","description":"","sections":[{"name":"A","room":"","capacity":"30"}]}
+2026-01-31 16:59:18 - EXCEPTION: Autoloader not found: D:\Softwares\Xampp\htdocs\School-SAAS\App\Modules\School_Admin\Views\classes/../../../autoloader.php at D:\Softwares\Xampp\htdocs\School-SAAS\App\Modules\School_Admin\Views\classes\save_class.php:46
+2026-01-31 17:01:38 - === Save Class Request Started ===
+2026-01-31 17:01:38 - School ID: 10
+2026-01-31 17:01:38 - Raw input length: 139
+2026-01-31 17:01:38 - Data decoded: {"name":"Play Group 1","code":"","grade":"Play Group 1","session":"1","description":"","sections":[{"name":"A","room":"","capacity":"30"}]}
+2026-01-31 17:01:38 - EXCEPTION: Autoloader not found: D:\Softwares\Xampp\htdocs\School-SAAS\App\Modules\School_Admin\Views\classes/../../../autoloader.php at D:\Softwares\Xampp\htdocs\School-SAAS\App\Modules\School_Admin\Views\classes\save_class.php:46
