@@ -104,4 +104,8 @@ class StaffSalaryController {
     public function calculateNetSalary($basic, $allowance = 0, $deduction = 0) {
         return $this->model->calculateNetSalary($basic, $allowance, $deduction);
     }
+
+    public function getUnfinalisedStaff() {
+        return $this->model->getUnfinalisedStaff($this->school_id);
+    }
 }

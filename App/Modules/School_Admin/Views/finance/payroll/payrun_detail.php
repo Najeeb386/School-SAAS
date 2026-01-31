@@ -45,8 +45,16 @@ $payment_summary = $payrun_data['payment_summary'] ?? [];
             .container-fluid { padding-left: 1rem; padding-right: 1rem; }
         }
         .stat-box { border-left: 4px solid #007bff; padding: 1rem; background: #f8f9fa; }
-        .stat-box h6 { color: #666; font-weight: 600; font-size: 0.85rem; }
-        .stat-box .value { font-size: 1.5rem; font-weight: bold; color: #333; }
+        .stat-box h6 { color: #000; font-weight: 600; font-size: 0.85rem; }
+        .stat-box .value { font-size: 1.5rem; font-weight: bold; color: #000; }
+        body { color: #000; }
+        .table { color: #000; }
+        .table th, .table td { color: #000; }
+        .card-body, .card-title { color: #000; }
+        h3, h5, h6 { color: #000; }
+        .breadcrumb-item { color: #000; }
+        .breadcrumb-item a { color: #007bff; }
+        .text-muted { color: #666 !important; }
         @media print {
             .no-print { display: none !important; }
             body { margin: 0; padding: 0; }
@@ -143,6 +151,7 @@ $payment_summary = $payrun_data['payment_summary'] ?? [];
                                                     <th>Deduction</th>
                                                     <th>Net Salary</th>
                                                     <th>Payment Status</th>
+                                                    <th>Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -166,6 +175,11 @@ $payment_summary = $payrun_data['payment_summary'] ?? [];
                                                                     $p_badge = $payment_badge[$item['payment_status']] ?? 'badge-secondary';
                                                                 ?>
                                                                 <span class="badge <?php echo $p_badge; ?>"><?php echo ucfirst($item['payment_status']); ?></span>
+                                                            </td>
+                                                            <td>
+                                                                <a href="payslip.php?id=<?php echo $item['id']; ?>" class="btn btn-xs btn-primary" title="View Payslip">
+                                                                    <i class="fa fa-file-pdf-o"></i> View
+                                                                </a>
                                                             </td>
                                                         </tr>
                                                     <?php endforeach; ?>

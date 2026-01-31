@@ -13,6 +13,9 @@ $school_id = isset($_SESSION['school_id']) ? intval($_SESSION['school_id']) : 0;
 $ctrl = new StaffSalaryController($DB_con);
 $salaries = $ctrl->list();
 
+// Get unfinalised staff (employees and teachers without salary records)
+$unfinalised_staff = $ctrl->getUnfinalisedStaff();
+
 $editing = false;
 $editRecord = null;
 if (isset($_GET['edit'])) {
@@ -43,16 +46,27 @@ if (isset($_GET['edit'])) {
         .app, .app-wrap, .app-container { padding-left: 0 !important; }
         .app-main { margin-left: 0 !important; width: 100% !important; }
         .container-fluid { max-width: 1400px; padding-left: 1.5rem; padding-right: 1.5rem; }
-        body { overflow-x: hidden; }
+        body { overflow-x: hidden; color: #000; }
         @media (max-width: 768px) {
             .container-fluid { padding-left: 1rem; padding-right: 1rem; }
         }
         /* tighten table spacing on small screens */
-        #salariesTable th, #salariesTable td { white-space: nowrap; }
+        #salariesTable th, #salariesTable td { white-space: nowrap; color: #000; }
+        #unfinalizedTable th, #unfinalizedTable td { white-space: nowrap; color: #000; }
+        .table { color: #000; }
+        .card-body, .card-title { color: #000; }
+        h3, h5, h6 { color: #000; }
+        
+        /* Pagination Styling */
+        .pagination { margin-top: 1.5rem; display: flex; justify-content: center; gap: 0.5rem; }
+        .pagination .page-link { color: #007bff; border: 1px solid #dee2e6; padding: 0.5rem 0.75rem; }
+        .pagination .page-link:hover { background-color: #e9ecef; }
+        .pagination .page-item.active .page-link { background-color: #007bff; border-color: #007bff; color: white; }
+        .pagination .page-item.disabled .page-link { color: #6c757d; pointer-events: none; }
         
         /* Print media query to hide Actions column */
         @media print {
-            .no-print, #salariesTable th:last-child, #salariesTable td:last-child { 
+            .no-print, #salariesTable th:last-child, #salariesTable td:last-child, .pagination { 
                 display: none !important; 
             }
             body { margin: 0; padding: 0; }
@@ -182,12 +196,72 @@ if (isset($_GET['edit'])) {
                                             </tbody>
                                         </table>
                                     </div>
+                                    <!-- Pagination for Salaries Table -->
+                                    <nav aria-label="Salaries pagination">
+                                        <ul class="pagination">
+                                            <li class="page-item" id="salariesPrevBtn"><a class="page-link" href="#" id="salariesPrev">Previous</a></li>
+                                            <li class="page-item active" id="salariesPageInfo"><span class="page-link">Page <span id="salariesCurrentPage">1</span></span></li>
+                                            <li class="page-item" id="salariesNextBtn"><a class="page-link" href="#" id="salariesNext">Next</a></li>
+                                        </ul>
+                                    </nav>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Pending Salary Finalization</h5>
+                                    <small class="text-muted">Staff members who don't have finalized salaries yet</small>
+                                    <div class="table-responsive mt-3">
+                                        <table id="unfinalizedTable" class="table table-striped table-hover" style="font-size: 0.875rem;">
+                                            <thead>
+                                                <tr>
+                                                    <th style="min-width: 30px;">#</th>
+                                                    <th style="min-width: 100px;">Staff Type</th>
+                                                    <th style="min-width: 80px;">Staff ID</th>
+                                                    <th style="min-width: 150px;">Name</th>
+                                                    <th style="min-width: 100px;">Email</th>
+                                                    <th style="min-width: 120px;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php if (!empty($unfinalised_staff) && is_array($unfinalised_staff)): ?>
+                                                    <?php $j = 1; foreach ($unfinalised_staff as $staff): ?>
+                                                        <tr>
+                                                            <td><?php echo $j++; ?></td>
+                                                            <td><?php echo htmlspecialchars(ucfirst($staff['staff_type'])); ?></td>
+                                                            <td><?php echo htmlspecialchars($staff['staff_type'] . '-' . str_pad($staff['staff_id'], 3, '0', STR_PAD_LEFT)); ?></td>
+                                                            <td><?php echo htmlspecialchars($staff['name']); ?></td>
+                                                            <td><?php echo htmlspecialchars($staff['email'] ?? '-'); ?></td>
+                                                            <td>
+                                                                <button class="btn btn-sm btn-outline-success btn-add-pending-salary" 
+                                                                    data-staff-type="<?php echo $staff['staff_type']; ?>"
+                                                                    data-staff-id="<?php echo $staff['staff_id']; ?>"
+                                                                    data-name="<?php echo htmlspecialchars($staff['name']); ?>">Add Salary</button>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <tr><td colspan="6" class="text-center text-muted">All staff have finalized salaries!</td></tr>
+                                                <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <!-- Pagination for Unfinalised Table -->
+                                    <nav aria-label="Unfinalised pagination">
+                                        <ul class="pagination">
+                                            <li class="page-item" id="unfinalPrevBtn"><a class="page-link" href="#" id="unfinalPrev">Previous</a></li>
+                                            <li class="page-item active" id="unfinalPageInfo"><span class="page-link">Page <span id="unfinalCurrentPage">1</span></span></li>
+                                            <li class="page-item" id="unfinalNextBtn"><a class="page-link" href="#" id="unfinalNext">Next</a></li>
+                                        </ul>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                 </div>
             </div>
@@ -318,6 +392,31 @@ if (isset($_GET['edit'])) {
             });
         });
 
+        // Add Salary for unfinalised staff
+        document.querySelectorAll('.btn-add-pending-salary').forEach(function(btn){
+            btn.addEventListener('click', function(){
+                var stype = this.getAttribute('data-staff-type');
+                var stid = this.getAttribute('data-staff-id');
+                var name = this.getAttribute('data-name');
+
+                document.getElementById('modal_salary_id').value = '';
+                document.getElementById('modal_staff_type').value = stype;
+                document.getElementById('modal_staff_id').value = stid;
+                document.getElementById('modal_basic').value = '';
+                document.getElementById('modal_allowance').value = '0';
+                document.getElementById('modal_deduction').value = '0';
+                document.getElementById('modal_eff_from').value = new Date().toISOString().split('T')[0];
+                document.getElementById('modal_session_id').value = '';
+                document.getElementById('salaryModalLabel').textContent = 'Add Salary for ' + name;
+
+                updateNetSalary();
+
+                if (window.jQuery && typeof jQuery('#salaryModal').modal === 'function') {
+                    jQuery('#salaryModal').modal('show');
+                }
+            });
+        });
+
         // Calculate net salary in real-time
         function updateNetSalary(){
             var basic = parseFloat(document.getElementById('modal_basic').value) || 0;
@@ -424,7 +523,53 @@ if (isset($_GET['edit'])) {
                 var loader = document.querySelector('.loader');
                 if (loader) loader.style.display = 'none';
             }, 300);
+
+            // Initialize pagination
+            initPagination();
         });
+
+        // Pagination Configuration
+        const ROWS_PER_PAGE = 5;
+
+        function initPagination() {
+            paginateTable('salariesTable', 'salariesPrev', 'salariesNext', 'salariesCurrentPage', 'salariesPrevBtn', 'salariesNextBtn');
+            paginateTable('unfinalizedTable', 'unfinalPrev', 'unfinalNext', 'unfinalCurrentPage', 'unfinalPrevBtn', 'unfinalNextBtn');
+        }
+
+        function paginateTable(tableId, prevBtnId, nextBtnId, pageSpanId, prevContainerId, nextContainerId) {
+            const table = document.getElementById(tableId);
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            let currentPage = 1;
+            const totalPages = Math.ceil(rows.length / ROWS_PER_PAGE);
+
+            const showPage = (page) => {
+                rows.forEach((row, idx) => {
+                    const isInRange = idx >= (page - 1) * ROWS_PER_PAGE && idx < page * ROWS_PER_PAGE;
+                    row.style.display = isInRange ? '' : 'none';
+                });
+                document.getElementById(pageSpanId).textContent = page;
+                document.getElementById(prevContainerId).classList.toggle('disabled', page === 1);
+                document.getElementById(nextContainerId).classList.toggle('disabled', page === totalPages);
+            };
+
+            document.getElementById(prevBtnId).addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    showPage(currentPage);
+                }
+            });
+
+            document.getElementById(nextBtnId).addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    showPage(currentPage);
+                }
+            });
+
+            showPage(currentPage);
+        }
     </script>
 </body>
 

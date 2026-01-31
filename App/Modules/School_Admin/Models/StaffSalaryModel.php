@@ -101,4 +101,36 @@ class StaffSalaryModel {
     public function calculateNetSalary($basic, $allowance, $deduction) {
         return $basic + $allowance - $deduction;
     }
+
+    public function getUnfinalisedStaff($school_id) {
+        // Get employees without salary records
+        $sql = 'SELECT 
+                    e.id as staff_id,
+                    "employee" as staff_type,
+                    e.name,
+                    e.email
+                FROM employees e
+                WHERE e.school_id = :sid AND e.status = 1
+                AND e.id NOT IN (
+                    SELECT staff_id FROM school_staff_salaries 
+                    WHERE school_id = :sid AND staff_type = "employee" AND deleted_at IS NULL
+                )
+                UNION
+                SELECT 
+                    t.id as staff_id,
+                    "teacher" as staff_type,
+                    t.name,
+                    t.email
+                FROM school_teachers t
+                WHERE t.school_id = :sid AND t.status = 1
+                AND t.id NOT IN (
+                    SELECT staff_id FROM school_staff_salaries 
+                    WHERE school_id = :sid AND staff_type = "teacher" AND deleted_at IS NULL
+                )
+                ORDER BY staff_type, name';
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':sid' => $school_id]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
 }

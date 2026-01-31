@@ -39,11 +39,18 @@ $payruns = $ctrl->list($session_id);
         @media (max-width: 768px) {
             .container-fluid { padding-left: 1rem; padding-right: 1rem; }
         }
-        #payrunsTable th, #payrunsTable td { white-space: nowrap; }
+        #payrunsTable th, #payrunsTable td { white-space: nowrap; color: #000; }
         .status-badge {
             font-size: 0.85rem;
             padding: 0.35rem 0.6rem;
         }
+        body { color: #000; }
+        .table { color: #000; }
+        .card-body, .card-title { color: #000; }
+        h3, h5, h6 { color: #000; }
+        .breadcrumb-item { color: #000; }
+        .breadcrumb-item a { color: #007bff; }
+        .text-muted { color: #666 !important; }
         @media print {
             .no-print, #payrunsTable th:last-child, #payrunsTable td:last-child { 
                 display: none !important; 

@@ -37,6 +37,17 @@ $next_payrun_year = $current_year;
     <link rel="stylesheet" type="text/css" href="../../../../../../public/assets/css/vendors.css" />
     <!-- app style -->
     <link rel="stylesheet" type="text/css" href="../../../../../../public/assets/css/style.css" />
+    <style>
+        body { color: #000; }
+        .table { color: #000; }
+        .table th, .table td { color: #000; }
+        .card-body, .card-title { color: #000; }
+        h3, h5, h6, h4 { color: #000; }
+        .badge { color: #fff; }
+        .breadcrumb-item { color: #000; }
+        .breadcrumb-item a { color: #007bff; }
+        .text-muted { color: #666 !important; }
+    </style>
 </head>
 
 <body>
@@ -95,7 +106,7 @@ $next_payrun_year = $current_year;
 
                         <div class="row">
                             <div class="col-md-3 mb-4">
-                                <a href="payruns.php" class="text-dark text-decoration-none">
+                                <a href="payrun.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3"><i class="fa fa-calendar fa-2x text-primary"></i></div>
