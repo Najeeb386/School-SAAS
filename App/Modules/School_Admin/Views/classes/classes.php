@@ -504,56 +504,63 @@ try {
                             </div>
                             <div class="page-actions">
                                 <button class="btn btn-secondary">📥 Import</button>
-                                <button class="btn btn-primary" onclick="openAddClassModal()">+ Add New Class</button>
+                                <button class="btn btn-primary" onclick="startAddClass()">+ Add New Class</button>
                             </div>
                         </div>
 
                         <!-- Statistics Cards -->
+                        <?php
+                        // Compute summary statistics for the cards
+                        try {
+                            // Total classes
+                            $totStmt = $db->prepare("SELECT COUNT(*) FROM school_classes WHERE school_id = :sid AND session_id = :sess");
+                            $totStmt->execute([':sid' => $school_id, ':sess' => $active_session_id]);
+                            $total_classes = (int) $totStmt->fetchColumn();
+
+                            // Total students (sum of current_enrollment from sections)
+                            $studentsStmt = $db->prepare("SELECT COALESCE(SUM(s.current_enrollment),0) FROM school_class_sections s JOIN school_classes c ON s.class_id = c.id WHERE c.school_id = :sid AND c.session_id = :sess");
+                            $studentsStmt->execute([':sid' => $school_id, ':sess' => $active_session_id]);
+                            $total_students = (int) $studentsStmt->fetchColumn();
+
+                            // Active teachers (count from teachers table where status = 1)
+                            $teachersStmt = $db->prepare("SELECT COUNT(*) FROM school_teachers WHERE school_id = :sid AND status = 1");
+                            $teachersStmt->execute([':sid' => $school_id]);
+                            $active_teachers = (int) $teachersStmt->fetchColumn();
+
+                            $avg_class_size = $total_classes > 0 ? round($total_students / max(1, $total_classes)) : 0;
+                        } catch (Exception $e) {
+                            $total_classes = $total_students = $active_teachers = $avg_class_size = 0;
+                        }
+                        ?>
+
                         <div class="stats-row">
                             <div class="stat-card">
                                 <div class="stat-card-icon blue">📚</div>
                                 <h6>Total Classes</h6>
-                                <div class="value">12</div>
+                                <div class="value"><?php echo $total_classes; ?></div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-card-icon green">👨‍🎓</div>
                                 <h6>Total Students</h6>
-                                <div class="value">450</div>
+                                <div class="value"><?php echo $total_students; ?></div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-card-icon orange">👨‍🏫</div>
                                 <h6>Active Teachers</h6>
-                                <div class="value">24</div>
+                                <div class="value"><?php echo $active_teachers; ?></div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-card-icon purple">📊</div>
                                 <h6>Avg Class Size</h6>
-                                <div class="value">37</div>
+                                <div class="value"><?php echo $avg_class_size; ?></div>
                             </div>
                         </div>
 
-                        <!-- Filters Section -->
+                        <!-- Filters Section (single search only) -->
                         <div class="filters-section">
                             <div class="search-box">
-                                <input type="text" placeholder="🔍 Search classes by name, code, or section...">
+                                <input id="classSearch" type="text" placeholder="🔍 Search classes by name, code, section, or teacher...">
                             </div>
-                            <select class="filter-select">
-                                <option>All Sections</option>
-                                <option>A Section</option>
-                                <option>B Section</option>
-                                <option>C Section</option>
-                            </select>
-                            <select class="filter-select">
-                                <option>All Grades</option>
-                                <option>Grade 1</option>
-                                <option>Grade 2</option>
-                                <option>Grade 3</option>
-                            </select>
-                            <select class="filter-select">
-                                <option>All Sessions</option>
-                                <option>2025-2026</option>
-                                <option>2024-2025</option>
-                            </select>
                         </div>
 
                         <!-- Classes Table -->
@@ -564,7 +571,7 @@ try {
                                         <th>#</th>
                                         <th>Class Name</th>
                                         <th>Code</th>
-                                        <th>Section</th>
+                                        <th>Sections</th>
                                         <th>Class Teacher</th>
                                         <th>Students</th>
                                         <th>Status</th>
@@ -573,18 +580,20 @@ try {
                                 </thead>
                                 <tbody>
                                     <?php
-                                    // Fetch classes and their sections for current school + session
+                                    // Fetch classes (one row per class) and compute section counts for current school + session
                                     try {
                                         $sql = "SELECT c.id AS class_id, c.class_name, c.class_code, c.status AS class_status,
-                                            s.id AS section_id, s.section_name, s.section_code, s.current_enrollment,
-                                            t.name AS teacher_name
+                                            COUNT(sc.id) AS sections_count,
+                                            COALESCE(SUM(sc.current_enrollment),0) AS students_count,
+                                            (SELECT t2.name FROM school_class_sections sc2 JOIN school_teachers t2 ON sc2.class_teacher_id = t2.id WHERE sc2.class_id = c.id AND sc2.school_id = :sid1 AND sc2.class_teacher_id IS NOT NULL LIMIT 1) AS teacher_name
                                             FROM school_classes c
-                                            LEFT JOIN school_class_sections s ON s.class_id = c.id
-                                            LEFT JOIN school_teachers t ON s.class_teacher_id = t.id
-                                            WHERE c.school_id = :sid AND c.session_id = :sess
-                                            ORDER BY c.id ASC, s.section_name ASC";
+                                            LEFT JOIN school_class_sections sc ON sc.class_id = c.id AND sc.school_id = :sid2
+                                            LEFT JOIN school_teachers t ON sc.class_teacher_id = t.id
+                                            WHERE c.school_id = :sid3 AND c.session_id = :sess
+                                            GROUP BY c.id
+                                            ORDER BY c.id ASC";
                                         $stmt = $db->prepare($sql);
-                                        $stmt->execute([':sid' => $school_id, ':sess' => $active_session_id]);
+                                        $stmt->execute(['sid1' => $school_id, 'sid2' => $school_id, 'sid3' => $school_id, 'sess' => $active_session_id]);
                                         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                                         if (empty($rows)) {
@@ -593,19 +602,18 @@ try {
                                             $counter = 1;
                                             foreach ($rows as $r) {
                                                 $className = htmlspecialchars($r['class_name'] ?? '');
-                                                $sectionName = htmlspecialchars($r['section_name'] ?? '-');
-                                                $code = htmlspecialchars($r['section_code'] ?? $r['class_code'] ?? '-');
+                                                $code = htmlspecialchars($r['class_code'] ?? '-');
+                                                $sectionsCount = intval($r['sections_count'] ?? 0);
                                                 $teacher = htmlspecialchars($r['teacher_name'] ?? '-');
-                                                $students = intval($r['current_enrollment'] ?? 0);
+                                                $students = intval($r['students_count'] ?? 0);
                                                 $status = ($r['class_status'] ?? 'active');
-                                                $sectionId = intval($r['section_id'] ?? 0);
                                                 $classId = intval($r['class_id'] ?? 0);
 
                                                 echo '<tr>';
                                                 echo '<td>' . $counter++ . '</td>';
                                                 echo '<td><strong>' . $className . '</strong></td>';
                                                 echo '<td>' . $code . '</td>';
-                                                echo '<td>' . $sectionName . '</td>';
+                                                echo '<td>' . $sectionsCount . '</td>';
                                                 echo '<td>' . $teacher . '</td>';
                                                 echo '<td>' . $students . '</td>';
                                                 echo '<td><span class="badge badge-' . ($status === 'active' ? 'success' : 'secondary') . '">' . ucfirst($status) . '</span></td>';
@@ -614,6 +622,7 @@ try {
                                                 echo '<button class="btn-sm btn-view" onclick="viewClass(' . $classId . ')">View</button>';
                                                 echo '<button class="btn-sm btn-edit" onclick="editClass(' . $classId . ')">Edit</button>';
                                                 echo '<button class="btn-sm btn-delete" onclick="deleteClass(' . $classId . ')">Delete</button>';
+                                                echo '<button class="btn-sm" style="background:#6c757d;color:#fff;padding:6px 8px;border-radius:4px;" onclick="openAddSectionModal(' . $classId . ')">Add Section</button>';
                                                 echo '</div>';
                                                 echo '</td>';
                                                 echo '</tr>';
@@ -741,6 +750,34 @@ try {
         </div>
     </template>
 
+    <!-- Add Section Modal -->
+    <div id="addSectionModal" class="modal">
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header">
+                <h2>Add Section</h2>
+                <button class="close-btn" onclick="closeAddSectionModal()">×</button>
+            </div>
+            <div style="padding:10px 0 0 0;">
+                <div class="form-group">
+                    <label>Section Name *</label>
+                    <input type="text" id="newSectionName" placeholder="e.g., A, B">
+                </div>
+                <div class="form-group">
+                    <label>Room Number</label>
+                    <input type="text" id="newSectionRoom" placeholder="Optional">
+                </div>
+                <div class="form-group">
+                    <label>Capacity</label>
+                    <input type="number" id="newSectionCapacity" min="1" placeholder="Optional">
+                </div>
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
+                    <button class="btn btn-secondary" onclick="closeAddSectionModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="submitAddSection()">Save Section</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- plugins -->
     <script type="text/javascript" src="../../../../../public/assets/js/vendors.js"></script>
     <!-- custom scripts -->
@@ -748,6 +785,7 @@ try {
 
     <script>
         let sectionCount = 0;
+        let editingClassId = null;
 
         function openAddClassModal() {
             sectionCount = 0;
@@ -766,11 +804,17 @@ try {
             document.getElementById('classModal').classList.add('show');
         }
 
+        function startAddClass() {
+            editingClassId = null;
+            document.querySelector('.modal-header h2').textContent = 'Add New Class';
+            openAddClassModal();
+        }
+
         function closeClassModal() {
             document.getElementById('classModal').classList.remove('show');
         }
 
-        function addSectionRow() {
+        function addSectionRow(data = null) {
             const template = document.getElementById('sectionTemplate');
             const container = document.getElementById('sectionsContainer');
             const clone = template.content.cloneNode(true);
@@ -778,6 +822,16 @@ try {
             // Add unique IDs
             const sectionRow = clone.querySelector('.section-row');
             sectionRow.id = 'section-' + sectionCount++;
+
+            // populate if data provided
+            if (data) {
+                const nameEl = sectionRow.querySelector('.section-name');
+                const roomEl = sectionRow.querySelector('.section-room');
+                const capEl = sectionRow.querySelector('.section-capacity');
+                if (nameEl) nameEl.value = data.section_name || data.sectionName || '';
+                if (roomEl) roomEl.value = data.room_number || data.room || '';
+                if (capEl) capEl.value = data.capacity || '';
+            }
             
             container.appendChild(clone);
         }
@@ -798,9 +852,40 @@ try {
             alert('View class ' + id);
         }
 
-        function editClass(id) {
+        async function editClass(id) {
+            editingClassId = id;
             document.querySelector('.modal-header h2').textContent = 'Edit Class';
+            // open modal and populate
             openAddClassModal();
+            // fetch class data
+            try {
+                const resp = await fetch('/School-SAAS/App/Modules/School_Admin/Views/classes/get_class.php?id=' + encodeURIComponent(id), { credentials: 'same-origin' });
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    alert('Failed to load class: ' + (data.message || resp.statusText));
+                    return;
+                }
+                const cls = data.class;
+                const secs = data.sections || [];
+
+                document.getElementById('className').value = cls.class_name || '';
+                document.getElementById('classCode').value = cls.class_code || '';
+                document.getElementById('gradeLevel').value = cls.grade_level || '';
+                document.getElementById('description').value = cls.description || '';
+
+                // clear existing section rows
+                const container = document.getElementById('sectionsContainer');
+                container.innerHTML = '';
+                sectionCount = 0;
+                if (secs.length === 0) {
+                    addSectionRow();
+                } else {
+                    secs.forEach(s => addSectionRow(s));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error loading class: ' + err.message);
+            }
         }
 
         function deleteClass(id) {
@@ -817,6 +902,58 @@ try {
             }
         }
 
+        // Add Section modal functions
+        let addSectionClassId = null;
+        function openAddSectionModal(classId) {
+            addSectionClassId = classId;
+            document.getElementById('newSectionName').value = '';
+            document.getElementById('newSectionRoom').value = '';
+            document.getElementById('newSectionCapacity').value = '';
+            document.getElementById('addSectionModal').classList.add('show');
+        }
+
+        function closeAddSectionModal() {
+            document.getElementById('addSectionModal').classList.remove('show');
+            addSectionClassId = null;
+        }
+
+        async function submitAddSection() {
+            const name = document.getElementById('newSectionName').value.trim();
+            const room = document.getElementById('newSectionRoom').value.trim();
+            const capacityVal = document.getElementById('newSectionCapacity').value;
+            const capacity = capacityVal === '' ? null : parseInt(capacityVal, 10);
+
+            if (!addSectionClassId) {
+                alert('Class not specified');
+                return;
+            }
+            if (!name) {
+                alert('Section name is required');
+                return;
+            }
+
+            try {
+                const payload = { class_id: addSectionClassId, name: name, room: room, capacity: capacity, session_id: (document.getElementById('sessionId') ? document.getElementById('sessionId').value : '') };
+                const resp = await fetch('/School-SAAS/App/Modules/School_Admin/Views/classes/add_section.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    alert('Error adding section: ' + (data.message || resp.statusText));
+                    return;
+                }
+                alert('Section added');
+                closeAddSectionModal();
+                // reload to show new section and update counts
+                setTimeout(() => location.reload(), 300);
+            } catch (err) {
+                console.error(err);
+                alert('Unexpected error: ' + err.message);
+            }
+        }
+
         // Form submission
         document.getElementById('classForm')?.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -830,6 +967,10 @@ try {
                 description: document.getElementById('description').value,
                 sections: []
             };
+
+            if (editingClassId) {
+                classData.id = editingClassId;
+            }
 
             // Collect section data
             document.querySelectorAll('.section-row').forEach(row => {
@@ -930,6 +1071,21 @@ try {
             if (loader) {
                 loader.style.display = 'none';
             }
+        });
+        
+        // Simple client-side search/filter for classes table
+        document.getElementById('classSearch')?.addEventListener('input', function() {
+            const q = this.value.trim().toLowerCase();
+            const rows = document.querySelectorAll('.table-container tbody tr');
+            rows.forEach(r => {
+                // if this row is the 'no classes found' message, leave display handling to match search
+                const text = r.textContent.toLowerCase();
+                if (!q || text.indexOf(q) !== -1) {
+                    r.style.display = '';
+                } else {
+                    r.style.display = 'none';
+                }
+            });
         });
     </script>
 </body>

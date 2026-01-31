@@ -128,9 +128,38 @@ try {
     }
     
     try {
-        $controller = new \App\Modules\School_Admin\Controllers\ClassController($db);
-        $class_id = $controller->createFromArray($school_id, $session_id, $payload);
-        json_success($class_id);
+        // If an id is provided, perform update, otherwise create
+        $classModel = new \App\Modules\School_Admin\Models\ClassModel($db);
+        $sectionModel = new \App\Modules\School_Admin\Models\ClassSectionModel($db);
+
+        if (!empty($data['id'])) {
+            $class_id = (int)$data['id'];
+
+            // Update class fields (but NOT class_code - keep it unchanged)
+            $updateData = [
+                'class_name' => $payload['class_name'],
+                'grade_level' => $payload['grade_level'],
+                'description' => $payload['description'],
+                'status' => $payload['status']
+            ];
+
+            $classModel->update($class_id, $updateData);
+
+            // Replace sections: delete existing and insert new ones
+            $sectionModel->deleteByClassId($class_id);
+            if (!empty($payload['sections'])) {
+                foreach ($payload['sections'] as $s) {
+                    $sectionName = $s['section_name'] ?? '';
+                    $sectionModel->create($school_id, $session_id, $class_id, $sectionName, $s['section_code'] ?? null, $s['room_number'] ?? null, isset($s['capacity']) ? (int)$s['capacity'] : null, $s['class_teacher_id'] ?? null, 'active');
+                }
+            }
+
+            json_success($class_id);
+        } else {
+            $controller = new \App\Modules\School_Admin\Controllers\ClassController($db);
+            $class_id = $controller->createFromArray($school_id, $session_id, $payload);
+            json_success($class_id);
+        }
     } catch (Exception $e) {
         json_error('Save error: ' . $e->getMessage());
     }
