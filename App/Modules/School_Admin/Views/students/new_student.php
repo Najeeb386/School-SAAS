@@ -197,7 +197,60 @@ require_once __DIR__ . '/../../../../Core/database.php';
         document.getElementById('backToAcademic').addEventListener('click', function(e){ e.preventDefault(); $('#tab-academic-tab').tab('show'); });
 
         document.getElementById('submitStudent').addEventListener('click', function(){
-            alert('Submit student (UI only) - implement save_student.php to persist.');
+            var btn = this; btn.disabled = true; btn.textContent = 'Submitting...';
+            var fd = new FormData();
+            // personal
+            fd.append('first_name', document.getElementById('first_name').value || '');
+            fd.append('last_name', document.getElementById('last_name').value || '');
+            fd.append('admission_no', document.getElementById('admission_no').value || '');
+            fd.append('dob', document.getElementById('dob').value || '');
+            fd.append('gender', document.getElementById('gender').value || '');
+            fd.append('admission_date', document.getElementById('admission_date').value || '');
+            fd.append('religion', document.getElementById('religion').value || '');
+            // guardians
+            fd.append('guardian_name', document.getElementById('guardian_name').value || '');
+            fd.append('guardian_relation', document.getElementById('guardian_relation').value || '');
+            fd.append('guardian_cnic', document.getElementById('guardian_cnic').value || '');
+            fd.append('guardian_occupation', document.getElementById('guardian_occupation').value || '');
+            fd.append('guardian_mobile', document.getElementById('guardian_mobile').value || '');
+            fd.append('guardian_address', document.getElementById('guardian_address').value || '');
+            fd.append('guardian2_name', document.getElementById('guardian2_name').value || '');
+            fd.append('guardian2_relation', document.getElementById('guardian2_relation').value || '');
+            fd.append('guardian2_cnic', document.getElementById('guardian2_cnic').value || '');
+            fd.append('guardian2_occupation', document.getElementById('guardian2_occupation').value || '');
+            // academic
+            fd.append('enroll_class', document.getElementById('enroll_class').value || '');
+            fd.append('enroll_section', document.getElementById('enroll_section').value || '');
+            fd.append('enroll_session', document.getElementById('enroll_session').value || '');
+            fd.append('transferred', document.getElementById('transferred').value || 'no');
+            fd.append('prev_school', document.getElementById('prev_school').value || '');
+            fd.append('prev_class', document.getElementById('prev_class').value || '');
+            fd.append('prev_adm_no', document.getElementById('prev_adm_no').value || '');
+            fd.append('prev_result', document.getElementById('prev_result').value || '');
+
+            // files
+            var photo = document.getElementById('doc_photo'); if (photo && photo.files && photo.files[0]) fd.append('doc_photo', photo.files[0]);
+            var gcn = document.getElementById('doc_guardian_cnic'); if (gcn && gcn.files && gcn.files[0]) fd.append('doc_guardian_cnic', gcn.files[0]);
+            var bc = document.getElementById('doc_birth_cert'); if (bc && bc.files && bc.files[0]) fd.append('doc_birth_cert', bc.files[0]);
+            var others = document.getElementById('doc_other'); if (others && others.files) { for (var i=0;i<others.files.length;i++) fd.append('doc_other[]', others.files[i]); }
+
+            fetch('save_student.php', { method: 'POST', body: fd }).then(function(resp){
+                return resp.text().then(function(txt){
+                    try { return JSON.parse(txt); } catch(err) { throw new Error('Invalid JSON response:\n'+txt); }
+                });
+            }).then(function(json){
+                if (json.success) {
+                    alert('Student saved, ID: ' + (json.student_id || ''));
+                    // redirect to students list
+                    window.location.href = 'students.php';
+                } else {
+                    alert('Save failed: ' + (json.message || 'Unknown'));
+                    btn.disabled = false; btn.textContent = 'Submit Student';
+                }
+            }).catch(function(err){
+                alert('Request error: ' + err.message);
+                btn.disabled = false; btn.textContent = 'Submit Student';
+            });
         });
 
         document.getElementById('saveDraft').addEventListener('click', function(){ alert('Draft saved (placeholder)'); });
@@ -209,6 +262,44 @@ require_once __DIR__ . '/../../../../Core/database.php';
             var reader = new FileReader(); reader.onload = function(ev){ document.getElementById('preview_photo').src = ev.target.result; };
             reader.readAsDataURL(f);
         });
+
+        // Load classes and populate class->section selects
+        var _classesCache = [];
+        function loadClasses(){
+            return fetch('../fees/list_classes.php').then(function(r){ return r.json(); }).then(function(j){
+                if (!j.success) return;
+                _classesCache = j.data || [];
+                var $c = $('#enroll_class'); var $s = $('#enroll_section');
+                $c.empty().append('<option value="">-- choose --</option>');
+                $s.empty().append('<option value="">-- choose --</option>');
+                _classesCache.forEach(function(cl){ $c.append('<option value="'+cl.id+'">'+(cl.class_name||'')+'</option>'); });
+            }).catch(function(err){ console.error(err); });
+        }
+
+        function populateSectionsForClass(classId){
+            var $s = $('#enroll_section'); $s.empty().append('<option value="">-- choose --</option>');
+            if (!classId) return;
+            var found = _classesCache.find(function(c){ return String(c.id) === String(classId); });
+            if (!found) return;
+            var secs = found.sections || [];
+            secs.forEach(function(sec){ $s.append('<option value="'+sec.id+'">'+(sec.section_name||'')+'</option>'); });
+        }
+
+        $('#enroll_class').on('change', function(){ populateSectionsForClass($(this).val()); });
+
+        // load active session and set enroll_session
+        function loadActiveSession(){
+            return fetch('../fees/get_current_session.php').then(function(r){ return r.json(); }).then(function(j){
+                if (!j.success) return;
+                var $ss = $('#enroll_session'); $ss.empty();
+                $ss.append('<option value="'+j.id+'">'+(j.name||'')+'</option>');
+            }).catch(function(err){ console.error(err); });
+        }
+
+        // kick off loads
+        loadClasses().then(function(){ /* optionally set default class */ });
+        loadActiveSession();
+
     })();
     </script>
 </body>
