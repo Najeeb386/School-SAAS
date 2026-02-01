@@ -572,8 +572,6 @@ try {
                                         <th>Class Name</th>
                                         <th>Code</th>
                                         <th>Sections</th>
-                                        <th>Class Teacher</th>
-                                        <th>Students</th>
                                         <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
@@ -604,8 +602,6 @@ try {
                                                 $className = htmlspecialchars($r['class_name'] ?? '');
                                                 $code = htmlspecialchars($r['class_code'] ?? '-');
                                                 $sectionsCount = intval($r['sections_count'] ?? 0);
-                                                $teacher = htmlspecialchars($r['teacher_name'] ?? '-');
-                                                $students = intval($r['students_count'] ?? 0);
                                                 $status = ($r['class_status'] ?? 'active');
                                                 $classId = intval($r['class_id'] ?? 0);
 
@@ -614,8 +610,6 @@ try {
                                                 echo '<td><strong>' . $className . '</strong></td>';
                                                 echo '<td>' . $code . '</td>';
                                                 echo '<td>' . $sectionsCount . '</td>';
-                                                echo '<td>' . $teacher . '</td>';
-                                                echo '<td>' . $students . '</td>';
                                                 echo '<td><span class="badge badge-' . ($status === 'active' ? 'success' : 'secondary') . '">' . ucfirst($status) . '</span></td>';
                                                 echo '<td>';
                                                 echo '<div class="action-btns">';
@@ -849,7 +843,8 @@ try {
         }
 
         function viewClass(id) {
-            alert('View class ' + id);
+            // navigate to detailed class view
+            window.location.href = '/School-SAAS/App/Modules/School_Admin/Views/classes/viewclass.php?id=' + encodeURIComponent(id);
         }
 
         async function editClass(id) {
