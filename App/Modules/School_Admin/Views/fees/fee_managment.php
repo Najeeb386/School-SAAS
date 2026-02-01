@@ -82,8 +82,14 @@ if (!$school_id) {
 
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <strong>Assignments</strong>
-                    <small class="text-muted">Map fees to classes / sections / students</small>
+                    <div>
+                        <strong>Assignments</strong>
+                        <small class="text-muted d-block">Map fees to classes / sections / students</small>
+                    </div>
+                    <div style="min-width:320px; display:flex; gap:8px; align-items:center;">
+                        <input id="assign_search" class="form-control form-control-sm" placeholder="Search assignments..." style="max-width:220px;" />
+                        <button id="refreshAssignments" class="btn btn-sm btn-outline-secondary">Refresh</button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -143,12 +149,20 @@ if (!$school_id) {
     <div class="modal-content">
       <div class="modal-header"><h5 class="modal-title">Assign Fee</h5><button type="button" class="close" data-dismiss="modal">&times;</button></div>
       <div class="modal-body">
-        <form id="formAssignFee" onsubmit="return false;">
-          <div class="form-group"><label>Fee Item</label><select class="form-control" id="assign_fee_item"><option value="">-- choose --</option></select></div>
-          <div class="form-group"><label>Assign To</label><select class="form-control" id="assign_to"><option value="class">Class</option><option value="section">Section</option><option value="student">Student</option></select></div>
-          <div class="form-group" id="assign_target_container"><label>Target</label><select class="form-control" id="assign_target"><option value="">-- choose --</option></select></div>
-          <div class="form-group"><label>Amount (optional)</label><input class="form-control" id="assign_amount" type="number" step="0.01"></div>
-        </form>
+                <form id="formAssignFee" onsubmit="return false;">
+                    <input type="hidden" id="assign_session_id" value="<?php echo htmlspecialchars($_SESSION['current_session_id'] ?? $_SESSION['active_session_id'] ?? 0); ?>">
+                    <input type="hidden" id="assign_edit_id" value="">
+                    <div class="form-group"><label>Fee Item</label><select class="form-control" id="assign_fee_item"><option value="">-- choose --</option></select></div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6"><label>Assign To</label><select class="form-control" id="assign_to"><option value="class">Class</option><option value="section">Section</option><option value="student">Student</option></select></div>
+                        <div class="form-group col-md-6"><label>Session</label><input type="text" class="form-control" id="assign_session_display" value="<?php echo htmlspecialchars($_SESSION['current_session_name'] ?? $_SESSION['active_session_name'] ?? ''); ?>" readonly></div>
+                    </div>
+                    <div class="form-group" id="assign_target_container"><label>Target</label><select class="form-control" id="assign_target"><option value="">-- choose --</option></select></div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6"><label>Amount (optional)</label><input class="form-control" id="assign_amount" type="number" step="0.01"></div>
+                        <div class="form-group col-md-6"><label>Due Day</label><input class="form-control" id="assign_due_day" type="number" min="1" max="28" value="10"></div>
+                    </div>
+                </form>
       </div>
       <div class="modal-footer"><button class="btn btn-secondary" data-dismiss="modal">Close</button><button id="saveAssignment" class="btn btn-primary">Assign</button></div>
     </div>
@@ -251,6 +265,172 @@ $(function(){
         }).catch(console.error);
     }
     loadFeeItems();
+
+    // load fee items for assign modal
+    function loadAssignFeeItems() {
+        fetch('list_fee_items.php').then(r=>r.json()).then(json=>{
+            var $sel = $('#assign_fee_item'); $sel.empty().append('<option value="">-- choose --</option>');
+            if (json.success && Array.isArray(json.data)) {
+                json.data.forEach(function(it){ $sel.append('<option value="'+it.id+'">'+escapeHtml(it.name) + ' (' + (it.category_name||'-') + ')</option>'); });
+            }
+        }).catch(console.error);
+    }
+
+    // load targets (classes/sections). caches classes data
+    var _classesCache = null;
+    function loadAssignTargets(force){
+        return new Promise(function(resolve, reject){
+            if (_classesCache && !force) { populateTargets(); resolve(); return; }
+            fetch('list_classes.php').then(r=>r.json()).then(json=>{
+                if (!json.success) { resolve(); return; }
+                _classesCache = json.data || [];
+                populateTargets();
+                resolve();
+            }).catch(err=>{ console.error(err); resolve(); });
+        });
+    }
+
+    function populateTargets(){
+        var mode = $('#assign_to').val();
+        var $t = $('#assign_target'); $t.empty().append('<option value="">-- choose --</option>');
+        if (!Array.isArray(_classesCache)) return;
+        if (mode === 'class') {
+            _classesCache.forEach(function(c){ $t.append('<option value="'+c.id+'">'+escapeHtml(c.class_name || c.class_name || c.class_name) + '</option>'); });
+        } else if (mode === 'section') {
+            _classesCache.forEach(function(c){
+                var secs = c.sections || [];
+                if (secs.length) {
+                    var group = document.createElement('optgroup'); group.label = c.class_name || '';
+                    secs.forEach(function(s){ var opt = document.createElement('option'); opt.value = s.id; opt.text = s.section_name; group.appendChild(opt); });
+                    $t.append(group);
+                }
+            });
+        } else if (mode === 'student') {
+            $t.append('<option value="0">(Select student from student list - not implemented)</option>');
+        }
+    }
+
+    $('#assign_to').on('change', function(){ populateTargets(); });
+
+    // open assign modal and prepare lists; fetch active session first
+    $('#btnAssignFee').on('click', function(){
+        // fetch current session
+        fetch('get_current_session.php').then(r=>r.json()).then(js=>{
+            if (js && js.success) {
+                $('#assign_session_id').val(js.id);
+                $('#assign_session_display').val(js.name || '');
+            }
+            // reset edit state
+            $('#assign_edit_id').val(''); $('#assign_amount').val(''); $('#assign_due_day').val('10');
+            loadAssignFeeItems();
+            loadAssignTargets(true).then(function(){ $('#assignFeeModal').modal('show'); });
+        }).catch(err=>{
+            console.error(err);
+            $('#assign_edit_id').val(''); $('#assign_amount').val(''); $('#assign_due_day').val('10');
+            loadAssignFeeItems();
+            loadAssignTargets(true).then(function(){ $('#assignFeeModal').modal('show'); });
+        });
+    });
+
+    // save assignment
+    $('#saveAssignment').on('click', function(){
+        var fee = $('#assign_fee_item').val(); if (!fee) return alert('Choose fee item');
+        var assign_to = $('#assign_to').val(); var target = $('#assign_target').val(); if (!target) return alert('Choose target');
+        var fd = new FormData(); fd.append('fee_item_id', fee); fd.append('assign_to', assign_to); fd.append('target', target);
+        fd.append('session_id', $('#assign_session_id').val()); fd.append('amount', $('#assign_amount').val()); fd.append('due_day', $('#assign_due_day').val());
+        var editId = $('#assign_edit_id').val(); if (editId) fd.append('id', editId);
+        fetch('save_fee_assignment.php', { method: 'POST', body: fd }).then(r=>r.json()).then(j=>{
+            if (j.success) { $('#assignFeeModal').modal('hide'); $('#assign_edit_id').val(''); alert(editId ? 'Updated' : 'Assigned'); loadFeeAssignments(); }
+            else alert(j.message||'Assign failed');
+        }).catch(e=>{ alert('Request failed'); console.error(e); });
+    });
+
+    // load assignments list
+    function loadFeeAssignments(){
+        fetch('list_fee_assignments.php').then(r=>r.json()).then(json=>{
+            var $list = $('#feeAssignmentsList'); $list.empty();
+            if (!json.success) { $list.append('<tr><td colspan="6" class="text-muted">Failed to load assignments.</td></tr>'); return; }
+            var rows = json.data || [];
+            if (!rows.length) { $list.append('<tr><td colspan="6" class="text-muted">No assignments yet.</td></tr>'); return; }
+            rows.forEach(function(r,i){
+                var assignedTo = '-';
+                if (r.student_id) assignedTo = 'Student #' + r.student_id;
+                else if (r.section_id) assignedTo = (r.class_name? r.class_name + ' - ' : '') + (r.section_name || ('Section ' + r.section_id));
+                else if (r.class_id) assignedTo = r.class_name || ('Class ' + r.class_id);
+                var amount = r.amount !== null ? parseFloat(r.amount).toFixed(2) : (r.fee_item_default_amount ? parseFloat(r.fee_item_default_amount).toFixed(2) : '0.00');
+                var session = r.session_name || ('#' + (r.session_id||''));
+                var actions = '<button class="btn btn-sm btn-outline-secondary btn-edit-assign mr-1" data-id="'+r.id+'" data-fee="'+(r.fee_item_id||'')+'" data-class="'+(r.class_id||'')+'" data-section="'+(r.section_id||'')+'" data-student="'+(r.student_id||'')+'" data-amount="'+(r.amount||'')+'" data-due="'+(r.due_day||'')+'" data-session="'+(r.session_id||'')+'" data-session-name="'+(r.session_name||'')+'">Edit</button>'+
+                              '<button class="btn btn-sm btn-outline-danger btn-delete-assign" data-id="'+r.id+'">Delete</button>';
+
+                var searchText = (String(r.fee_item_name||'') + ' ' + assignedTo + ' ' + String(session) + ' ' + String(amount)).toLowerCase();
+                $list.append('<tr data-search="'+encodeURIComponent(searchText)+'"><td>'+(i+1)+'</td><td>'+escapeHtml(r.fee_item_name||'')+'</td><td>'+escapeHtml(assignedTo)+'</td><td>'+amount+'</td><td>'+escapeHtml(session)+'</td><td>'+actions+'</td></tr>');
+            });
+            // apply current filter after rendering
+            applyAssignmentFilter();
+        }).catch(err=>{ console.error(err); $('#feeAssignmentsList').empty().append('<tr><td colspan="6" class="text-muted">Error loading assignments</td></tr>'); });
+    }
+
+    // initial load
+    loadFeeAssignments();
+
+    // search / filter for assignments
+    function applyAssignmentFilter(){
+        var q = ($('#assign_search').val() || '').trim().toLowerCase();
+        var anyVisible = false;
+        $('#feeAssignmentsList tr').each(function(){
+            var ds = $(this).attr('data-search') || '';
+            var text = ds ? decodeURIComponent(ds) : '';
+            if (!q) { $(this).show(); anyVisible = true; return; }
+            if (text.indexOf(q) !== -1) { $(this).show(); anyVisible = true; } else { $(this).hide(); }
+        });
+        if (!anyVisible) {
+            $('#feeAssignmentsList').append('<tr class="no-match"><td colspan="6" class="text-muted">No matching assignments.</td></tr>');
+        } else {
+            $('#feeAssignmentsList tr.no-match').remove();
+        }
+    }
+
+    $('#assign_search').on('input', function(){ applyAssignmentFilter(); });
+    $('#refreshAssignments').on('click', function(){ loadFeeAssignments(); });
+
+    // assignment edit / delete handlers
+    $('#feeAssignmentsList').on('click', '.btn-delete-assign', function(){
+        if (!confirm('Delete this assignment?')) return;
+        var id = $(this).data('id'); var fd = new FormData(); fd.append('action','delete'); fd.append('id', id);
+        fetch('save_fee_assignment.php', { method:'POST', body: fd }).then(r=>r.json()).then(j=>{ if (j.success) loadFeeAssignments(); else alert(j.message||'Delete failed'); }).catch(e=>{ alert('Request failed'); console.error(e); });
+    });
+
+    $('#feeAssignmentsList').on('click', '.btn-edit-assign', function(){
+        var $b = $(this);
+        var id = $b.data('id');
+        var fee = $b.data('fee');
+        var cls = $b.data('class');
+        var sec = $b.data('section');
+        var stu = $b.data('student');
+        var amt = $b.data('amount');
+        var due = $b.data('due');
+        var sess = $b.data('session');
+
+        $('#assign_edit_id').val(id);
+        $('#assign_fee_item').val(fee);
+        if (sess) { $('#assign_session_id').val(sess); }
+        var sessName = $b.data('session-name') || '';
+        $('#assign_session_display').val(sessName);
+        $('#assign_amount').val(amt || '');
+        $('#assign_due_day').val(due || 10);
+
+        // determine assign_to and target
+        var targetVal = '';
+        if (stu) { $('#assign_to').val('student'); targetVal = stu; }
+        else if (sec) { $('#assign_to').val('section'); targetVal = sec; }
+        else if (cls) { $('#assign_to').val('class'); targetVal = cls; }
+
+        loadAssignTargets(true).then(function(){
+            // set the target after populate
+            if (targetVal) $('#assign_target').val(targetVal);
+            $('#assignFeeModal').modal('show');
+        });
+    });
 
     // save fee item
     $('#saveFeeItem').on('click', function(){
