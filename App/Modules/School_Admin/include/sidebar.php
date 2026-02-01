@@ -12,7 +12,7 @@
                                 
                             </li>
                             
-                            <li><a href="../../views/settings/setting.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Student</span></a> </li>
+                            <li><a href="../../views/students/students.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Student</span></a> </li>
                             <li><a href="../../views/staff/staff.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Teachers</span></a> </li>
                             <li><a href="../../views/classes/classes.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Classes</span></a> </li>
                             <li><a href="../../views/settings/setting.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Attendence</span></a> </li>
