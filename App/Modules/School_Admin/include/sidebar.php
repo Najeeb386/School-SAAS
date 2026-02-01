@@ -17,7 +17,7 @@
                             <li><a href="../../views/classes/classes.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Classes</span></a> </li>
                             <li><a href="../../views/settings/setting.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Attendence</span></a> </li>
                             <li><a href="../../views/finance/finance.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Finance</span></a> </li>
-                            <li><a href="../../views/settings/setting.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Fess</span></a> </li>
+                            <li><a href="../../views/fees/fees.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Fees</span></a> </li>
                             <li><a href="../../views/settings/setting.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Reports</span></a> </li>
                             <li><a href="../../views/settings/setting.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Exams</span></a> </li>
                             <li><a href="../../views/settings/setting.php" aria-expanded="false"><i class="nav-icon ti ti-comment"></i><span class="nav-title">Announcements</span></a> </li>
