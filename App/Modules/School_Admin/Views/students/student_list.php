@@ -104,7 +104,7 @@ require_once __DIR__ . '/../../../../Core/database.php';
                     var photo = s.photo || s.photo_path || '';
                     var thumb = photo ? '<img src="'+photo+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px">' : '<img src="../../../../../public/assets/img/avtar/02.jpg" style="width:48px;height:48px;object-fit:cover;border-radius:6px">';
                     var actions = '<div class="table-actions">'+
-                        '<a href="view_student.php?id='+s.id+'" class="btn btn-sm btn-outline-secondary" title="View"><i class="fas fa-eye"></i></a> '+
+                            '<a href="student_view.php?id='+s.id+'" class="btn btn-sm btn-outline-secondary" title="View"><i class="fas fa-eye"></i></a> '+
                         '<a href="student_documents.php?id='+s.id+'" class="btn btn-sm btn-outline-info" title="Documents"><i class="fas fa-file-alt"></i></a> '+
                         '<a href="edit_student.php?id='+s.id+'" class="btn btn-sm btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a> '+
                         '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="'+s.id+'" title="Delete"><i class="fas fa-trash"></i></button>'+
