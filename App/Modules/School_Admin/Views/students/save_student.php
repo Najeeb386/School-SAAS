@@ -46,20 +46,105 @@ try {
     // start transaction
     $db->beginTransaction();
 
-    $stmt = $db->prepare("INSERT INTO school_students (school_id, admission_no, first_name, last_name, dob, gender, admission_date, religion, created_at) VALUES (:school_id, :admission_no, :first_name, :last_name, :dob, :gender, :admission_date, :religion, NOW())");
-    $stmt->execute([
-        'school_id' => $school_id,
-        'admission_no' => $admission_no,
-        'first_name' => $first_name,
-        'last_name' => $last_name,
-        'dob' => $dob,
-        'gender' => $gender,
-        'admission_date' => $admission_date,
-        'religion' => $religion
-    ]);
-    $student_id = (int)$db->lastInsertId();
+    $student_id = !empty($_POST['id']) ? (int)$_POST['id'] : null;
+    if ($student_id) {
+        // update existing student
+        $ust = $db->prepare("UPDATE school_students SET admission_no = :admission_no, first_name = :first_name, last_name = :last_name, dob = :dob, gender = :gender, admission_date = :admission_date, religion = :religion, updated_at = NOW() WHERE id = :id AND school_id = :school_id");
+        $ust->execute([
+            'admission_no' => $admission_no,
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+            'dob' => $dob,
+            'gender' => $gender,
+            'admission_date' => $admission_date,
+            'religion' => $religion,
+            'id' => $student_id,
+            'school_id' => $school_id
+        ]);
+    } else {
+        // Generate admission number atomically using school_admission_counters
+        try {
+            $startedTx = false;
+            if (!$db->inTransaction()) {
+                $db->beginTransaction();
+                $startedTx = true;
+            }
 
-    // insert guardians
+            // lock counter row for this school+session
+            $sel = $db->prepare("SELECT last_number FROM school_admission_counters WHERE school_id = :sch AND session_id = :sess FOR UPDATE");
+            $sel->execute(['sch' => $school_id, 'sess' => $enroll_session]);
+            $row = $sel->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $newnum = (int)$row['last_number'] + 1;
+                $upd = $db->prepare("UPDATE school_admission_counters SET last_number = :new WHERE school_id = :sch AND session_id = :sess");
+                $upd->execute(['new' => $newnum, 'sch' => $school_id, 'sess' => $enroll_session]);
+            } else {
+                $newnum = 1;
+                $ins = $db->prepare("INSERT INTO school_admission_counters (school_id, session_id, last_number) VALUES (:sch, :sess, :new)");
+                $ins->execute(['sch' => $school_id, 'sess' => $enroll_session, 'new' => $newnum]);
+            }
+
+            // fetch school_code
+            $scode = 'SCH';
+            try {
+                $sc = $db->prepare("SELECT school_code FROM schools WHERE id = :id LIMIT 1");
+                $sc->execute(['id' => $school_id]);
+                $srow = $sc->fetch(PDO::FETCH_ASSOC);
+                if ($srow && !empty($srow['school_code'])) {
+                    $scode = $srow['school_code'];
+                }
+            } catch (Exception $ex) {
+                // ignore and use default
+            }
+
+            // derive session label (try common column names)
+            $session_label = date('Y');
+            if (!empty($enroll_session)) {
+                try {
+                    $ss = $db->prepare("SELECT name, session, title, id FROM school_sessions WHERE id = :id LIMIT 1");
+                    $ss->execute(['id' => $enroll_session]);
+                    $sessRow = $ss->fetch(PDO::FETCH_ASSOC);
+                    if ($sessRow) {
+                        if (!empty($sessRow['session'])) $session_label = $sessRow['session'];
+                        elseif (!empty($sessRow['name'])) $session_label = $sessRow['name'];
+                        elseif (!empty($sessRow['title'])) $session_label = $sessRow['title'];
+                        else $session_label = (string)$sessRow['id'];
+                    }
+                } catch (Exception $ex) {
+                    // ignore and fallback to year
+                }
+            }
+
+            $admission_no = sprintf('%s-%s-%s', $scode, $session_label, str_pad((string)$newnum, 6, '0', STR_PAD_LEFT));
+
+            // insert student with generated admission_no
+            $stmt = $db->prepare("INSERT INTO school_students (school_id, admission_no, first_name, last_name, dob, gender, admission_date, religion, created_at) VALUES (:school_id, :admission_no, :first_name, :last_name, :dob, :gender, :admission_date, :religion, NOW())");
+            $stmt->execute([
+                'school_id' => $school_id,
+                'admission_no' => $admission_no,
+                'first_name' => $first_name,
+                'last_name' => $last_name,
+                'dob' => $dob,
+                'gender' => $gender,
+                'admission_date' => $admission_date,
+                'religion' => $religion
+            ]);
+            $student_id = (int)$db->lastInsertId();
+
+            // commit counter + student insert; only commit if we started the transaction
+            if ($startedTx && $db->inTransaction()) {
+                $db->commit();
+            }
+        } catch (Exception $e) {
+            if (isset($startedTx) && $startedTx && $db->inTransaction()) $db->rollBack();
+            echo json_encode(['success' => false, 'message' => 'Failed to create student (admission number generation): '.$e->getMessage()]);
+            exit;
+        }
+    }
+
+    // insert / update guardians: mark existing as deleted and re-insert (simple approach)
+    $delg = $db->prepare("UPDATE school_student_guardians SET deleted_at = NOW() WHERE student_id = :student_id AND school_id = :school_id AND deleted_at IS NULL");
+    $delg->execute(['student_id'=>$student_id,'school_id'=>$school_id]);
     $gstmt = $db->prepare("INSERT INTO school_student_guardians (student_id, school_id, name, relation, cnic_passport, occupation, mobile, address, is_primary, created_at) VALUES (:student_id, :school_id, :name, :relation, :cnic, :occupation, :mobile, :address, :is_primary, NOW())");
     if ($g1_name) {
         $gstmt->execute(['student_id'=>$student_id,'school_id'=>$school_id,'name'=>$g1_name,'relation'=>$g1_relation,'cnic'=>$g1_cnic,'occupation'=>$g1_occupation,'mobile'=>$g1_mobile,'address'=>$g1_address,'is_primary'=>1]);
@@ -69,6 +154,19 @@ try {
     }
 
     // insert academic record
+    // handle academic: if updating, adjust previous enrollment counts
+    if (!empty($_POST['id'])) {
+        // find existing academic (most recent)
+        $oldAstmt = $db->prepare("SELECT id, section_id FROM school_student_academics WHERE student_id = :sid AND school_id = :sch AND deleted_at IS NULL ORDER BY id DESC LIMIT 1");
+        $oldAstmt->execute([':sid'=>$student_id,':sch'=>$school_id]);
+        $oldA = $oldAstmt->fetch(PDO::FETCH_ASSOC);
+        if ($oldA) {
+            // mark old as deleted (simple history)
+            $mark = $db->prepare("UPDATE school_student_academics SET deleted_at = NOW() WHERE id = :id");
+            $mark->execute([':id'=>$oldA['id']]);
+        }
+    }
+
     $astmt = $db->prepare("INSERT INTO school_student_academics (student_id, school_id, session_id, class_id, section_id, is_transferred, previous_school, previous_class, previous_admission_no, previous_result, enrolled_at, created_at) VALUES (:student_id, :school_id, :session_id, :class_id, :section_id, :is_transferred, :previous_school, :previous_class, :previous_admission_no, :previous_result, NOW(), NOW())");
     $astmt->execute([
         'student_id' => $student_id,
@@ -83,14 +181,19 @@ try {
         'previous_result' => $prev_result
     ]);
 
-    // update section enrollment count if section provided
+    // update section enrollment counts: decrement old, increment new
+    if (!empty($_POST['id'])) {
+        if (!empty($oldA['section_id']) && $oldA['section_id'] != $enroll_section) {
+            $dec = $db->prepare("UPDATE school_class_sections SET current_enrollment = GREATEST(COALESCE(current_enrollment,0) - 1, 0) WHERE id = :sid AND school_id = :sch");
+            $dec->execute(['sid'=>$oldA['section_id'],'sch'=>$school_id]);
+        }
+    }
     if (!empty($enroll_section)) {
         try {
             $u = $db->prepare("UPDATE school_class_sections SET current_enrollment = COALESCE(current_enrollment,0) + 1 WHERE id = :sid AND school_id = :sch");
             $u->execute(['sid' => $enroll_section, 'sch' => $school_id]);
         } catch (Exception $ee) {
-            // non-fatal - record warning in output
-            // continue
+            // non-fatal
         }
     }
 

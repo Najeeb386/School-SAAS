@@ -58,11 +58,13 @@ require_once __DIR__ . '/../../../../Core/database.php';
             </a>
 		</div>
 		<div class="col-md-3">
-			<div class="card card-hero p-3 text-center shadow-sm" id="cardStudentsList">
+			<a href="student_list.php">
+                <div class="card card-hero p-3 text-center shadow-sm" id="cardStudentsList">
 				<div class="icon text-success mb-2"><i class="fas fa-users"></i></div>
 				<h5>Students List</h5>
 				<p class="muted-small">View and manage all students</p>
 			</div>
+            </a>
 		</div>
 		<div class="col-md-3">
 			<div class="card card-hero p-3 text-center shadow-sm" id="cardImport">
