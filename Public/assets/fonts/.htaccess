@@ -1,0 +1,6 @@
+# Rewrite requests for .html font files to the corresponding .woff
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Map any *.html font request to the same name with .woff
+    RewriteRule ^(.+)\.html$ $1.woff [L]
+</IfModule>

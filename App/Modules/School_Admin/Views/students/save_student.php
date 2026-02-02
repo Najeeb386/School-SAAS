@@ -203,6 +203,39 @@ try {
         }
     }
 
+    // insert enrollment record into school_student_enrollments if academic info provided
+    try {
+        // normalize section id for table (table expects non-null section_id default 0)
+        $en_section = (!empty($enroll_section) ? (int)$enroll_section : 0);
+        $en_session = !empty($enroll_session) ? (int)$enroll_session : 0;
+        $en_class = !empty($enroll_class) ? (int)$enroll_class : 0;
+
+        if ($en_session && $en_class) {
+            $rollStmt = $db->prepare("SELECT COALESCE(MAX(roll_no), 0) + 1 AS next_roll FROM school_student_enrollments WHERE school_id = :school_id AND session_id = :session_id AND class_id = :class_id AND section_id = :section_id");
+            $rollStmt->execute([':school_id' => $school_id, ':session_id' => $en_session, ':class_id' => $en_class, ':section_id' => $en_section]);
+            $rrow = $rollStmt->fetch(PDO::FETCH_ASSOC);
+            $nextRoll = isset($rrow['next_roll']) ? (int)$rrow['next_roll'] : 1;
+
+            $insEnroll = $db->prepare("INSERT INTO school_student_enrollments (school_id, student_id, session_id, class_id, section_id, roll_no, admission_no, admission_date, status, remarks, created_at, updated_at) VALUES (:school_id, :student_id, :session_id, :class_id, :section_id, :roll_no, :admission_no, :admission_date, :status, :remarks, NOW(), NOW())");
+            $insEnroll->execute([
+                ':school_id' => $school_id,
+                ':student_id' => $student_id,
+                ':session_id' => $en_session,
+                ':class_id' => $en_class,
+                ':section_id' => $en_section,
+                ':roll_no' => $nextRoll,
+                ':admission_no' => $admission_no,
+                ':admission_date' => $admission_date,
+                ':status' => 'active',
+                ':remarks' => null
+            ]);
+        }
+    } catch (Exception $eEnroll) {
+        // don't fail entire save on enrollment insert; log to output
+        // collect into warning output
+        echo "<!-- Enrollment insert failed: " . addslashes($eEnroll->getMessage()) . " -->";
+    }
+
     // handle file uploads
     $base_upload_dir = __DIR__ . '/../../../../../Storage/uploads/schools/';
     if (!is_dir($base_upload_dir)) mkdir($base_upload_dir, 0755, true);

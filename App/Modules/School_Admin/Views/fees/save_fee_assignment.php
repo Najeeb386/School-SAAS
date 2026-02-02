@@ -31,6 +31,18 @@ try {
 
     $db = \Database::connect();
 
+    // if amount not supplied use fee item's default amount
+    if ($amount === null) {
+        $f = $db->prepare('SELECT amount FROM schoo_fee_items WHERE id = :id AND school_id = :sid LIMIT 1');
+        $f->execute([':id' => $fee_item_id, ':sid' => $school_id]);
+        $fr = $f->fetch(PDO::FETCH_ASSOC);
+        if ($fr && isset($fr['amount'])) {
+            $amount = (float)$fr['amount'];
+        } else {
+            $amount = 0.00;
+        }
+    }
+
     // delete
     if ($action === 'delete' && $assignment_id) {
         // ensure belongs to school

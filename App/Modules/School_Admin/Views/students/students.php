@@ -67,18 +67,22 @@ require_once __DIR__ . '/../../../../Core/database.php';
             </a>
 		</div>
 		<div class="col-md-3">
-			<div class="card card-hero p-3 text-center shadow-sm" id="cardImport">
+			<a href="droped_students.php">
+                <div class="card card-hero p-3 text-center shadow-sm" id="cardImport">
 				<div class="icon text-warning mb-2"><i class="fas fa-file-upload"></i></div>
-				<h5>Import</h5>
-				<p class="muted-small">Bulk import from CSV</p>
+				<h5>DropOut</h5>
+				<p class="muted-small">Dropout or leaved Students</p>
 			</div>
+            </a>
 		</div>
 		<div class="col-md-3">
-			<div class="card card-hero p-3 text-center shadow-sm" id="cardReports">
+			<a href="students_reports.php">
+                <div class="card card-hero p-3 text-center shadow-sm" id="cardReports">
 				<div class="icon text-info mb-2"><i class="fas fa-chart-line"></i></div>
 				<h5>Reports</h5>
 				<p class="muted-small">Attendance, performance & exports</p>
 			</div>
+            </a>
 		</div>
 	</div>
 
