@@ -75,6 +75,17 @@ $student_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
                                                     </div>
 
                                                     <div class="form-row">
+                                                        <div class="form-group col-md-6">
+                                                            <label>Father Name (optional)</label>
+                                                            <input class="form-control" id="father_names" placeholder="Father full name">
+                                                        </div>
+                                                        <div class="form-group col-md-6">
+                                                            <label>Father Contact</label>
+                                                            <input class="form-control" id="father_contact" placeholder="Mobile or phone number">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-row">
                                                         <div class="form-group col-md-3">
                                                             <label>Gender</label>
                                                             <select class="form-control" id="gender"><option value="">-- choose --</option><option value="male">Male</option><option value="female">Female</option></select>
@@ -212,6 +223,8 @@ $student_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
             // personal
             fd.append('first_name', document.getElementById('first_name').value || '');
             fd.append('last_name', document.getElementById('last_name').value || '');
+            fd.append('father_names', document.getElementById('father_names').value || '');
+            fd.append('father_contact', document.getElementById('father_contact').value || '');
             fd.append('admission_no', document.getElementById('admission_no').value || '');
             fd.append('dob', document.getElementById('dob').value || '');
             fd.append('gender', document.getElementById('gender').value || '');
@@ -280,6 +293,8 @@ $student_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
         // fetch student data and prefill
         function prefill(){ if (!<?php echo $student_id?:0; ?>) return; fetch('get_student.php?id=' + <?php echo $student_id?:0; ?>, { credentials: 'same-origin' }).then(r=>r.json()).then(function(j){ if (!j.success) { alert('Failed to load student: '+(j.message||'')); return; } var s = j.student||{}; document.getElementById('first_name').value = s.first_name||''; document.getElementById('last_name').value = s.last_name||''; document.getElementById('dob').value = s.dob||''; document.getElementById('gender').value = s.gender||''; document.getElementById('admission_no').value = s.admission_no||''; document.getElementById('admission_date').value = s.admission_date||''; document.getElementById('religion').value = s.religion||'';
+            document.getElementById('father_names').value = s.father_names||'';
+            document.getElementById('father_contact').value = s.father_contact||'';
             var g = (j.guardians||[])[0]||{}; document.getElementById('guardian_name').value = g.name||''; document.getElementById('guardian_relation').value = g.relation||''; document.getElementById('guardian_cnic').value = g.cnic_passport||''; document.getElementById('guardian_occupation').value = g.occupation||''; document.getElementById('guardian_mobile').value = g.mobile||''; document.getElementById('guardian_address').value = g.address||'';
             var g2 = (j.guardians||[])[1]||{}; document.getElementById('guardian2_name').value = g2.name||''; document.getElementById('guardian2_relation').value = g2.relation||''; document.getElementById('guardian2_cnic').value = g2.cnic_passport||''; document.getElementById('guardian2_occupation').value = g2.occupation||'';
             var a = (j.academic||{}); if (a) { document.getElementById('enroll_session').value = a.session_id||''; document.getElementById('enroll_class').value = a.class_id||''; populateSectionsForClass(a.class_id); setTimeout(function(){ document.getElementById('enroll_section').value = a.section_id||''; },200); document.getElementById('transferred').value = a.is_transferred? 'yes':'no'; document.getElementById('prev_school').value = a.previous_school||''; document.getElementById('prev_class').value = a.previous_class||''; document.getElementById('prev_adm_no').value = a.previous_admission_no||''; document.getElementById('prev_result').value = a.previous_result||''; }

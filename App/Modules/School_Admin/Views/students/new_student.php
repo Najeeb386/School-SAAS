@@ -75,6 +75,17 @@ require_once __DIR__ . '/../../../../Core/database.php';
                                                     </div>
 
                                                     <div class="form-row">
+                                                        <div class="form-group col-md-6">
+                                                            <label>Father Name (optional)</label>
+                                                            <input class="form-control" id="father_names" placeholder="Father full name">
+                                                        </div>
+                                                        <div class="form-group col-md-6">
+                                                            <label>Father Contact</label>
+                                                            <input class="form-control" id="father_contact" placeholder="Mobile or phone number">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-row">
                                                         <div class="form-group col-md-3">
                                                             <label>Gender</label>
                                                             <select class="form-control" id="gender"><option value="">-- choose --</option><option value="male">Male</option><option value="female">Female</option></select>
@@ -205,6 +216,8 @@ require_once __DIR__ . '/../../../../Core/database.php';
             // personal
             fd.append('first_name', document.getElementById('first_name').value || '');
             fd.append('last_name', document.getElementById('last_name').value || '');
+            fd.append('father_names', document.getElementById('father_names').value || '');
+            fd.append('father_contact', document.getElementById('father_contact').value || '');
             fd.append('admission_no', document.getElementById('admission_no').value || '');
             fd.append('dob', document.getElementById('dob').value || '');
             fd.append('gender', document.getElementById('gender').value || '');

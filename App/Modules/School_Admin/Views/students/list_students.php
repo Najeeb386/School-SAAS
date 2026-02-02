@@ -15,7 +15,7 @@ try {
     $session_id = !empty($_GET['session_id']) ? (int)$_GET['session_id'] : null;
     $q = trim($_GET['q'] ?? '');
 
-    $sql = "SELECT s.id, s.admission_no, s.first_name, s.last_name, s.status,
+    $sql = "SELECT s.id, s.admission_no, s.first_name, s.last_name, s.father_names, s.father_contact, s.status,
         sc.class_name, sec.section_name,
         (SELECT g.name FROM school_student_guardians g WHERE g.student_id = s.id AND g.is_primary = 1 AND g.deleted_at IS NULL LIMIT 1) AS guardian_name,
         (SELECT d.file_path FROM school_student_documents d WHERE d.student_id = s.id AND d.doc_type = 'photo' AND d.deleted_at IS NULL ORDER BY d.id DESC LIMIT 1) AS photo

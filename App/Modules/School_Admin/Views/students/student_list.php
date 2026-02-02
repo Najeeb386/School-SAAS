@@ -66,8 +66,8 @@ require_once __DIR__ . '/../../../../Core/database.php';
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table table-sm table-hover" id="studentsTable">
-                                        <thead class="thead-light"><tr><th>#</th><th>Photo</th><th>Admission</th><th>Name</th><th>Class</th><th>Section</th><th>Guardian</th><th>Status</th><th>Actions</th></tr></thead>
-                                        <tbody id="studentsTbody"><tr><td colspan="8" class="text-muted">No students loaded.</td></tr></tbody>
+                                        <thead class="thead-light"><tr><th>#</th><th>Photo</th><th>Admission</th><th>Name</th><th>Father Name</th><th>Father Contact</th><th>Class</th><th>Section</th><th>Guardian</th><th>Status</th><th>Actions</th></tr></thead>
+                                        <tbody id="studentsTbody"><tr><td colspan="11" class="text-muted">No students loaded.</td></tr></tbody>
                                     </table>
                                 </div>
                             </div>
@@ -99,7 +99,7 @@ require_once __DIR__ . '/../../../../Core/database.php';
             $('#studentsTbody').html('<tr><td colspan="8" class="text-muted">Loading...</td></tr>');
             fetch(url).then(r=>r.json()).then(j=>{
                 var $b = $('#studentsTbody'); $b.empty();
-                if (!j.success || !j.data || !j.data.length) { $b.append('<tr><td colspan="8" class="text-muted">No students found.</td></tr>'); return; }
+                if (!j.success || !j.data || !j.data.length) { $b.append('<tr><td colspan="11" class="text-muted">No students found.</td></tr>'); return; }
                 j.data.forEach(function(s,i){
                     var photo = s.photo || s.photo_path || '';
                     var thumb = photo ? '<img src="'+photo+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px">' : '<img src="../../../../../public/assets/img/avtar/02.jpg" style="width:48px;height:48px;object-fit:cover;border-radius:6px">';
@@ -109,7 +109,7 @@ require_once __DIR__ . '/../../../../Core/database.php';
                         '<a href="edit_student.php?id='+s.id+'" class="btn btn-sm btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a> '+
                         '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="'+s.id+'" title="Delete"><i class="fas fa-trash"></i></button>'+
                         '</div>';
-                    $b.append('<tr><td>'+(i+1)+'</td><td>'+thumb+'</td><td>'+(s.admission_no||'') +'</td><td>'+ (s.first_name+' '+(s.last_name||'')) +'</td><td>'+(s.class_name||'')+'</td><td>'+(s.section_name||'')+'</td><td>'+(s.guardian_name||'')+'</td><td>'+(s.status==1?'Active':'Inactive')+'</td><td>'+actions+'</td></tr>');
+                    $b.append('<tr><td>'+(i+1)+'</td><td>'+thumb+'</td><td>'+(s.admission_no||'') +'</td><td>'+ (s.first_name+' '+(s.last_name||'')) +'</td><td>'+(s.father_names||'')+'</td><td>'+(s.father_contact||'')+'</td><td>'+(s.class_name||'')+'</td><td>'+(s.section_name||'')+'</td><td>'+(s.guardian_name||'')+'</td><td>'+(s.status==1?'Active':'Inactive')+'</td><td>'+actions+'</td></tr>');
                 });
             }).catch(err=>{ console.error(err); $('#studentsTbody').html('<tr><td colspan="8" class="text-danger">Error loading students</td></tr>'); });
         }

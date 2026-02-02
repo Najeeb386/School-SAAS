@@ -12,6 +12,8 @@ try {
     // collect basic fields
     $first_name = trim($_POST['first_name'] ?? '');
     $last_name = trim($_POST['last_name'] ?? '');
+    $father_names = trim($_POST['father_names'] ?? '');
+    $father_contact = trim($_POST['father_contact'] ?? '');
     if (!$first_name) throw new Exception('First name is required');
 
     $admission_no = trim($_POST['admission_no'] ?? null);
@@ -49,11 +51,13 @@ try {
     $student_id = !empty($_POST['id']) ? (int)$_POST['id'] : null;
     if ($student_id) {
         // update existing student
-        $ust = $db->prepare("UPDATE school_students SET admission_no = :admission_no, first_name = :first_name, last_name = :last_name, dob = :dob, gender = :gender, admission_date = :admission_date, religion = :religion, updated_at = NOW() WHERE id = :id AND school_id = :school_id");
+        $ust = $db->prepare("UPDATE school_students SET admission_no = :admission_no, first_name = :first_name, last_name = :last_name, father_names = :father_names, father_contact = :father_contact, dob = :dob, gender = :gender, admission_date = :admission_date, religion = :religion, updated_at = NOW() WHERE id = :id AND school_id = :school_id");
         $ust->execute([
             'admission_no' => $admission_no,
             'first_name' => $first_name,
             'last_name' => $last_name,
+            'father_names' => $father_names,
+            'father_contact' => $father_contact,
             'dob' => $dob,
             'gender' => $gender,
             'admission_date' => $admission_date,
@@ -118,12 +122,14 @@ try {
             $admission_no = sprintf('%s-%s-%s', $scode, $session_label, str_pad((string)$newnum, 6, '0', STR_PAD_LEFT));
 
             // insert student with generated admission_no
-            $stmt = $db->prepare("INSERT INTO school_students (school_id, admission_no, first_name, last_name, dob, gender, admission_date, religion, created_at) VALUES (:school_id, :admission_no, :first_name, :last_name, :dob, :gender, :admission_date, :religion, NOW())");
+            $stmt = $db->prepare("INSERT INTO school_students (school_id, admission_no, first_name, last_name, father_names, father_contact, dob, gender, admission_date, religion, created_at) VALUES (:school_id, :admission_no, :first_name, :last_name, :father_names, :father_contact, :dob, :gender, :admission_date, :religion, NOW())");
             $stmt->execute([
                 'school_id' => $school_id,
                 'admission_no' => $admission_no,
                 'first_name' => $first_name,
                 'last_name' => $last_name,
+                'father_names' => $father_names,
+                'father_contact' => $father_contact,
                 'dob' => $dob,
                 'gender' => $gender,
                 'admission_date' => $admission_date,
