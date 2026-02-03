@@ -12,3 +12,13 @@
 2026-02-03 13:45:51 | saved | {"remote":"::1","payload":{"success":true,"id":6}}
 2026-02-03 13:45:53 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"","session_id":2025,"type":"discount","value_type":"fixed","value":"","applies_to":"tuition_only","start_month":"","end_month":"","status":1}}
 2026-02-03 13:45:53 | error | {"remote":"::1","payload":{"message":"Missing admission_no"}}
+2026-02-03 17:38:34 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"aams-2026-000003","session_id":2025,"type":"concession","value_type":"percentage","value":"1","applies_to":"tuition_only","start_month":"2026-01","end_month":"2026-12","status":1}}
+2026-02-03 17:38:34 | saved | {"remote":"::1","payload":{"success":true,"id":7}}
+2026-02-03 17:39:21 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"","session_id":2025,"type":"discount","value_type":"fixed","value":"","applies_to":"tuition_only","start_month":"","end_month":"","status":1}}
+2026-02-03 17:39:21 | error | {"remote":"::1","payload":{"message":"Missing admission_no"}}
+2026-02-03 17:40:04 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"aams-2026-000003","session_id":2025,"type":"discount","value_type":"fixed","value":"10","applies_to":"tuition_only","start_month":"2026-01","end_month":"2026-12","status":1}}
+2026-02-03 17:40:04 | saved | {"remote":"::1","payload":{"success":true,"id":8}}
+2026-02-03 17:45:10 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"aams-2026-000003","session_id":2025,"type":"discount","value_type":"fixed","value":"500","applies_to":"tuition_only","start_month":"2026-02","end_month":"2026-03","status":1}}
+2026-02-03 17:45:10 | saved | {"remote":"::1","payload":{"success":true,"id":9}}
+2026-02-03 17:48:37 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"aams-2026-000003","session_id":2025,"type":"scholarship","value_type":"percentage","value":"3","applies_to":"tuition_only","start_month":"2026-01-01","end_month":"2026-11-01","status":1}}
+2026-02-03 17:48:37 | saved | {"remote":"::1","payload":{"success":true,"id":10}}

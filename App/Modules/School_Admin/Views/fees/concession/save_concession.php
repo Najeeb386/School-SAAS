@@ -23,6 +23,21 @@ ob_start();
     $db = \Database::connect();
     $controller = new \App\Modules\School_Admin\Controllers\ConcessionController($db);
 
+    // Helper: convert month input (YYYY-MM) to DATE format (YYYY-MM-01), validate format
+    $normMonth = function($val) {
+        if (empty($val)) return null;
+        $s = trim($val);
+        // HTML month input returns YYYY-MM format (7 chars)
+        if (strlen($s) === 7 && preg_match('/^\d{4}-\d{2}$/', $s)) {
+            // append -01 to make it a valid DATE: YYYY-MM-01
+            return $s . '-01';
+        }
+        return null; // invalid format
+    };
+
+    $start_month = $normMonth($_POST['start_month'] ?? '');
+    $end_month = $normMonth($_POST['end_month'] ?? '');
+
     $data = [
         'school_id' => $school_id,
         'admission_no' => trim($_POST['admission_no'] ?? ''),
@@ -31,8 +46,8 @@ ob_start();
         'value_type' => $_POST['value_type'] ?? 'fixed',
         'value' => $_POST['value'] ?? 0,
         'applies_to' => $_POST['applies_to'] ?? 'tuition_only',
-        'start_month' => $_POST['start_month'] ?? null,
-        'end_month' => $_POST['end_month'] ?? null,
+        'start_month' => $start_month,
+        'end_month' => $end_month,
         'status' => isset($_POST['status']) ? (int)$_POST['status'] : 1
     ];
 

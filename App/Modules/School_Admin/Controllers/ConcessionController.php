@@ -17,6 +17,7 @@ class ConcessionController {
         if (empty($data['session_id'])) throw new \Exception('Missing session');
         if (empty($data['type'])) throw new \Exception('Missing type');
         if (!isset($data['value']) || $data['value'] === '') throw new \Exception('Missing value');
+        if (empty($data['start_month'])) throw new \Exception('Start month is required (YYYY-MM format)');
         return $this->model->create($data);
     }
 

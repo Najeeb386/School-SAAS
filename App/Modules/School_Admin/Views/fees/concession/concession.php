@@ -1,3 +1,46 @@
+<?php
+try {
+    require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
+    require_once __DIR__ . '/../../../../../Core/database.php';
+    require_once __DIR__ . '/../../../Models/ConcessionModel.php';
+    require_once __DIR__ . '/../../../Controllers/ConcessionController.php';
+
+    $school_id = $_SESSION['school_id'] ?? null;
+    if (!$school_id) {
+        throw new Exception('Unauthorized');
+    }
+
+    $db = \Database::connect();
+    $controller = new \App\Modules\School_Admin\Controllers\ConcessionController($db);
+    $concessions = $controller->listConcessions($school_id);
+
+    // Calculate stats from DB rows (normalize month values)
+    $activeCount = 0;
+    $expiringCount = 0;
+    $nowMonth = date('Y-m');
+    foreach ($concessions as $c) {
+        if (isset($c['status']) && $c['status'] == 1) {
+            $activeCount++;
+        }
+        // normalize end_month to YYYY-MM if present (stored as YYYY-MM-DD in DB)
+        $end_raw = $c['end_month'] ?? null;
+        $end_month_norm = null;
+        if (!empty($end_raw) && $end_raw !== '0000-00-00') {
+            // take first 7 chars (YYYY-MM) from YYYY-MM-DD
+            $end_month_norm = substr($end_raw, 0, 7);
+        }
+        if ($end_month_norm === $nowMonth) {
+            $expiringCount++;
+        }
+    }
+
+} catch (Exception $e) {
+    error_log('Error fetching concessions: ' . $e->getMessage());
+    $concessions = [];
+    $activeCount = 0;
+    $expiringCount = 0;
+}
+?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -55,11 +98,9 @@ body{
       <div class="small-muted">Manage discounts, scholarships & special fee concessions</div>
     </div>
     <div>
-      <button class="btn btn-outline-secondary mr-2">
-        <i class="fas fa-history"></i> Audit
-      </button>
-      <button class="btn btn-primary">
-        <i class="fas fa-plus"></i> New
+      
+      <button onclick="window.location.href='../fees.php'" class="btn btn-primary">
+        Back
       </button>
     </div>
   </div>
@@ -164,13 +205,13 @@ body{
           <div class="col-md-6 mb-3">
             <div id="statActive" class="stat-box">
               <div class="small-muted text-white">Active Concessions</div>
-              <h3 class="mb-0">0</h3>
+              <h3 class="mb-0"><?php echo $activeCount; ?></h3>
             </div>
           </div>
           <div class="col-md-6 mb-3">
             <div id="statExpiring" class="stat-box light">
               <div class="small-muted">Expiring This Month</div>
-              <h3 class="mb-0">0</h3>
+              <h3 class="mb-0"><?php echo $expiringCount; ?></h3>
             </div>
           </div>
       </div>
@@ -178,7 +219,13 @@ body{
       <!-- RECENT -->
       <div class="card mb-4">
         <div class="card-body">
-          <h5 class="mb-3">Recent Concessions</h5>
+          <div class="row">
+            <div class="col-10"><h5 class="mb-3">Recent Concessions</h5>
+          </div>
+          <div class="col-2">
+            <a href="concession_list.php" class="btn btn-sm btn-primary" >See All</a>
+          </div>
+          </div>
           <div class="list-scroll">
             <table class="table table-sm table-hover mb-0">
               <thead>
@@ -186,31 +233,61 @@ body{
                   <th>Student</th>
                   <th>Type</th>
                   <th>Value</th>
+                  <th>Applied</th>
                   <th>Period</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>
-                    John Doe<br>
-                    <span class="small-muted">ADM-2026-003</span>
-                  </td>
-                  <td><span class="badge badge-discount">Discount</span></td>
-                  <td>₨ 500</td>
-                  <td>Feb → Jun</td>
-                  <td><span class="badge badge-success">Active</span></td>
-                </tr>
-                <tr>
-                  <td>
-                    Mary Ali<br>
-                    <span class="small-muted">ADM-2025-112</span>
-                  </td>
-                  <td><span class="badge badge-scholarship">Scholarship</span></td>
-                  <td>10%</td>
-                  <td>Sep → —</td>
-                  <td><span class="badge badge-success">Active</span></td>
-                </tr>
+                <?php if (empty($concessions)): ?>
+                    <tr><td colspan="5" class="text-center text-muted py-3">No concessions found.</td></tr>
+                <?php else: ?>
+                    <?php foreach ($concessions as $c): ?>
+                        <tr>
+                            <td>
+                                <strong><?php echo htmlspecialchars(($c['first_name'] ?? '') . ' ' . ($c['last_name'] ?? '')); ?></strong><br>
+                                <span class="small-muted"><?php echo htmlspecialchars($c['admission_no'] ?? ''); ?></span>
+                            </td>
+                            <td>
+                                <span class="badge badge-<?php echo htmlspecialchars(strtolower($c['type'] ?? 'discount')); ?>">
+                                    <?php echo htmlspecialchars(ucfirst($c['type'] ?? 'discount')); ?>
+                                </span>
+                            </td>
+                            <td>
+                              <?php echo htmlspecialchars($c['applies_to'] ?? ''); ?>
+                            </td>
+                            <td>
+                                <?php
+                                if (($c['value_type'] ?? '') === 'percentage') {
+                                    echo htmlspecialchars($c['value'] ?? '0') . '%';
+                                } else {
+                                    echo '₨ ' . number_format($c['value'] ?? 0, 2);
+                                }
+                                ?>
+                            </td>
+                            <td>
+                                <?php
+                                $start = '';
+                                $end = '—';
+                                if (!empty($c['start_month']) && $c['start_month'] !== '0000-00-00') {
+                                    $start = date('M Y', strtotime($c['start_month'].'-01'));
+                                }
+                                if (!empty($c['end_month']) && $c['end_month'] !== '0000-00-00') {
+                                    $end = date('M Y', strtotime($c['end_month'].'-01'));
+                                }
+                                echo htmlspecialchars($start) . ' → ' . htmlspecialchars($end);
+                                ?>
+                            </td>
+                            <td>
+                                <?php if (($c['status'] ?? 0) == 1): ?>
+                                    <span class="badge badge-success">Active</span>
+                                <?php else: ?>
+                                    <span class="badge badge-secondary">Inactive</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
               </tbody>
             </table>
           </div>
@@ -229,39 +306,6 @@ document.addEventListener('DOMContentLoaded', function(){
   function qs(id){ return document.getElementById(id); }
   function escapeHtml(s){ if (s===null||s===undefined) return ''; return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]; }); }
 
-  function loadRecent(){
-    fetch('list_concessions.php', { credentials: 'same-origin' })
-      .then(r=>r.json()).then(data=>{
-        if (!data || !data.success) return;
-        const tb = document.querySelector('tbody'); tb.innerHTML='';
-        const list = (data.concessions||[]);
-        let activeCount = 0, expiringCount = 0;
-        const now = new Date();
-        const nowMonth = now.getMonth()+1; const nowYear = now.getFullYear();
-        list.forEach(c=>{
-          const tr = document.createElement('tr');
-          const student = (c.first_name||'') + (c.last_name?(' '+c.last_name):'');
-          const period = (c.start_month||'') + (c.end_month?(' → '+c.end_month):' → —');
-          const value = (c.value_type==='percentage') ? (c.value+'%') : ('₨ '+Number(c.value).toLocaleString());
-          const typeBadge = '<span class="badge badge-discount">'+escapeHtml(c.type||'')+'</span>';
-          const statusBadge = c.status==1?'<span class="badge badge-success">Active</span>':'<span class="badge badge-secondary">Inactive</span>';
-          tr.innerHTML = '<td>'+escapeHtml(student)+'<br><span class="small-muted">'+escapeHtml(c.admission_no||'')+'</span></td><td>'+typeBadge+'</td><td>'+escapeHtml(value)+'</td><td>'+escapeHtml(period)+'</td><td>'+statusBadge+'</td>';
-          tb.appendChild(tr);
-          if (parseInt(c.status)==1) activeCount++;
-          // expiring this month: check end_month in format YYYY-MM or similar
-          if (c.end_month) {
-            const m = c.end_month.split('-');
-            if (m.length>=2) {
-              const y = parseInt(m[0]), mo = parseInt(m[1]);
-              if (y===nowYear && mo===nowMonth) expiringCount++;
-            }
-          }
-        });
-        const elActive = document.querySelector('#statActive h3'); if (elActive) elActive.innerText = String(activeCount);
-        const elExp = document.querySelector('#statExpiring h3'); if (elExp) elExp.innerText = String(expiringCount);
-      }).catch(err=>console.error(err));
-  }
-
   // safe reset helper
   qs('btnReset').addEventListener('click', function(){ const form = document.querySelector('form'); if (form) form.reset(); qs('admission_no').value=''; });
 
@@ -269,6 +313,12 @@ document.addEventListener('DOMContentLoaded', function(){
   let saving = false;
   qs('btnSaveConcession').addEventListener('click', function(){
     if (saving) return; // ignore double clicks
+    
+    // validate start month is selected
+    if (!qs('startMonth').value) {
+      alert('Start month is required'); return;
+    }
+    
     saving = true; qs('btnSaveConcession').disabled = true; const oldText = qs('btnSaveConcession').innerText; qs('btnSaveConcession').innerText = 'Saving...';
 
     const fd = new FormData();
@@ -302,6 +352,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   qs('btnPickStudent').addEventListener('click', function(){
     const ad = prompt('Enter admission number (e.g. aams-2026-000003)'); if (!ad) return;
+    // This file doesn't exist yet, but leaving the JS here for when it's created
     fetch('find_student_by_admission.php?admission_no='+encodeURIComponent(ad), { credentials:'same-origin' }).then(r=>r.json()).then(res=>{
       if (res && res.success) {
         const s = res.student; qs('studentSearch').value = (s.first_name||'')+' '+(s.last_name||'')+' ('+s.admission_no+')'; qs('admission_no').value = s.admission_no;
@@ -313,6 +364,5 @@ document.addEventListener('DOMContentLoaded', function(){
   const bulkBtn = document.querySelector('.card .btn-outline-primary');
   if (bulkBtn) bulkBtn.addEventListener('click', function(){ alert('Bulk apply is available in the Bulk section.'); });
 
-  loadRecent();
 });
 </script>

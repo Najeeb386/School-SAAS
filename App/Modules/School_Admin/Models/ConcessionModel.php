@@ -21,8 +21,9 @@ class ConcessionModel {
             ':value_type' => $data['value_type'],
             ':value' => $data['value'],
             ':applies_to' => $data['applies_to'],
-            ':start_month' => $data['start_month'],
-            ':end_month' => $data['end_month'] ?: null,
+            // store NULL for empty months to avoid inserting zero-dates
+            ':start_month' => !empty($data['start_month']) ? $data['start_month'] : null,
+            ':end_month' => !empty($data['end_month']) ? $data['end_month'] : null,
             ':status' => $data['status'] ?? 1
         ]);
         return (int)$this->db->lastInsertId();
@@ -35,10 +36,26 @@ class ConcessionModel {
         if (!empty($filters['status'])) { $where .= ' AND c.status = :status'; $params[':status'] = $filters['status']; }
         if (!empty($filters['admission_no'])) { $where .= ' AND c.admission_no = :admission_no'; $params[':admission_no'] = $filters['admission_no']; }
 
-        $sql = "SELECT c.*, s.name AS session_name, st.first_name, st.last_name FROM school_student_fees_concessions c LEFT JOIN school_sessions s ON s.id = c.session_id LEFT JOIN school_students st ON st.admission_no = c.admission_no AND st.school_id = c.school_id WHERE $where ORDER BY c.created_at DESC";
+        // Simplified query: fetch concessions only, then add student names via separate query if needed
+        $sql = "SELECT c.* FROM school_student_fees_concessions c WHERE $where ORDER BY c.created_at DESC LIMIT 100";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $concessions = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // Add student names to each concession
+        foreach ($concessions as &$c) {
+            if (!empty($c['admission_no'])) {
+                $stmtSt = $this->db->prepare('SELECT first_name, last_name FROM school_students WHERE admission_no = :ad AND school_id = :sid LIMIT 1');
+                $stmtSt->execute([':ad' => $c['admission_no'], ':sid' => $school_id]);
+                $st = $stmtSt->fetch(\PDO::FETCH_ASSOC);
+                if ($st) {
+                    $c['first_name'] = $st['first_name'] ?? '';
+                    $c['last_name'] = $st['last_name'] ?? '';
+                }
+            }
+        }
+        
+        return $concessions;
     }
 
     public function findStudentByAdmission(int $school_id, string $admission_no) {
@@ -65,8 +82,8 @@ class ConcessionModel {
                 ':value_type'=>$concessionData['value_type'],
                 ':value'=>$concessionData['value'],
                 ':applies_to'=>$concessionData['applies_to'],
-                ':start_month'=>$concessionData['start_month'],
-                ':end_month'=>$concessionData['end_month'] ?: null,
+                ':start_month'=>!empty($concessionData['start_month']) ? $concessionData['start_month'] : null,
+                ':end_month'=>!empty($concessionData['end_month']) ? $concessionData['end_month'] : null,
                 ':status'=>$concessionData['status'] ?? 1
             ]);
             $count++;
