@@ -61,7 +61,7 @@ require_once __DIR__ . '/../../../../Core/database.php';
                                 </a>
                             </div>
                             <div class="col-md-3 mb-4">
-                                <a href="" class="text-dark text-decoration-none">
+                                <a href="invoices/fees_invoice.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3"><i class="fa fa-file-text-o fa-2x text-warning"></i></div>
@@ -101,9 +101,21 @@ require_once __DIR__ . '/../../../../Core/database.php';
                                 </a>
                             </div>
                         </div>
-
-                         
-
+                        <div class="row">
+                            <div class="col-md-3 mb-4">
+                                <a href="concession/concession.php" class="text-dark text-decoration-none">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-body d-flex align-items-center">
+                                            <div class="mr-3"><i class="fa fa-cogs fa-2x text-primary"></i></div>
+                                            <div>
+                                                <h6 class="mb-0">Concession</h6>
+                                                <small class="text-muted">Scholarship, Discount, Concession</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
