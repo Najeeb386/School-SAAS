@@ -1,223 +1,373 @@
+<?php
+try {
+    require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
+    require_once __DIR__ . '/../../../../../Core/database.php';
+
+    $school_id = $_SESSION['school_id'] ?? null;
+    if (!$school_id) {
+        throw new Exception('Unauthorized');
+    }
+
+    $db = \Database::connect();
+    
+    // Fetch classes for dropdown
+    $stmtClasses = $db->prepare('SELECT id, name FROM school_classes WHERE school_id = :sid ORDER BY name');
+    $stmtClasses->execute([':sid' => $school_id]);
+    $classes = $stmtClasses->fetchAll(\PDO::FETCH_ASSOC);
+    
+    // Fetch sessions with all columns, then filter to show only the name column we need
+    $sessions = [];
+    try {
+        // Fetch all sessions for this school, ordered by most recent first
+        $stmtSessions = $db->prepare('SELECT id, name FROM school_sessions WHERE school_id = :sid AND is_active = 1 ORDER BY id DESC');
+        $stmtSessions->execute([':sid' => $school_id]);
+        $sessions = $stmtSessions->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // If no active sessions, fetch all regardless of is_active status
+        if (empty($sessions)) {
+            error_log("No active sessions for school_id: {$school_id}, fetching all sessions");
+            $stmtAllSessions = $db->prepare('SELECT id, name FROM school_sessions WHERE school_id = :sid ORDER BY id DESC');
+            $stmtAllSessions->execute([':sid' => $school_id]);
+            $sessions = $stmtAllSessions->fetchAll(\PDO::FETCH_ASSOC);
+        }
+        
+        error_log("Sessions loaded: " . count($sessions) . " for school_id: {$school_id}");
+    } catch (Exception $e) {
+        error_log('Error fetching sessions: ' . $e->getMessage());
+        $sessions = [];
+    }
+    
+} catch (Exception $e) {
+    error_log('Error loading invoice page: ' . $e->getMessage());
+    $classes = [];
+    $sessions = [];
+}
+?>
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Invoice Generator</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulk Invoice Generator</title>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.2/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.2/js/bootstrap.min.js"></script>
+
 <style>
-body{background:#f6f7fb}
-.card{border-radius:10px}
-.summary-box{background:#fff;border-radius:10px;padding:20px;box-shadow:0 5px 15px rgba(0,0,0,.08)}
-.table td{vertical-align:middle}
+body{
+  background:#f5f7fb;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+}
+.page-title{font-weight:700;}
+.card{
+  border:none;
+  border-radius:12px;
+  box-shadow:0 8px 22px rgba(20,30,70,.06);
+}
+.form-label{
+  font-size:.85rem;
+  font-weight:600;
+  color:#495057;
+}
+.fee-item-check{margin-bottom:15px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;}
+.fee-item-check input{margin-top:3px;}
+.small-muted{font-size:.8rem;color:#6c757d;}
 </style>
 </head>
 
 <body>
 
-<div class="container my-4">
+<div class="container-fluid py-4">
 
-<!-- HEADER -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h3 class="mb-1">Invoice Generator</h3>
-    <small class="text-muted">Generate student fee invoices</small>
-  </div>
-  <span class="badge badge-primary px-3 py-2">Session 2025–2026</span>
-</div>
-
-<!-- TABS -->
-<ul class="nav nav-tabs mb-3" role="tablist">
-  <li class="nav-item">
-    <a class="nav-link active" data-toggle="tab" href="#auto">Auto Generate</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" data-toggle="tab" href="#manual">Manual Invoice</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" data-toggle="tab" href="#preview">Preview Queue</a>
-  </li>
-</ul>
-
-<div class="tab-content">
-
-<!-- ================= AUTO GENERATE TAB ================= -->
-<div class="tab-pane fade show active" id="auto">
-
-<div class="card">
-<div class="card-body">
-
-<h5 class="mb-3">Auto Monthly Invoice Generation</h5>
-
-<div class="row">
-  <div class="col-md-3">
-    <label>Invoice Month</label>
-    <input type="month" class="form-control">
+  <!-- HEADER -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="page-title mb-1">Bulk Invoice Generator</h3>
+      <div class="small-muted">Generate fee invoices for students in bulk</div>
+    </div>
+    <div>
+      <a href="invoice_list.php" class="btn btn-outline-secondary">
+        <i class="fas fa-list"></i> View Invoices
+      </a>
+    </div>
   </div>
 
-  <div class="col-md-3">
-    <label>Apply To</label>
-    <select class="form-control">
-      <option>All Classes</option>
-      <option>Selected Class</option>
-    </select>
+  <div class="row">
+    <!-- LEFT: GENERATOR FORM -->
+    <div class="col-lg-8 mb-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="mb-4">Generate Invoices</h5>
+
+          <form id="invoiceGeneratorForm">
+            <!-- Session & Month -->
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label class="form-label">Session</label>
+                <select id="sessionId" name="session_id" class="form-control" required>
+                  <option value="">-- Select Session --</option>
+                  <?php foreach ($sessions as $s): ?>
+                    <option value="<?php echo intval($s['id']); ?>"><?php echo htmlspecialchars($s['name']); ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="form-group col-md-6">
+                <label class="form-label">Billing Month</label>
+                <input type="month" id="billingMonth" name="billing_month" class="form-control" required>
+              </div>
+            </div>
+
+            <!-- Class Selection -->
+            <div class="form-group">
+              <label class="form-label">Apply To</label>
+              <div>
+                <div class="custom-control custom-radio mb-2">
+                  <input type="radio" id="applyAll" name="apply_to" value="all" class="custom-control-input" checked>
+                  <label class="custom-control-label" for="applyAll">All Classes</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="applySpecific" name="apply_to" value="specific" class="custom-control-input">
+                  <label class="custom-control-label" for="applySpecific">Specific Class</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Class Dropdown (hidden by default) -->
+            <div class="form-group" id="classSelectWrap" style="display:none;">
+              <label class="form-label">Select Class</label>
+              <select id="classId" name="class_id" class="form-control">
+                <option value="">-- Select Class --</option>
+                <?php foreach ($classes as $c): ?>
+                  <option value="<?php echo intval($c['id']); ?>"><?php echo htmlspecialchars($c['name']); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <!-- Additional Fees -->
+            <div class="form-group">
+              <label class="form-label">Additional Fees (Optional)</label>
+              <small class="form-text text-muted d-block mb-2">Select any additional fees to include in invoices</small>
+              
+              <div class="fee-item-check">
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox" id="fee_examination" name="additional_fees[]" value="examination" class="custom-control-input">
+                  <label class="custom-control-label" for="fee_examination">
+                    <strong>Examination Fee</strong>
+                    <input type="number" name="fee_examination_amount" class="form-control form-control-sm mt-1" placeholder="Amount" style="max-width:150px;">
+                  </label>
+                </div>
+              </div>
+
+              <div class="fee-item-check">
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox" id="fee_vacation" name="additional_fees[]" value="vacation" class="custom-control-input">
+                  <label class="custom-control-label" for="fee_vacation">
+                    <strong>Vacation/Sports Fee</strong>
+                    <input type="number" name="fee_vacation_amount" class="form-control form-control-sm mt-1" placeholder="Amount" style="max-width:150px;">
+                  </label>
+                </div>
+              </div>
+
+              <div class="fee-item-check">
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox" id="fee_advance" name="additional_fees[]" value="advance" class="custom-control-input">
+                  <label class="custom-control-label" for="fee_advance">
+                    <strong>Advance Payment / Other</strong>
+                    <input type="number" name="fee_advance_amount" class="form-control form-control-sm mt-1" placeholder="Amount" style="max-width:150px;">
+                  </label>
+                </div>
+              </div>
+
+              <div class="fee-item-check">
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox" id="fee_library" name="additional_fees[]" value="library" class="custom-control-input">
+                  <label class="custom-control-label" for="fee_library">
+                    <strong>Library Fee</strong>
+                    <input type="number" name="fee_library_amount" class="form-control form-control-sm mt-1" placeholder="Amount" style="max-width:150px;">
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Due Date -->
+            <div class="form-group">
+              <label class="form-label">Due Date</label>
+              <input type="date" id="dueDate" name="due_date" class="form-control" required>
+            </div>
+
+            <!-- Submit -->
+            <div class="text-right mt-4">
+              <button type="button" id="btnPreview" class="btn btn-outline-primary mr-2">
+                <i class="fas fa-eye mr-2"></i>Preview
+              </button>
+              <button type="submit" id="btnGenerate" class="btn btn-success">
+                <i class="fas fa-file-invoice mr-2"></i>Generate Invoices
+              </button>
+            </div>
+
+            <div id="formMessage" class="alert mt-3" role="alert" style="display:none;"></div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: INFO -->
+    <div class="col-lg-4 mb-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="mb-3"><i class="fas fa-info-circle mr-2"></i>About Invoice Generation</h5>
+          <p class="small">The system will:</p>
+          <ul class="small">
+            <li>Fetch all active students from selected class(es)</li>
+            <li>Apply fee structure from school_fee_assignment</li>
+            <li>Apply scholarships/concessions from school_student_fees_concessions</li>
+            <li>Add any additional fees selected above</li>
+            <li>Generate invoice with invoice number (auto-increment)</li>
+            <li>Create line items for each fee component</li>
+          </ul>
+          <hr>
+          <p class="small"><strong>Note:</strong> Only active students will be included. Invoices are marked as "pending" by default.</p>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-body">
+          <h5 class="mb-3"><i class="fas fa-cogs mr-2"></i>Total Students to Invoice</h5>
+          <h2 id="totalStudents" class="text-primary mb-0">—</h2>
+          <small class="text-muted">Will be calculated after you select filters</small>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="col-md-3">
-    <label>Class</label>
-    <select class="form-control">
-      <option>Class 1</option>
-      <option>Class 2</option>
-    </select>
-  </div>
-
-  <div class="col-md-3">
-    <label>Fee Type</label>
-    <select class="form-control">
-      <option>Monthly</option>
-      <option>Yearly</option>
-    </select>
-  </div>
 </div>
 
-<hr>
-
-<div class="text-right">
-  <button class="btn btn-outline-secondary">Preview</button>
-  <button class="btn btn-success">Generate Invoices</button>
-</div>
-
-</div>
-</div>
-</div>
-
-<!-- ================= MANUAL INVOICE TAB ================= -->
-<div class="tab-pane fade" id="manual">
-
-<div class="row">
-
-<!-- LEFT -->
-<div class="col-md-8">
-<div class="card mb-3">
-<div class="card-body">
-
-<h5 class="mb-3">Manual Invoice Creation</h5>
-
-<div class="row mb-3">
-  <div class="col-md-6">
-    <label>Student</label>
-    <input class="form-control" placeholder="Search student">
-  </div>
-  <div class="col-md-3">
-    <label>Session</label>
-    <select class="form-control">
-      <option>2025–2026</option>
-    </select>
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="previewModalLabel">
+          <i class="fas fa-eye mr-2"></i>Invoice Preview
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="previewContent">
+        Loading preview...
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
   </div>
 </div>
-
-<table class="table table-bordered">
-<thead class="thead-light">
-<tr>
-<th>Fee Item</th>
-<th width="120">Amount</th>
-<th width="60"></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Tuition Fee</td>
-<td>5000</td>
-<td><button class="btn btn-sm btn-danger">×</button></td>
-</tr>
-<tr>
-<td>Exam Fee</td>
-<td>1000</td>
-<td><button class="btn btn-sm btn-danger">×</button></td>
-</tr>
-</tbody>
-</table>
-
-<button class="btn btn-outline-primary btn-sm">
-<i class="fas fa-plus"></i> Add Fee Item
-</button>
-
-</div>
-</div>
-</div>
-
-<!-- RIGHT -->
-<div class="col-md-4">
-<div class="summary-box">
-
-<h6 class="text-muted">Invoice Summary</h6>
-<hr>
-<div class="d-flex justify-content-between">
-<span>Subtotal</span><strong>₨ 6,000</strong>
-</div>
-<div class="d-flex justify-content-between">
-<span>Discount</span><strong>₨ 0</strong>
-</div>
-<hr>
-<div class="d-flex justify-content-between">
-<strong>Total</strong><strong>₨ 6,000</strong>
-</div>
-
-<button class="btn btn-success btn-block mt-3">
-Generate Invoice
-</button>
-
-</div>
-</div>
-
-</div>
-</div>
-
-<!-- ================= PREVIEW TAB ================= -->
-<div class="tab-pane fade" id="preview">
-
-<div class="card">
-<div class="card-body">
-
-<h5 class="mb-3">Invoice Preview Queue</h5>
-
-<table class="table table-striped">
-<thead>
-<tr>
-<th>Student</th>
-<th>Class</th>
-<th>Month</th>
-<th>Amount</th>
-<th></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Ali</td>
-<td>Class 2</td>
-<td>Aug 2026</td>
-<td>₨ 5,000</td>
-<td><button class="btn btn-sm btn-danger">Remove</button></td>
-</tr>
-</tbody>
-</table>
-
-<button class="btn btn-success float-right">
-Generate Selected
-</button>
-
-</div>
-</div>
-</div>
-
-</div>
-</div>
-
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  // Toggle class select based on radio button
+  const applyAll = document.getElementById('applyAll');
+  const applySpecific = document.getElementById('applySpecific');
+  const classSelectWrap = document.getElementById('classSelectWrap');
+  const classId = document.getElementById('classId');
+
+  function toggleClassSelect() {
+    if (applySpecific.checked) {
+      classSelectWrap.style.display = 'block';
+      classId.required = true;
+    } else {
+      classSelectWrap.style.display = 'none';
+      classId.required = false;
+      classId.value = '';
+    }
+  }
+
+  applyAll.addEventListener('change', toggleClassSelect);
+  applySpecific.addEventListener('change', toggleClassSelect);
+
+  // Set today's date in due date if not set
+  const dueDate = document.getElementById('dueDate');
+  if (!dueDate.value) {
+    const today = new Date();
+    dueDate.value = today.toISOString().split('T')[0];
+  }
+
+  // Preview button
+  document.getElementById('btnPreview').addEventListener('click', function(){
+    const form = document.getElementById('invoiceGeneratorForm');
+    const formData = new FormData(form);
+    formData.set('action', 'preview');
+
+    fetch('bulk_generate_invoices.php', { method:'POST', credentials:'same-origin', body: formData })
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(res => {
+        if (res && res.success) {
+          document.getElementById('previewContent').innerHTML = res.preview_html;
+          document.getElementById('totalStudents').textContent = res.student_count;
+          jQuery('#previewModal').modal('show');
+        } else {
+          alert('Error: ' + (res.message || 'Unknown error'));
+        }
+      })
+      .catch(e => {
+        console.error(e);
+        alert('Preview failed: ' + e.message);
+      });
+  });
+
+  // Generate button
+  document.getElementById('invoiceGeneratorForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    
+    if (!confirm('Generate invoices for all selected students? This action cannot be undone.')) return;
+
+    const form = this;
+    const formData = new FormData(form);
+    formData.set('action', 'generate');
+
+    const btn = document.getElementById('btnGenerate');
+    btn.disabled = true;
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+
+    fetch('bulk_generate_invoices.php', { method:'POST', credentials:'same-origin', body: formData })
+      .then(r => {
+        if (!r.ok) {
+          return r.json().then(data => {
+            throw new Error(data.message || 'HTTP ' + r.status);
+          });
+        }
+        return r.json();
+      })
+      .then(res => {
+        if (res && res.success) {
+          alert('✓ ' + res.message + '\n' + res.invoice_count + ' invoices generated successfully!');
+          window.location.href = 'invoice_list.php';
+        } else {
+          throw new Error(res.message || 'Unknown error');
+        }
+      })
+      .catch(e => {
+        console.error(e);
+        const msgDiv = document.getElementById('formMessage');
+        msgDiv.className = 'alert alert-danger';
+        msgDiv.textContent = 'Error: ' + e.message;
+        msgDiv.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = oldText;
+      });
+  });
+});
+</script>
