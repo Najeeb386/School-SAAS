@@ -135,7 +135,7 @@ if (!$school_id) {
                     <input type="hidden" id="fee_edit_id" value="">
                     <div class="form-group"><label>Title</label><input class="form-control" id="fee_title" required></div>
                     <div class="form-group"><label>Category</label><select id="fee_category" class="form-control"><option value="">-- choose --</option></select></div>
-                    <div class="form-row"><div class="form-group col-md-6"><label>Amount</label><input class="form-control" id="fee_amount" type="number" step="0.01" required></div><div class="form-group col-md-6"><label>Billing Cycle</label><select id="fee_recurring" class="form-control"><option value="one_time">One-time</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></div></div>
+                    <div class="form-row"><div class="form-group col-md-6"><label>Amount</label><input class="form-control" id="fee_amount" type="number" step="0.01" required></div><div class="form-group col-md-6"><label>Billing Cycle</label><select id="fee_recurring" class="form-control"><option value="once_per_session">Once per session</option><option value="one_time">One-time</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></div></div>
                 </form>
             </div>
       <div class="modal-footer"><button class="btn btn-secondary" data-dismiss="modal">Close</button><button id="saveFeeItem" class="btn btn-primary">Save Item</button></div>

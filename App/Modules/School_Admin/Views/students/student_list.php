@@ -22,15 +22,14 @@ require_once __DIR__ . '/../../../../Core/database.php';
     <div class="app">
         <div class="app-wrap">
             <header class="app-header top-bar">
-                <?php include_once __DIR__ . '/../../include/navbar.php'; ?>
             </header>
             <div class="app-container">
-                <?php include_once __DIR__ . '/../../include/sidebar.php'; ?>
-                <div class="app-main" id="main">
+                <div class="" id="main">
                     <div class="container-fluid my-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h3 class="mb-0">Students</h3>
                             <div>
+                                <button onclick="window.location='students.php'" class="btn btn-warning"><i class="fas fa-arrow-left"></i> Back</button>
                                 <a href="new_student.php" class="btn btn-primary"><i class="fas fa-plus"></i> New Student</a>
                             </div>
                         </div>

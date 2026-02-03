@@ -70,7 +70,43 @@ try {
     $dstmt->execute([':id'=>$id,':sid'=>$school_id]);
     $docs = $dstmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode(['success'=>true,'student'=>$student,'guardians'=>$guardians,'academic'=>$academic,'enrollment'=>$enrollment,'documents'=>$docs]);
+    // subject assignments for student's current class/session/section
+    $subjects = [];
+    $class_id = $enrollment['class_id'] ?? $academic['class_id'] ?? null;
+    $section_id = $enrollment['section_id'] ?? $academic['section_id'] ?? null;
+    $session_for_assign = $enrollment['session_id'] ?? $academic['session_id'] ?? null;
+    if ($class_id) {
+        $subSql = 'SELECT a.*, s.name AS subject_name, t.name AS teacher_name FROM school_subject_assignments a JOIN school_subjects s ON a.subject_id = s.id LEFT JOIN school_teachers t ON a.teacher_id = t.id WHERE a.school_id = :sid AND a.class_id = :cid';
+        $params = [':sid' => $school_id, ':cid' => $class_id];
+        if ($session_for_assign) {
+            $subSql .= ' AND a.session_id = :sess';
+            $params[':sess'] = $session_for_assign;
+        }
+        if ($section_id) {
+            $subSql .= ' AND (a.section_id = :sec OR a.section_id IS NULL)';
+            $params[':sec'] = $section_id;
+        }
+        $subSql .= ' ORDER BY s.name ASC';
+        $sstmt = $db->prepare($subSql);
+        $sstmt->execute($params);
+        $subjects = $sstmt->fetchAll(PDO::FETCH_ASSOC);
+        // if no assignments found for the specific session/section, try a broader query by class only
+        if (empty($subjects)) {
+            $broaderSql = 'SELECT a.*, s.name AS subject_name, t.name AS teacher_name FROM school_subject_assignments a JOIN school_subjects s ON a.subject_id = s.id LEFT JOIN school_teachers t ON a.teacher_id = t.id WHERE a.school_id = :sid AND a.class_id = :cid ORDER BY s.name ASC';
+            $bs = $db->prepare($broaderSql);
+            $bs->execute([':sid'=>$school_id, ':cid'=>$class_id]);
+            $subjects = $bs->fetchAll(PDO::FETCH_ASSOC);
+        }
+        // if still empty, as a last resort list all subjects defined for the school
+        if (empty($subjects)) {
+            $allSql = 'SELECT s.id AS subject_id, s.name AS subject_name, t.name AS teacher_name FROM school_subjects s LEFT JOIN school_teachers t ON s.teacher_id = t.id WHERE s.school_id = :sid AND s.deleted_at IS NULL ORDER BY s.name ASC';
+            $as = $db->prepare($allSql);
+            $as->execute([':sid'=>$school_id]);
+            $subjects = $as->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+
+    echo json_encode(['success'=>true,'student'=>$student,'guardians'=>$guardians,'academic'=>$academic,'enrollment'=>$enrollment,'documents'=>$docs,'subjects'=>$subjects]);
 } catch (Throwable $e) {
     $out = ob_get_clean();
     http_response_code(500);
