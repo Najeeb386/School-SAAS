@@ -1,0 +1,14 @@
+2026-02-03 13:35:59 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"","session_id":2025,"type":"scholarship","value_type":"percentage","value":"3","applies_to":"tuition_only","start_month":"2026-01","end_month":"2026-10","status":1}}
+2026-02-03 13:35:59 | error | {"remote":"::1","payload":{"message":"Missing admission_no"}}
+2026-02-03 13:36:15 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"aams-2026-000003","session_id":2025,"type":"scholarship","value_type":"percentage","value":"3","applies_to":"tuition_only","start_month":"2026-01","end_month":"2026-10","status":1}}
+2026-02-03 13:36:15 | saved | {"remote":"::1","payload":{"success":true,"id":4}}
+2026-02-03 13:40:31 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"","session_id":2025,"type":"discount","value_type":"fixed","value":"","applies_to":"tuition_only","start_month":"","end_month":"","status":1}}
+2026-02-03 13:40:31 | error | {"remote":"::1","payload":{"message":"Missing admission_no"}}
+2026-02-03 13:40:54 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"aams-2026-000003","session_id":2025,"type":"scholarship","value_type":"percentage","value":"1","applies_to":"tuition_only","start_month":"2026-01","end_month":"2026-09","status":1}}
+2026-02-03 13:40:54 | saved | {"remote":"::1","payload":{"success":true,"id":5}}
+2026-02-03 13:45:13 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"","session_id":2025,"type":"discount","value_type":"fixed","value":"","applies_to":"tuition_only","start_month":"","end_month":"","status":1}}
+2026-02-03 13:45:13 | error | {"remote":"::1","payload":{"message":"Missing admission_no"}}
+2026-02-03 13:45:51 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"aams-2026-000003","session_id":2025,"type":"concession","value_type":"fixed","value":"1","applies_to":"all","start_month":"2026-02","end_month":"2026-02","status":1}}
+2026-02-03 13:45:51 | saved | {"remote":"::1","payload":{"success":true,"id":6}}
+2026-02-03 13:45:53 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"","session_id":2025,"type":"discount","value_type":"fixed","value":"","applies_to":"tuition_only","start_month":"","end_month":"","status":1}}
+2026-02-03 13:45:53 | error | {"remote":"::1","payload":{"message":"Missing admission_no"}}
