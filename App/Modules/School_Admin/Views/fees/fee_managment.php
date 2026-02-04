@@ -26,45 +26,71 @@ if (!$school_id) {
 <div class="container-fluid my-4 px-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="mb-0">Fees Management</h3>
-        <a href="fees.php" class="btn btn-outline-secondary"><i class="fas fa-chevron-left"></i> Back</a>
+        <a href="fees.php" class="btn btn-secondary"><i class="fas fa-chevron-left"></i> Back</a>
     </div>
 
-    <div class="row">
-        <div class="col-lg-3 left-col">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <strong>Fee Categories</strong>
-                    <button class="btn btn-sm btn-primary" id="btnAddCategory"><i class="fas fa-plus"></i></button>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0">
-                            <thead class="thead-light"><tr><th>#</th><th>Name</th><th>Actions</th></tr></thead>
-                            <tbody id="feeCategoriesList">
-                                <tr><td colspan="2" class="text-muted">No categories yet.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+    <!-- Global quick actions (always visible) -->
+    <div class="d-flex justify-content-end align-items-center mb-3">
+        <div class="btn-group">
+            <button class="btn btn-sm btn-primary m-1" id="btnAddItem">
+                <i class="fas fa-plus"></i> Add Fee Item
+            </button>
+            <button class="btn btn-sm btn-success m-1" id="btnAssignFee">
+                <i class="fas fa-project-diagram"></i> Assign Fee
+            </button>
+        </div>
+    </div>
 
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <strong>Quick Actions</strong>
-                </div>
-                <div class="card-body">
-                    <button class="btn btn-block btn-outline-primary mb-2" id="btnAddItem">Add Fee Item</button>
-                    <button class="btn btn-block btn-outline-success" id="btnAssignFee">Assign Fee to Class/Section</button>
+    <!-- Tabs for Categories / Fee Items / Assignments -->
+    <ul class="nav nav-tabs mb-3" id="feesTab" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="tab-categories" data-toggle="tab" href="#pane-categories" role="tab" aria-controls="pane-categories" aria-selected="true">
+                <i class="fas fa-folder-open mr-1"></i>Categories
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="tab-items" data-toggle="tab" href="#pane-items" role="tab" aria-controls="pane-items" aria-selected="false">
+                <i class="fas fa-list mr-1"></i>Fee Items
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="tab-assign" data-toggle="tab" href="#pane-assign" role="tab" aria-controls="pane-assign" aria-selected="false">
+                <i class="fas fa-Sitemap mr-1"></i>Fees Assigning
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="feesTabContent">
+        <!-- Categories Tab -->
+        <div class="tab-pane fade show active" id="pane-categories" role="tabpanel" aria-labelledby="tab-categories">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <strong>Fee Categories</strong>
+                            <button class="btn btn-sm btn-primary" id="btnAddCategory"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead class="thead-light"><tr><th>#</th><th>Name</th><th>Actions</th></tr></thead>
+                                    <tbody id="feeCategoriesList">
+                                        <tr><td colspan="2" class="text-muted">No categories yet.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-9">
+        <!-- Fee Items Tab -->
+        <div class="tab-pane fade" id="pane-items" role="tabpanel" aria-labelledby="tab-items">
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <strong>Fee Items</strong>
                     <div>
-                        <button class="btn btn-sm btn-outline-secondary" id="refreshFees"><i class="fas fa-sync"></i> Refresh</button>
                         <button class="btn btn-sm btn-primary" id="newFeeItem"><i class="fas fa-plus"></i> New Item</button>
                     </div>
                 </div>
@@ -79,16 +105,18 @@ if (!$school_id) {
                     </div>
                 </div>
             </div>
+        </div>
 
+        <!-- Assignments Tab -->
+        <div class="tab-pane fade" id="pane-assign" role="tabpanel" aria-labelledby="tab-assign">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
-                        <strong>Assignments</strong>
+                        <strong>Fees Assigning</strong>
                         <small class="text-muted d-block">Map fees to classes / sections / students</small>
                     </div>
                     <div style="min-width:320px; display:flex; gap:8px; align-items:center;">
                         <input id="assign_search" class="form-control form-control-sm" placeholder="Search assignments..." style="max-width:220px;" />
-                        <button id="refreshAssignments" class="btn btn-sm btn-outline-secondary">Refresh</button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -181,7 +209,6 @@ $(function(){
         if (target === 'btnAddCategory') $('#addCategoryModal').modal('show');
         else $('#addFeeItemModal').modal('show');
     });
-    $('#btnAssignFee').on('click', function(){ $('#assignFeeModal').modal('show'); });
 
     // load categories and populate lists
     function loadCategories() {
@@ -202,8 +229,8 @@ $(function(){
                         '<td>'+(i+1)+'</td>'+
                         '<td>'+escapeHtml(r.name)+'</td>'+
                         '<td>'+
-                          '<button class="btn btn-sm btn-outline-secondary btn-edit-cat mr-1" data-id="'+r.id+'" data-name="'+nameEnc+'" data-desc="'+descEnc+'">Edit</button>'+
-                          '<button class="btn btn-sm btn-outline-danger btn-delete-cat" data-id="'+r.id+'">Delete</button>'+
+                          '<button class="btn btn-sm btn-secondary btn-edit-cat mr-1" data-id="'+r.id+'" data-name="'+nameEnc+'" data-desc="'+descEnc+'">Edit</button>'+
+                          '<button class="btn btn-sm btn-danger btn-delete-cat" data-id="'+r.id+'">Delete</button>'+
                         '</td>'+
                       '</tr>';
                     $list.append(row);
@@ -258,8 +285,8 @@ $(function(){
             var $list = $('#feeItemsList'); $list.empty();
             if (!rows.length) $list.append('<tr><td colspan="7" class="text-muted">No fee items created.</td></tr>');
             else rows.forEach(function(r,i){
-                var editBtn = '<button class="btn btn-sm btn-outline-secondary btn-edit-fee mr-1" data-id="'+r.id+'" data-name="'+encodeURIComponent(r.name||'')+'" data-category="'+(r.category_id||'')+'" data-amount="'+r.amount+'" data-billing_cycle="'+(r.billing_cycle||'one_time')+'">Edit</button>';
-                var delBtn = '<button class="btn btn-sm btn-outline-danger btn-delete-fee" data-id="'+r.id+'">Delete</button>';
+                var editBtn = '<button class="btn btn-sm btn-secondary btn-edit-fee mr-1" data-id="'+r.id+'" data-name="'+encodeURIComponent(r.name||'')+'" data-category="'+(r.category_id||'')+'" data-amount="'+r.amount+'" data-billing_cycle="'+(r.billing_cycle||'one_time')+'">Edit</button>';
+                var delBtn = '<button class="btn btn-sm btn-danger btn-delete-fee" data-id="'+r.id+'">Delete</button>';
                 $list.append('<tr><td>'+(i+1)+'</td><td>'+escapeHtml(r.name)+'</td><td>'+escapeHtml(r.category_name||'-')+'</td><td>'+parseFloat(r.amount).toFixed(2)+'</td><td>'+escapeHtml(r.billing_cycle)+'</td><td>'+(r.status==1?'active':'inactive')+'</td><td>'+editBtn+delBtn+'</td></tr>');
             });
         }).catch(console.error);
@@ -313,7 +340,7 @@ $(function(){
     $('#assign_to').on('change', function(){ populateTargets(); });
 
     // open assign modal and prepare lists; fetch active session first
-    $('#btnAssignFee').on('click', function(){
+    $('#btnAssignFee, #btnAssignFeeTab').on('click', function(){
         // fetch current session
         fetch('get_current_session.php').then(r=>r.json()).then(js=>{
             if (js && js.success) {
@@ -359,8 +386,8 @@ $(function(){
                 else if (r.class_id) assignedTo = r.class_name || ('Class ' + r.class_id);
                 var amount = r.amount !== null ? parseFloat(r.amount).toFixed(2) : (r.fee_item_default_amount ? parseFloat(r.fee_item_default_amount).toFixed(2) : '0.00');
                 var session = r.session_name || ('#' + (r.session_id||''));
-                var actions = '<button class="btn btn-sm btn-outline-secondary btn-edit-assign mr-1" data-id="'+r.id+'" data-fee="'+(r.fee_item_id||'')+'" data-class="'+(r.class_id||'')+'" data-section="'+(r.section_id||'')+'" data-student="'+(r.student_id||'')+'" data-amount="'+(r.amount||'')+'" data-due="'+(r.due_day||'')+'" data-session="'+(r.session_id||'')+'" data-session-name="'+(r.session_name||'')+'">Edit</button>'+
-                              '<button class="btn btn-sm btn-outline-danger btn-delete-assign" data-id="'+r.id+'">Delete</button>';
+                var actions = '<button class="btn btn-sm btn-secondary btn-edit-assign mr-1" data-id="'+r.id+'" data-fee="'+(r.fee_item_id||'')+'" data-class="'+(r.class_id||'')+'" data-section="'+(r.section_id||'')+'" data-student="'+(r.student_id||'')+'" data-amount="'+(r.amount||'')+'" data-due="'+(r.due_day||'')+'" data-session="'+(r.session_id||'')+'" data-session-name="'+(r.session_name||'')+'">Edit</button>'+
+                              '<button class="btn btn-sm btn-danger btn-delete-assign" data-id="'+r.id+'">Delete</button>';
 
                 var searchText = (String(r.fee_item_name||'') + ' ' + assignedTo + ' ' + String(session) + ' ' + String(amount)).toLowerCase();
                 $list.append('<tr data-search="'+encodeURIComponent(searchText)+'"><td>'+(i+1)+'</td><td>'+escapeHtml(r.fee_item_name||'')+'</td><td>'+escapeHtml(assignedTo)+'</td><td>'+amount+'</td><td>'+escapeHtml(session)+'</td><td>'+actions+'</td></tr>');
