@@ -25,9 +25,8 @@ try {
     // Normalize due_date to Y-m-d
     $due_date = $due_date ? date('Y-m-d', strtotime($due_date)) : null;
     
-    // For diagnose_concession and single-student actions, validation rules differ.
-    // Bulk preview/generate require both session and billing month.
-    if (!in_array($action, ['diagnose_concession', 'single_preview', 'single_generate'], true) && (!$session_id || !$billing_month)) {
+    // For diagnose_concession action, these are optional at first check
+    if ($action !== 'diagnose_concession' && (!$session_id || !$billing_month)) {
         throw new Exception('Session and billing month are required');
     }
 
@@ -47,177 +46,33 @@ try {
         }
     }
 
-    // Get students to invoice (bulk modes only)
-    if (in_array($action, ['preview', 'generate'], true)) {
-        if ($apply_to === 'specific' && $class_id) {
-            // Specific class - get students enrolled in that class
-            $stmtStudents = $db->prepare('
-                SELECT DISTINCT s.id, s.admission_no, s.first_name, s.last_name, e.class_id
-                FROM school_students s
-                INNER JOIN school_student_enrollments e ON e.student_id = s.id
-                WHERE s.school_id = :sid AND e.class_id = :cid AND e.session_id = :sess AND s.status = 1
-                ORDER BY s.first_name, s.last_name
-            ');
-            $stmtStudents->execute(['sid' => $school_id, 'cid' => $class_id, 'sess' => $session_id]);
-        } else {
-            // All classes - get all active students enrolled in this session
-            $stmtStudents = $db->prepare('
-                SELECT DISTINCT s.id, s.admission_no, s.first_name, s.last_name, e.class_id
-                FROM school_students s
-                INNER JOIN school_student_enrollments e ON e.student_id = s.id
-                WHERE s.school_id = :sid AND e.session_id = :sess AND s.status = 1
-                ORDER BY e.class_id, s.first_name, s.last_name
-            ');
-            $stmtStudents->execute(['sid' => $school_id, 'sess' => $session_id]);
-        }
-        
-        $students = $stmtStudents->fetchAll(\PDO::FETCH_ASSOC);
-
-        if (empty($students)) {
-            throw new Exception('No active students found for selected criteria');
-        }
-    } else {
-        $students = [];
-    }
-
-    // ============ SINGLE-STUDENT PREVIEW ============
-    if ($action === 'single_preview') {
-        $admission_no = trim($_POST['single_admission_no'] ?? '');
-        $single_session_id = intval($_POST['session_id'] ?? 0);
-        $from_month_raw = trim($_POST['single_from_month'] ?? '');
-        $to_month_raw = trim($_POST['single_to_month'] ?? '');
-
-        if (!$admission_no || !$single_session_id || !$from_month_raw) {
-            throw new Exception('Admission no, session and from month are required for single-student preview');
-        }
-
-        // Resolve month range (inclusive)
-        $fromDate = new \DateTime($from_month_raw . '-01');
-        $toDate = $to_month_raw ? new \DateTime($to_month_raw . '-01') : clone $fromDate;
-        if ($toDate < $fromDate) {
-            $tmp = $fromDate;
-            $fromDate = $toDate;
-            $toDate = $tmp;
-        }
-
-        // Find student + class for this session
-        $stmtStu = $db->prepare('
-            SELECT s.id, s.admission_no, s.first_name, s.last_name, e.class_id
+    // Get students to invoice
+    if ($apply_to === 'specific' && $class_id) {
+        // Specific class - get students enrolled in that class
+        $stmtStudents = $db->prepare('
+            SELECT DISTINCT s.id, s.admission_no, s.first_name, s.last_name, e.class_id
             FROM school_students s
             INNER JOIN school_student_enrollments e ON e.student_id = s.id
-            WHERE s.school_id = :sid AND s.admission_no = :adno AND e.session_id = :sess
-            LIMIT 1
+            WHERE s.school_id = :sid AND e.class_id = :cid AND e.session_id = :sess AND s.status = 1
+            ORDER BY s.first_name, s.last_name
         ');
-        $stmtStu->execute(['sid' => $school_id, 'adno' => $admission_no, 'sess' => $single_session_id]);
-        $student = $stmtStu->fetch(\PDO::FETCH_ASSOC);
-        if (!$student) {
-            throw new Exception('Student not found for given admission no and session');
-        }
+        $stmtStudents->execute(['sid' => $school_id, 'cid' => $class_id, 'sess' => $session_id]);
+    } else {
+        // All classes - get all active students enrolled in this session
+        $stmtStudents = $db->prepare('
+            SELECT DISTINCT s.id, s.admission_no, s.first_name, s.last_name, e.class_id
+            FROM school_students s
+            INNER JOIN school_student_enrollments e ON e.student_id = s.id
+            WHERE s.school_id = :sid AND e.session_id = :sess AND s.status = 1
+            ORDER BY e.class_id, s.first_name, s.last_name
+        ');
+        $stmtStudents->execute(['sid' => $school_id, 'sess' => $session_id]);
+    }
+    
+    $students = $stmtStudents->fetchAll(\PDO::FETCH_ASSOC);
 
-        // Manual discount params
-        $disc_type = strtolower(trim($_POST['single_discount_type'] ?? ''));
-        $disc_value = floatval($_POST['single_discount_value'] ?? 0);
-        $disc_note = trim($_POST['single_discount_note'] ?? '');
-
-        $preview_rows = [];
-        $monthsCount = 0;
-
-        $cur = clone $fromDate;
-        while ($cur <= $toDate) {
-            $billing_month_single = $cur->format('Y-m-d');
-
-            $calc = calculateInvoiceAmount(
-                $db,
-                $school_id,
-                $student['id'],
-                $student['admission_no'],
-                $single_session_id,
-                $student['class_id'],
-                $billing_month_single,
-                $additional_fees
-            );
-
-            // Apply manual discount on top of concessions if configured
-            $manual_discount = 0.0;
-            if ($disc_type && $disc_value > 0) {
-                $discount_base = max(0.0, $calc['total_amount'] ?? ($calc['base_amount'] - $calc['concessions'] + $calc['additional_fees_total']));
-                if ($disc_type === 'percentage') {
-                    $manual_discount = ($discount_base * $disc_value) / 100.0;
-                } else {
-                    $manual_discount = $disc_value;
-                }
-                $manual_discount = min($manual_discount, $discount_base);
-
-                if ($manual_discount > 0) {
-                    $calc['concessions'] += $manual_discount;
-                    $calc['total_amount'] = $calc['base_amount'] - $calc['concessions'] + $calc['additional_fees_total'];
-                    $desc = 'Manual Discount';
-                    if ($disc_note !== '') {
-                        $desc .= ' - ' . $disc_note;
-                    }
-                    $calc['fee_items'][] = [
-                        'fee_item_id' => 0,
-                        'description' => $desc,
-                        'amount' => -1 * $manual_discount,
-                    ];
-                }
-            }
-
-            $preview_rows[] = [
-                'month_label' => $cur->format('F Y'),
-                'name' => $student['first_name'] . ' ' . $student['last_name'],
-                'admission_no' => $student['admission_no'],
-                'base_amount' => $calc['base_amount'],
-                'concessions' => $calc['concessions'],
-                'additional_fees_total' => $calc['additional_fees_total'],
-                'total_amount' => $calc['total_amount'],
-            ];
-
-            $monthsCount++;
-            $cur->modify('+1 month');
-        }
-
-        // Build simple HTML table for single-student preview
-        $html = '<h6 class="mb-3">Invoices for ' . htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) .
-                ' (' . htmlspecialchars($student['admission_no']) . ')</h6>';
-        $html .= '<div style="max-height: 500px; overflow-y: auto;">';
-        $html .= '<table class="table table-sm table-striped">';
-        $html .= '<thead class="thead-light"><tr><th>Month</th><th>Base</th><th>Concessions</th><th>Additional</th><th>Total</th></tr></thead><tbody>';
-
-        $totBase = $totCons = $totAdd = $totNet = 0.0;
-        foreach ($preview_rows as $row) {
-            $totBase += $row['base_amount'];
-            $totCons += $row['concessions'];
-            $totAdd += $row['additional_fees_total'];
-            $totNet += $row['total_amount'];
-
-            $html .= '<tr>';
-            $html .= '<td><small>' . htmlspecialchars($row['month_label']) . '</small></td>';
-            $html .= '<td><small>' . number_format($row['base_amount'], 2) . '</small></td>';
-            $html .= '<td><small class="text-danger">-' . number_format($row['concessions'], 2) . '</small></td>';
-            $html .= '<td><small class="text-info">' . number_format($row['additional_fees_total'], 2) . '</small></td>';
-            $html .= '<td><small><strong>' . number_format($row['total_amount'], 2) . '</strong></small></td>';
-            $html .= '</tr>';
-        }
-
-        $html .= '<tr class="font-weight-bold bg-light">';
-        $html .= '<td>TOTAL (' . $monthsCount . ' month(s))</td>';
-        $html .= '<td>' . number_format($totBase, 2) . '</td>';
-        $html .= '<td class="text-danger">-' . number_format($totCons, 2) . '</td>';
-        $html .= '<td class="text-info">' . number_format($totAdd, 2) . '</td>';
-        $html .= '<td>' . number_format($totNet, 2) . '</td>';
-        $html .= '</tr>';
-
-        $html .= '</tbody></table></div>';
-
-        echo json_encode([
-            'success' => true,
-            'message' => 'Single-student preview generated successfully',
-            'invoice_count' => $monthsCount,
-            'preview_html' => $html,
-        ]);
-        ob_end_flush();
-        exit;
+    if (empty($students)) {
+        throw new Exception('No active students found for selected criteria');
     }
 
     // ============ PREVIEW MODE ============
@@ -367,186 +222,6 @@ try {
         $calc = calculateInvoiceAmount($db, $school_id, $stu['id'], $stu['admission_no'], $session_id, $class_id_debug, $billing_month, $additional_fees);
 
         echo json_encode(['success' => true, 'calculation' => $calc, 'class_id' => $class_id_debug]);
-        ob_end_flush();
-        exit;
-    }
-
-    // ============ SINGLE-STUDENT GENERATE ============
-    if ($action === 'single_generate') {
-        $admission_no = trim($_POST['single_admission_no'] ?? '');
-        $single_session_id = intval($_POST['session_id'] ?? 0);
-        $from_month_raw = trim($_POST['single_from_month'] ?? '');
-        $to_month_raw = trim($_POST['single_to_month'] ?? '');
-
-        if (!$admission_no || !$single_session_id || !$from_month_raw) {
-            throw new Exception('Admission no, session and from month are required for single-student generation');
-        }
-
-        $fromDate = new \DateTime($from_month_raw . '-01');
-        $toDate = $to_month_raw ? new \DateTime($to_month_raw . '-01') : clone $fromDate;
-        if ($toDate < $fromDate) {
-            $tmp = $fromDate;
-            $fromDate = $toDate;
-            $toDate = $tmp;
-        }
-
-        // Find student + class for this session
-        $stmtStu = $db->prepare('
-            SELECT s.id, s.admission_no, s.first_name, s.last_name, e.class_id
-            FROM school_students s
-            INNER JOIN school_student_enrollments e ON e.student_id = s.id
-            WHERE s.school_id = :sid AND s.admission_no = :adno AND e.session_id = :sess
-            LIMIT 1
-        ');
-        $stmtStu->execute(['sid' => $school_id, 'adno' => $admission_no, 'sess' => $single_session_id]);
-        $student = $stmtStu->fetch(\PDO::FETCH_ASSOC);
-        if (!$student) {
-            throw new Exception('Student not found for given admission no and session');
-        }
-
-        // Manual discount params
-        $disc_type = strtolower(trim($_POST['single_discount_type'] ?? ''));
-        $disc_value = floatval($_POST['single_discount_value'] ?? 0);
-        $disc_note = trim($_POST['single_discount_note'] ?? '');
-
-        $db->beginTransaction();
-        $invoice_count = 0;
-        $errors = [];
-
-        $cur = clone $fromDate;
-        while ($cur <= $toDate) {
-            try {
-                $billing_month_single = $cur->format('Y-m-d');
-
-                // Skip if invoice already exists for this month
-                $stmtCheck = $db->prepare('
-                    SELECT id FROM schoo_fee_invoices
-                    WHERE school_id = :sid AND student_id = :stid AND session_id = :ssid AND billing_month = :bm
-                    LIMIT 1
-                ');
-                $stmtCheck->execute([
-                    'sid' => $school_id,
-                    'stid' => $student['id'],
-                    'ssid' => $single_session_id,
-                    'bm' => $billing_month_single,
-                ]);
-                if ($stmtCheck->rowCount() > 0) {
-                    $cur->modify('+1 month');
-                    continue;
-                }
-
-                // Calculate base + concessions + additional
-                $calc = calculateInvoiceAmount(
-                    $db,
-                    $school_id,
-                    $student['id'],
-                    $student['admission_no'],
-                    $single_session_id,
-                    $student['class_id'],
-                    $billing_month_single,
-                    $additional_fees
-                );
-
-                // Apply manual discount
-                $manual_discount = 0.0;
-                if ($disc_type && $disc_value > 0) {
-                    $discount_base = max(0.0, $calc['total_amount'] ?? ($calc['base_amount'] - $calc['concessions'] + $calc['additional_fees_total']));
-                    if ($disc_type === 'percentage') {
-                        $manual_discount = ($discount_base * $disc_value) / 100.0;
-                    } else {
-                        $manual_discount = $disc_value;
-                    }
-                    $manual_discount = min($manual_discount, $discount_base);
-
-                    if ($manual_discount > 0) {
-                        $calc['concessions'] += $manual_discount;
-                        $calc['total_amount'] = $calc['base_amount'] - $calc['concessions'] + $calc['additional_fees_total'];
-                        $desc = 'Manual Discount';
-                        if ($disc_note !== '') {
-                            $desc .= ' - ' . $disc_note;
-                        }
-                        $calc['fee_items'][] = [
-                            'fee_item_id' => 0,
-                            'description' => $desc,
-                            'amount' => -1 * $manual_discount,
-                        ];
-                    }
-                }
-
-                // Validate that we have at least some fees to invoice
-                if ($calc['total_amount'] <= 0 && empty($calc['fee_items'])) {
-                    $errors[] = $student['admission_no'] . ' ' . $cur->format('Y-m') . ' - No fees found for class. Check if fee assignments exist for this class/session.';
-                    $cur->modify('+1 month');
-                    continue;
-                }
-
-                // Generate invoice number
-                $invoice_no = getNextInvoiceNumber($db, $school_id, $single_session_id);
-
-                $gross = (float)$calc['base_amount'];
-                $concession = (float)($calc['concessions'] ?? 0);
-                $additional = (float)($calc['additional_fees_total'] ?? 0);
-                $net = max(0, $gross - $concession + $additional);
-
-                $stmtInsert = $db->prepare('
-                    INSERT INTO schoo_fee_invoices 
-                    (school_id, student_id, session_id, invoice_no, billing_month, gross_amount, concession_amount, net_payable, total_amount, status, due_date, created_at, updated_at)
-                    VALUES (:sid, :stid, :ssid, :inv, :bm, :gross, :concession, :net, :total, :status, :due, NOW(), NOW())
-                ');
-
-                $stmtInsert->execute([
-                    'sid' => $school_id,
-                    'stid' => $student['id'],
-                    'ssid' => $single_session_id,
-                    'inv' => $invoice_no,
-                    'bm' => $billing_month_single,
-                    'gross' => $gross,
-                    'concession' => $concession,
-                    'net' => $net,
-                    'total' => $net,
-                    'status' => 'draft',
-                    'due' => $due_date,
-                ]);
-
-                $invoice_id = $db->lastInsertId();
-
-                // Line items
-                foreach ($calc['fee_items'] as $item) {
-                    $stmtItem = $db->prepare('
-                        INSERT INTO schoo_fee_invoice_items (invoice_id, fee_item_id, description, amount, created_at)
-                        VALUES (:inv_id, :fee_id, :desc, :amount, NOW())
-                    ');
-                    $stmtItem->execute([
-                        'inv_id' => $invoice_id,
-                        'fee_id' => intval($item['fee_item_id'] ?? 0),
-                        'desc' => $item['description'],
-                        'amount' => (float)($item['amount'] ?? 0),
-                    ]);
-                }
-
-                $invoice_count++;
-            } catch (Exception $e) {
-                error_log('Single invoice generation error for ' . $admission_no . ' ' . $cur->format('Y-m') . ': ' . $e->getMessage());
-                $errors[] = $admission_no . ' ' . $cur->format('Y-m') . ' - ' . $e->getMessage();
-            }
-
-            $cur->modify('+1 month');
-        }
-
-        $db->commit();
-
-        if ($invoice_count > 0) {
-            echo json_encode([
-                'success' => true,
-                'message' => "Generated {$invoice_count} invoice(s) for {$admission_no}" . (!empty($errors) ? ' (with some warnings)' : ''),
-                'invoice_count' => $invoice_count,
-                'errors' => $errors,
-            ]);
-        } else {
-            $error_details = !empty($errors) ? implode('; ', $errors) : 'No invoices created.';
-            throw new Exception($error_details);
-        }
-
         ob_end_flush();
         exit;
     }
