@@ -91,7 +91,7 @@ try {
                     <?php if (!empty($class['description'])): ?><p class="mt-2 mb-0 text-muted"><?php echo htmlspecialchars($class['description']); ?></p><?php endif; ?>
                 </div>
                 <div class="text-right">
-                    <a href="classes.php" class="btn btn-outline-secondary"><i class="fas fa-chevron-left"></i> Back</a>
+                    <a href="classes.php" class="btn btn-secondary"><i class="fas fa-chevron-left"></i> Back</a>
                 </div>
             </div>
         </div>
@@ -110,7 +110,7 @@ try {
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table table-striped mb-0">
-                                <thead class="thead-light"><tr><th>#</th><th>Name</th><th>Code</th><th>Room</th><th>Capacity</th><th>Students</th><th>Teacher</th></tr></thead>
+                                <thead class="thead-light"><tr><th>#</th><th>Name</th><th>Code</th><th>Room</th><th>Capacity</th><th>Students</th><th>Students list</th></tr></thead>
                                 <tbody>
                                 <?php $i=1; foreach($sections as $s): ?>
                                     <tr>
@@ -120,16 +120,9 @@ try {
                                         <td><?php echo htmlspecialchars($s['room_number'] ?? '-'); ?></td>
                                         <td><?php echo htmlspecialchars($s['capacity'] ?? '-'); ?></td>
                                         <td><?php echo htmlspecialchars($s['current_enrollment'] ?? '0'); ?></td>
-                                        <td><?php
-                                            if (!empty($s['class_teacher_id'])) {
-                                                try {
-                                                    $t = $db->prepare('SELECT name FROM school_teachers WHERE id = :id LIMIT 1');
-                                                    $t->execute([':id' => $s['class_teacher_id']]);
-                                                    $tr = $t->fetch(PDO::FETCH_ASSOC);
-                                                    echo htmlspecialchars($tr['name'] ?? '-');
-                                                } catch (Throwable $e) { echo '-'; }
-                                            } else echo '-';
-                                        ?></td>
+                                        <td>
+                                            <a class="btn btn-sm btn-primary" href="students.php?section_id=<?php echo htmlspecialchars($s['id']); ?>">View Students</a>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>

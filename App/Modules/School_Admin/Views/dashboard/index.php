@@ -136,28 +136,34 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                                 </a>
                             </div>
                             <div class="col-lg-2 col-md-6 mb-3">
-                                <div class="card" style="background: #f8e8ff; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;">
+                               <a href="../staff/staff.php">
+                                 <div class="card" style="background: #f8e8ff; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;">
                                     <div class="card-body text-center p-4">
                                         <div style="font-size: 40px; margin-bottom: 10px;">👨‍🏫</div>
                                         <h6 style="color: #d946ef;">Add Staff</h6>
                                     </div>
                                 </div>
+                               </a>
                             </div>
                             <div class="col-lg-2 col-md-6 mb-3">
-                                <div class="card" style="background: #fffde8; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;">
+                                <a href="../finance/finance.php">
+                                    <div class="card" style="background: #fffde8; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;">
                                     <div class="card-body text-center p-4">
                                         <div style="font-size: 40px; margin-bottom: 10px;">💰</div>
                                         <h6 style="color: #eab308;">Add Income/Expense</h6>
                                     </div>
                                 </div>
+                                </a>
                             </div>
                             <div class="col-lg-2 col-md-6 mb-3">
+                            <a href="../fees/fees.php">
                                 <div class="card" style="background: #ffe8f0; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;">
                                     <div class="card-body text-center p-4">
                                         <div style="font-size: 40px; margin-bottom: 10px;">💳</div>
                                         <h6 style="color: #ec4899;">Add Student Fee</h6>
                                     </div>
                                 </div>
+                            </a>
                             </div>
                             <div class="col-lg-2 col-md-6 mb-3">
                                 <div class="card" style="background: #ffe8d8; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;">

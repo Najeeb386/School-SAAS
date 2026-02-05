@@ -503,7 +503,6 @@ try {
                                 <h2>Classes Management</h2>
                             </div>
                             <div class="page-actions">
-                                <button class="btn btn-secondary">📥 Import</button>
                                 <button class="btn btn-primary" onclick="startAddClass()">+ Add New Class</button>
                             </div>
                         </div>
