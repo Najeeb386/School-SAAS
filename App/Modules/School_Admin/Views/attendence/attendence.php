@@ -84,7 +84,7 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                             </div>
 
                             <div class="col-md-3 mb-4">
-                                <a href="fees.php" class="text-dark text-decoration-none">
+                                <a href="student_attendence/student_attendence.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">
@@ -100,7 +100,7 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                             </div>
 
                             <div class="col-md-3 mb-4">
-                                <a href="expenses/expenses.php" class="text-dark text-decoration-none">
+                                <a href="hollidays/hollidays.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">
