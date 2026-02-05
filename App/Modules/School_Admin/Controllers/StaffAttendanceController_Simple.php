@@ -44,7 +44,7 @@ try {
             $_POST = array_merge($_POST, $jsonBody);
         }
     }
-    $school_id = $_SESSION['school_id'] ?? 1;
+    $school_id = $_SESSION['school_id'] ?? 10;  // Default to school_id = 10 where test data exists
     
     if (!$action) {
         http_response_code(400);

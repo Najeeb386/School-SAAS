@@ -80,10 +80,11 @@ $db = \Database::connect();
             display: flex;
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .calendar-nav button {
-            background: rgba(255,255,255,0.2);
+            background: #007bff;
             border: none;
             color: white;
             padding: 8px 12px;
@@ -91,24 +92,35 @@ $db = \Database::connect();
             cursor: pointer;
             transition: background 0.3s;
             font-size: 12px;
+            font-weight: 500;
         }
 
         .calendar-nav button:hover {
-            background: rgba(255,255,255,0.3);
+            background: #0056b3;
+        }
+
+        .calendar-nav button.btn-outline-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .calendar-nav button.btn-outline-secondary:hover {
+            background: #5a6268;
         }
 
         .calendar-nav select {
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
+            background: white;
+            border: 1px solid #dee2e6;
+            color: #333;
             padding: 6px 10px;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 12px;
         }
 
         .calendar-nav select option {
-            background: #667eea;
-            color: white;
+            background: white;
+            color: #333;
         }
 
         /* Calendar Grid */
@@ -442,6 +454,154 @@ $db = \Database::connect();
         .status-radio.halfday input[type="radio"]:checked + label {
             background-color: #cce5ff;
         }
+
+        /* Print Styles */
+        @media print {
+            * {
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                background-color: white;
+            }
+
+            /* Hide specific elements */
+            .page-header,
+            .dashboard-stats,
+            #filterSection,
+            .modal,
+            .btn-close,
+            .navbar,
+            .sidebar,
+            #attendanceModal,
+            .card-header .calendar-nav {
+                display: none !important;
+            }
+
+            /* Show the attendance card */
+            .card.mt-4 {
+                display: block !important;
+                margin: 0 !important;
+                box-shadow: none;
+                border: none;
+                page-break-inside: avoid;
+            }
+
+            .card.mt-4 .card-header {
+                display: block !important;
+                background-color: white !important;
+                border-bottom: 2px solid #333;
+                padding: 10px 0;
+                margin-bottom: 10px;
+            }
+
+            .card.mt-4 .card-header h6 {
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: #000;
+            }
+
+            .card.mt-4 .card-header .text-muted {
+                font-size: 12px;
+                color: #666;
+            }
+
+            .card.mt-4 .card-body {
+                display: block !important;
+                padding: 0;
+            }
+
+            .calendar-grid {
+                padding: 0;
+                background: white;
+            }
+
+            .calendar-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+            }
+
+            .calendar-table th,
+            .calendar-table td {
+                border: 1px solid #000;
+                padding: 5px 3px;
+                text-align: center;
+                font-size: 9px;
+            }
+
+            .calendar-table th {
+                background-color: #e9ecef;
+                font-weight: bold;
+                color: #000;
+            }
+
+            .calendar-table td:first-child {
+                text-align: left;
+                font-weight: 500;
+                width: 12%;
+                background-color: #f8f9fa;
+            }
+
+            .badge {
+                border: 1px solid #000;
+                padding: 2px 4px !important;
+                font-size: 8px;
+                font-weight: bold;
+            }
+
+            .badge.bg-success {
+                background-color: #d4edda !important;
+                color: #155724 !important;
+            }
+
+            .badge.bg-danger {
+                background-color: #f8d7da !important;
+                color: #721c24 !important;
+            }
+
+            .badge.bg-warning {
+                background-color: #fff3cd !important;
+                color: #856404 !important;
+            }
+
+            .badge.bg-info {
+                background-color: #d1ecf1 !important;
+                color: #0c5460 !important;
+            }
+
+            .border-top {
+                display: block !important;
+                border-top: 2px solid #000 !important;
+                margin-top: 15px !important;
+                padding-top: 10px !important;
+            }
+
+            .border-top h6 {
+                font-size: 12px;
+                font-weight: bold;
+                margin-bottom: 8px;
+                color: #000;
+            }
+
+            .border-top .col-md-3 {
+                font-size: 10px;
+                margin-bottom: 3px;
+                color: #000;
+            }
+
+            #calendarLoadingSpinner {
+                display: none !important;
+            }
+
+            /* Print margins and sizing */
+            @page {
+                margin: 0.5in;
+                size: A4 landscape;
+            }
+        }
     </style>
 </head>
 <body>
@@ -450,8 +610,8 @@ $db = \Database::connect();
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2><i class="fas fa-clipboard-list"></i> Staff Attendance</h2>
             <div class="btn-group" role="group">
-                <button type="button" class="btn btn-success" id="markPresentAll">
-                    <i class="fas fa-check"></i> Mark All Present
+                <button type="button" onclick="window.location.href='attendence.php'" class="btn btn-success" id="markPresentAll">
+                    <i class="fas fa-check"></i> Back
                 </button>
                 <button type="button" class="btn btn-primary" id="addAttendanceBtn">
                     <i class="fas fa-plus"></i> Add Attendance
@@ -516,46 +676,7 @@ $db = \Database::connect();
         </div>
 
         <!-- Filter Section -->
-        <div class="card mb-4">
-            <div class="card-header bg-light">
-                <h6 class="mb-0">Filters</h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <label for="filterDate" class="form-label">Date:</label>
-                        <input type="date" id="filterDate" class="form-control">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="filterDepartment" class="form-label">Department:</label>
-                        <select id="filterDepartment" class="form-select">
-                            <option value="">All Departments</option>
-                            <option value="teaching">Teaching</option>
-                            <option value="admin">Administration</option>
-                            <option value="support">Support Staff</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="filterStatus" class="form-label">Status:</label>
-                        <select id="filterStatus" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="present">Present</option>
-                            <option value="absent">Absent</option>
-                            <option value="leave">Leave</option>
-                            <option value="not-marked">Not Marked</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-3 d-flex align-items-end">
-                        <button class="btn btn-primary me-2 w-50" id="applyFilters">
-                            <i class="fas fa-search"></i> Apply
-                        </button>
-                        <button class="btn btn-secondary w-50" id="resetFilters">
-                            <i class="fas fa-redo"></i> Reset
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
 
         <!-- Attendance Table -->
         <div class="card">
@@ -647,7 +768,7 @@ $db = \Database::connect();
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <div>
                     <h6 class="mb-0">Monthly Attendance Register</h6>
-                    <small class="text-muted" id="calendarTitle">February 2026</small>
+                    <small class="text-muted" id="calendarTitle"></small>
                 </div>
                 <div class="calendar-nav">
                     <button id="prevMonthBtn" class="btn btn-sm btn-outline-secondary" title="Previous Month">
@@ -662,6 +783,9 @@ $db = \Database::connect();
                     <select id="calendarYearMonth" class="form-select form-select-sm" style="width: 150px; display: inline-block;">
                         <!-- Year and month options will be populated by JavaScript -->
                     </select>
+                    <button id="printCalendarBtn" class="btn btn-sm btn-primary" title="Print Attendance Register">
+                        <i class="fas fa-print"></i> Print
+                    </button>
                 </div>
             </div>
             <div class="card-body">
@@ -815,7 +939,9 @@ $db = \Database::connect();
                 year: year
             });
             
-            return fetch(`${apiBaseUrl}?${params}`)
+            const url = `${apiBaseUrl}?${params}`;
+            
+            return fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -887,7 +1013,9 @@ $db = \Database::connect();
         // Generate calendar view from API data
         function generateCalendarView(data) {
             const calendarContainer = document.getElementById('calendarView');
-            if (!calendarContainer) return;
+            if (!calendarContainer) {
+                return;
+            }
             
             const { data: staff, year, month, month_name, days_in_month } = data;
             
@@ -936,20 +1064,26 @@ $db = \Database::connect();
                     // Add attendance cells
                     dates.forEach(date => {
                         const status = member.attendance ? member.attendance[date] : null;
-                        const statusClass = status ? `badge-${getStatusClass(status)}` : 'badge-secondary';
-                        const statusText = status || '-';
+                        const statusClass = status ? `bg-${getStatusClass(status)}` : 'bg-secondary';
                         const dateObj = new Date(date);
                         const isSunday = dateObj.getDay() === 0;
                         const cellClass = isSunday ? 'sunday-cell' : '';
 
-                        html += `<td class="${cellClass}" style="text-align: center;">
-                            <span class="badge ${statusClass} cursor-pointer" 
-                                  onclick="toggleAttendance('${member.staff_type}', ${member.id}, '${date}', this)"
-                                  data-staff-type="${member.staff_type}"
-                                  data-staff-id="${member.id}"
-                                  data-date="${date}"
-                                  data-status="${status || ''}">${statusText}</span>
-                        </td>`;
+                        // Only show badge if status exists (don't show empty dashes)
+                        if (status) {
+                            html += `<td class="${cellClass}" style="text-align: center;">
+                                <span class="badge ${statusClass} cursor-pointer" 
+                                      onclick="toggleAttendance('${member.staff_type}', ${member.id}, '${date}', this)"
+                                      data-staff-type="${member.staff_type}"
+                                      data-staff-id="${member.id}"
+                                      data-date="${date}"
+                                      data-status="${status}"
+                                      style="font-size: 11px; padding: 4px 8px; cursor: pointer; display: inline-block;">${status}</span>
+                            </td>`;
+                        } else {
+                            html += `<td class="${cellClass}" style="text-align: center;">
+                            </td>`;
+                        }
                     });
 
                     html += '</tr>';
@@ -1003,14 +1137,21 @@ $db = \Database::connect();
                     // Update the badge
                     if (nextStatus) {
                         element.textContent = nextStatus;
-                        element.className = `badge badge-${getStatusClass(nextStatus)} cursor-pointer`;
+                        element.className = `badge bg-${getStatusClass(nextStatus)} cursor-pointer`;
                         element.setAttribute('data-status', nextStatus);
+                        element.style.fontSize = '11px';
+                        element.style.padding = '4px 8px';
+                        element.style.cursor = 'pointer';
+                        element.style.display = 'inline-block';
                     } else {
                         element.textContent = '-';
-                        element.className = 'badge badge-secondary cursor-pointer';
+                        element.className = 'badge bg-secondary cursor-pointer';
                         element.setAttribute('data-status', '');
+                        element.style.fontSize = '11px';
+                        element.style.padding = '4px 8px';
+                        element.style.cursor = 'pointer';
+                        element.style.display = 'inline-block';
                     }
-                    console.log('Attendance marked successfully');
                     updateStats();
                 } else {
                     console.error('Failed to mark attendance:', data.message);
@@ -1256,10 +1397,19 @@ $db = \Database::connect();
                     const action = this.value;
                     if (!action) return;
 
+                    // Map action dropdown values to radio button values
+                    const statusMap = {
+                        'present': 'P',
+                        'absent': 'A',
+                        'leave': 'L',
+                        'halfday': 'HD'
+                    };
+                    const radioValue = statusMap[action];
+
                     allStaff.forEach((_, index) => {
                         const radioButtons = document.querySelectorAll(`input[name="status_${index}"]`);
                         radioButtons.forEach(radio => {
-                            if (radio.value === action) {
+                            if (radio.value === radioValue) {
                                 radio.checked = true;
                             }
                         });
@@ -1313,8 +1463,6 @@ $db = \Database::connect();
                     
                     // Update calendar to selected month/year
                     loadMonthlyData(month, year);
-                    
-                    console.log('Filter applied:', { month, year, department: dept });
                 });
             }
 
@@ -1377,6 +1525,14 @@ $db = \Database::connect();
                 calendarYearMonth.addEventListener('change', function() {
                     const [year, month] = this.value.split('-');
                     loadMonthlyData(parseInt(month), parseInt(year));
+                });
+            }
+
+            // Print Calendar Button
+            const printCalendarBtn = document.getElementById('printCalendarBtn');
+            if (printCalendarBtn) {
+                printCalendarBtn.addEventListener('click', function() {
+                    window.print();
                 });
             }
         }
