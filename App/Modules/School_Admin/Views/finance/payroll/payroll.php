@@ -79,7 +79,7 @@ $next_payrun_year = $current_year;
                                     </ol>
                                 </nav>
                                  </div>
-                                 <div class="col-1 mt-5 no-print"><button onclick="history.back()" class="btn btn-sm btn-outline-secondary">Back</button></div>
+                                 <div class="col-1 mt-5 no-print"><button onclick="window.location.href='../finance.php'" class="btn btn-sm btn-primary"><i class="fa fa-arrow-left"></i>  Back</button></div>
                             
                         </div>
                         
@@ -88,8 +88,7 @@ $next_payrun_year = $current_year;
                             <div class="col-12 mb-3 d-flex justify-content-between align-items-center">
                                 <div>
                                     <button id="btnNewPayrun" class="btn btn-primary mr-2">New Payrun</button>
-                                    <button class="btn btn-outline-secondary">Import Salaries</button>
-                                </div>
+                                    </div>
                                 <div>
                                     <div class="form-inline">
                                         <label class="mr-2 text-muted">Filter:</label>
@@ -222,18 +221,6 @@ $next_payrun_year = $current_year;
                     </div>
                 </div>
             </div>
-
-            <footer class="footer">
-                <div class="row">
-                    <div class="col-12 col-sm-6 text-center text-sm-left">
-                        <p>&copy; Copyright 2019. All rights reserved.</p>
-                    </div>
-                    <div class="col col-sm-6 ml-sm-auto text-center text-sm-right">
-                        <p><a target="_blank" href="https://www.templateshub.net">Templates Hub</a></p>
-                    </div>
-                </div>
-            </footer>
-
         </div>
     </div>
 

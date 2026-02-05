@@ -126,12 +126,14 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                         <!-- Quick Action Cards -->
                         <div class="row mb-4">
                             <div class="col-lg-2 col-md-6 mb-3">
-                                <div class="card" style="background: #e8f1ff; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;">
+                                <a href="../students/new_student.php" style="text-decoration: none;">
+                                    <div class="card" style="background: #e8f1ff; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;">
                                     <div class="card-body text-center p-4">
                                         <div style="font-size: 40px; margin-bottom: 10px;">👥</div>
                                         <h6 class="text-primary">Add Students</h6>
                                     </div>
                                 </div>
+                                </a>
                             </div>
                             <div class="col-lg-2 col-md-6 mb-3">
                                 <div class="card" style="background: #f8e8ff; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;">

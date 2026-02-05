@@ -104,14 +104,13 @@ if (isset($_GET['edit'])) {
                                 </ol>
                             </nav>
                         </div>
-                        <div class="col-1 mt-5 no-print"><button onclick="history.back()" class="btn btn-sm btn-outline-secondary">Back</button></div>
+                        <div class="col-1 mt-5 no-print"><button onclick="history.back()" class="btn btn-sm btn-primary"><i class="fa fa-arrow-left"></i> Back</button></div>
                     </div>
 
                     <div class="row mb-3 no-print">
                         <div class="col-12 d-flex flex-wrap justify-content-between align-items-center">
                             <div class="mb-2 mb-md-0">
                                 <button id="btnAddSalary" class="btn btn-primary">Add Salary</button>
-                                <button id="btnImport" class="btn btn-outline-secondary">Bulk Import</button>
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         Export

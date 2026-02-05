@@ -87,7 +87,7 @@ $payruns = $ctrl->list($session_id);
                                 </ol>
                             </nav>
                         </div>
-                        <div class="col-1 mt-5 no-print"><button onclick="history.back()" class="btn btn-sm btn-outline-secondary">Back</button></div>
+                        <div class="col-1 mt-5 no-print"><button onclick="window.location.href='payroll.php'" class="btn btn-sm btn-primary"><i class="fa fa-arrow-left"></i>  Back</button></div>
                     </div>
 
                     <div class="row mb-3 no-print">
@@ -125,7 +125,7 @@ $payruns = $ctrl->list($session_id);
                                                     <th style="min-width: 80px;">Employees</th>
                                                     <th style="min-width: 130px;">Total Amount</th>
                                                     <th style="min-width: 100px;">Status</th>
-                                                    <th style="min-width: 180px;">Actions</th>
+                                                    <th  style="min-width: 180px;">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -174,18 +174,6 @@ $payruns = $ctrl->list($session_id);
 
                 </div>
             </div>
-
-            <footer class="footer">
-                <div class="row">
-                    <div class="col-12 col-sm-6 text-center text-sm-left">
-                        <p>&copy; Copyright 2019. All rights reserved.</p>
-                    </div>
-                    <div class="col col-sm-6 ml-sm-auto text-center text-sm-right">
-                        <p><a target="_blank" href="https://www.templateshub.net">Templates Hub</a></p>
-                    </div>
-                </div>
-            </footer>
-
         </div>
     </div>
 

@@ -89,8 +89,8 @@ $payment_summary = $payrun_data['payment_summary'] ?? [];
                             </nav>
                         </div>
                         <div class="col-1 mt-5 no-print">
-                            <button onclick="history.back()" class="btn btn-sm btn-outline-secondary">Back</button>
-                            <button onclick="window.print()" class="btn btn-sm btn-outline-info">Print</button>
+                            <button onclick="history.back()" class="btn btn-sm btn-primary mb-2"><i class="fa fa-arrow-left"></i> Back</button>
+                            <button onclick="window.print()" class="btn btn-sm btn-info"><i class="fa fa-print"></i> Print</button>
                         </div>
                     </div>
 
@@ -151,7 +151,7 @@ $payment_summary = $payrun_data['payment_summary'] ?? [];
                                                     <th>Deduction</th>
                                                     <th>Net Salary</th>
                                                     <th>Payment Status</th>
-                                                    <th>Action</th>
+                                                    <th class="no-print" >Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -176,7 +176,7 @@ $payment_summary = $payrun_data['payment_summary'] ?? [];
                                                                 ?>
                                                                 <span class="badge <?php echo $p_badge; ?>"><?php echo ucfirst($item['payment_status']); ?></span>
                                                             </td>
-                                                            <td>
+                                                            <td class="no-print">
                                                                 <a href="payslip.php?id=<?php echo $item['id']; ?>" class="btn btn-xs btn-primary" title="View Payslip">
                                                                     <i class="fa fa-file-pdf-o"></i> View
                                                                 </a>
@@ -220,18 +220,6 @@ $payment_summary = $payrun_data['payment_summary'] ?? [];
 
                 </div>
             </div>
-
-            <footer class="footer">
-                <div class="row">
-                    <div class="col-12 col-sm-6 text-center text-sm-left">
-                        <p>&copy; Copyright 2019. All rights reserved.</p>
-                    </div>
-                    <div class="col col-sm-6 ml-sm-auto text-center text-sm-right">
-                        <p><a target="_blank" href="https://www.templateshub.net">Templates Hub</a></p>
-                    </div>
-                </div>
-            </footer>
-
         </div>
     </div>
 
