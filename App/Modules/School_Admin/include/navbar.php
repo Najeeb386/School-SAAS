@@ -53,29 +53,13 @@
                                         <div class="p-4">
                                             <a class="dropdown-item d-flex nav-link" href="../profile/profile.php">
                                                 <i class="fa fa-user pr-2 text-success"></i> Profile</a>
-                                            <a class="dropdown-item d-flex nav-link" href="javascript:void(0)">
-                                                <i class="fa fa-envelope pr-2 text-primary"></i> Inbox
-                                                <span class="badge badge-primary ml-auto">6</span>
-                                            </a>
-                                            <a class="dropdown-item d-flex nav-link" href="javascript:void(0)">
+                                            
+                                            <a class="dropdown-item d-flex nav-link" href="../settings/setting.php">
                                                 <i class=" ti ti-settings pr-2 text-info"></i> Settings
                                             </a>
-                                            <a class="dropdown-item d-flex nav-link" href="javascript:void(0)">
+                                            <a class="dropdown-item d-flex nav-link" href="https://wa.link/1fy2wk" target="_blank">
                                                 <i class="fa fa-compass pr-2 text-warning"></i> Need help?</a>
-                                            <div class="row mt-2">
-                                                <div class="col">
-                                                    <a class="bg-light p-3 text-center d-block" href="#">
-                                                        <i class="fe fe-mail font-20 text-primary"></i>
-                                                        <span class="d-block font-13 mt-2">My messages</span>
-                                                    </a>
-                                                </div>
-                                                <div class="col">
-                                                    <a class="bg-light p-3 text-center d-block" href="#">
-                                                        <i class="fe fe-plus font-20 text-primary"></i>
-                                                        <span class="d-block font-13 mt-2">Compose new</span>
-                                                    </a>
-                                                </div>
-                                            </div>
+                                            
                                         </div>
                                     </div>
                                 </li>

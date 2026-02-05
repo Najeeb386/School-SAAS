@@ -1,6 +1,20 @@
 <?php
+// Start output buffering and ensure we return JSON only (suppress HTML error output)
 ob_start();
 header('Content-Type: application/json; charset=utf-8');
+
+// Disable direct error display to avoid HTML in JSON responses
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+
+// Convert PHP warnings/notices to exceptions so they are caught and returned as JSON
+set_error_handler(function($severity, $message, $file, $line) {
+    // Respect error_reporting settings
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
 
 try {
     require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
@@ -306,6 +320,7 @@ try {
                 $html .= '</tbody></table></div>';
             }
 
+            if (ob_get_length()) { ob_clean(); }
             echo json_encode([
                 'success' => true,
                 'message' => 'Single-student preview generated successfully',
@@ -324,34 +339,86 @@ try {
             $is_multi_month = count($months) > 1;
             $first_month = $months[0];
             
-            // Get once_per_session items from first month only
+            // Check if once_per_session items were already included in ANY previous invoice for this session
+            $stmtCheckOPS = $db->prepare(
+                'SELECT COUNT(*) as ops_count FROM schoo_fee_invoice_items
+                WHERE invoice_id IN (
+                    SELECT id FROM schoo_fee_invoices
+                    WHERE school_id = :sid AND student_id = :stid AND session_id = :ssid
+                )
+                AND fee_item_id IN (
+                    SELECT id FROM schoo_fee_items WHERE school_id = :sid AND billing_cycle = "once_per_session"
+                )'
+            );
+            $stmtCheckOPS->execute(['sid' => $school_id, 'stid' => $student['id'], 'ssid' => $session_id]);
+            $opsCheckResult = $stmtCheckOPS->fetch(PDO::FETCH_ASSOC);
+            $once_per_session_already_charged = ($opsCheckResult['ops_count'] ?? 0) > 0;
+            
+            // Get once_per_session items from first month only (if not already charged)
             $calc_first = calculateInvoiceAmount(
                 $db, $school_id, $student['id'], $student['admission_no'],
-                $session_id, $single_class_id, $first_month, $additional_fees, true
+                $session_id, $single_class_id, $first_month, $additional_fees, !$once_per_session_already_charged
             );
-            $once_per_session_items = $calc_first['once_per_session_items'] ?? [];
+            $once_per_session_items = ($once_per_session_already_charged ? [] : ($calc_first['once_per_session_items'] ?? []));
             $once_per_session_total = 0.0;
             foreach ($once_per_session_items as $ops_item) {
                 $once_per_session_total += (float)($ops_item['amount'] ?? 0);
+            }
+            if ($once_per_session_already_charged) {
+                error_log('[InvoiceGenerate] Once-per-session items already charged for student ' . $student['admission_no'] . ' in session ' . $session_id . ', skipping');
             }
 
             if ($is_multi_month) {
                 // Create ONE consolidated invoice for all months
                 try {
                     // Check if consolidated invoice already exists (check by first month)
-                    $stmtCheck = $db->prepare('
-                        SELECT id FROM schoo_fee_invoices
-                        WHERE school_id = :sid AND student_id = :stid AND session_id = :ssid AND billing_month = :bm
-                        LIMIT 1
-                    ');
-                    $stmtCheck->execute([
-                        'sid' => $school_id,
-                        'stid' => $student['id'],
-                        'ssid' => $session_id,
-                        'bm' => $first_month
-                    ]);
-                    if ($stmtCheck->rowCount() > 0) {
-                        throw new Exception('An invoice already exists for this period');
+                    // Check for any existing invoices for this billing month
+                    $stmtCheck = $db->prepare(
+                        'SELECT id, invoice_no, status, due_date, total_amount FROM schoo_fee_invoices
+                        WHERE school_id = :sid AND student_id = :stid AND session_id = :ssid AND billing_month = :bm'
+                    );
+                    $stmtCheck->execute(['sid' => $school_id, 'stid' => $student['id'], 'ssid' => $session_id, 'bm' => $first_month]);
+                    $rowsForMonth = $stmtCheck->fetchAll(PDO::FETCH_ASSOC);
+
+                    $allowReplace = true;
+                    $carry_forward_amount = 0.0;
+                    $carry_forward_invoice_no = '';
+
+                    if (!empty($rowsForMonth)) {
+                        // Check for 'paid' invoices -> REFUSE creation (don't create duplicate for paid students)
+                        foreach ($rowsForMonth as $ex) {
+                            $st = strtolower(trim($ex['status'] ?? ''));
+                            if ($st === 'paid') {
+                                throw new Exception('Cannot create invoice: a PAID invoice already exists for this period (student has been billed and paid)');
+                            }
+                        }
+                        
+                        // If any existing invoice for this month is NOT an overdue 'issued' invoice, refuse to create
+                        foreach ($rowsForMonth as $ex) {
+                            $st = strtolower(trim($ex['status'] ?? ''));
+                            $due = $ex['due_date'] ?? null;
+                            if (!($st === 'issued' && $due && strtotime($due) <= strtotime(date('Y-m-d')))) {
+                                // Found an invoice that is not an overdue issued invoice -> cannot replace
+                                $allowReplace = false;
+                                break;
+                            }
+                        }
+
+                        if ($allowReplace) {
+                            // Cancel only overdue 'issued' invoices (NOT paid) and aggregate their amounts
+                            foreach ($rowsForMonth as $ex) {
+                                $st = strtolower(trim($ex['status'] ?? ''));
+                                if ($st === 'issued') {
+                                    $stmtCancel = $db->prepare('UPDATE schoo_fee_invoices SET status = :newstatus, updated_at = NOW() WHERE id = :id');
+                                    $stmtCancel->execute(['newstatus' => 'canceled', 'id' => $ex['id']]);
+                                    error_log('[InvoiceGenerate] Canceled overdue issued invoice id=' . $ex['id'] . ' for student ' . $student['admission_no']);
+                                    $carry_forward_amount += (float)($ex['total_amount'] ?? 0);
+                                    if (!empty($ex['invoice_no'])) $carry_forward_invoice_no = $ex['invoice_no'];
+                                }
+                            }
+                        } else {
+                            throw new Exception('An invoice already exists for this period');
+                        }
                     }
 
                     // Collect all monthly fees and calculate totals
@@ -395,23 +462,24 @@ try {
                         ];
                     }
 
-                    $gross_total = $total_gross_monthly + $once_per_session_total + $total_additional;
+                    // Compute totals for current-period fees (excluding carry-forward)
+                    $gross_total_current = $total_gross_monthly + $once_per_session_total + $total_additional;
 
-                    // Apply manual discount on total
+                    // Apply manual discount on current fees only
                     $manual_discount = 0.0;
                     if ($discount_type && $discount_value > 0) {
                         if ($discount_type === 'percentage') {
-                            $manual_discount = ($gross_total * $discount_value) / 100.0;
+                            $manual_discount = ($gross_total_current * $discount_value) / 100.0;
                         } else {
                             $manual_discount = $discount_value;
                         }
-                        $manual_discount = max(0.0, min($manual_discount, $gross_total));
+                        $manual_discount = max(0.0, min($manual_discount, $gross_total_current));
                     }
 
                     $total_concession = $total_concession_auto + $manual_discount;
-                    $net = max(0, $gross_total - $total_concession);
+                    $net_current = max(0, $gross_total_current - $total_concession);
 
-                    // Add manual discount as line item if present
+                    // Add manual discount as line item if present (affects current fees only)
                     if ($manual_discount > 0) {
                         $all_fee_items[] = [
                             'fee_item_id' => 0,
@@ -420,13 +488,46 @@ try {
                         ];
                     }
 
-                    // Add concessions line item if any
+                    // Add concessions line item if any (auto concessions only)
                     if ($total_concession_auto > 0) {
                         $all_fee_items[] = [
                             'fee_item_id' => 0,
                             'description' => 'Concessions / Scholarships',
                             'amount' => -1 * $total_concession_auto
                         ];
+                    }
+
+                    // Now incorporate carry-forward (previous unpaid) as a separate line item
+                    // Also check for any other previous overdue 'issued' invoices for this student/session
+                    $carry_forward_invoice_nos = [];
+                    try {
+                        $stmtPrev = $db->prepare('SELECT id, invoice_no, total_amount, status, due_date FROM schoo_fee_invoices WHERE school_id = :sid AND student_id = :stid AND session_id = :ssid AND status = :st AND due_date <= :today');
+                        $stmtPrev->execute(['sid' => $school_id, 'stid' => $student['id'], 'ssid' => $session_id, 'st' => 'issued', 'today' => date('Y-m-d')]);
+                        $prevRows = $stmtPrev->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($prevRows as $pr) {
+                            // Cancel each previous overdue issued invoice and aggregate amount
+                            $stmtCancelPrev = $db->prepare('UPDATE schoo_fee_invoices SET status = :newstatus, updated_at = NOW() WHERE id = :id');
+                            $stmtCancelPrev->execute(['newstatus' => 'canceled', 'id' => $pr['id']]);
+                            error_log('[InvoiceGenerate] Canceled previous overdue invoice id=' . $pr['id'] . ' for student ' . $student['admission_no'] . ' (was ' . ($pr['invoice_no'] ?? '') . ')');
+                            $carry_forward_amount += (float)($pr['total_amount'] ?? 0);
+                            if (!empty($pr['invoice_no'])) $carry_forward_invoice_nos[] = $pr['invoice_no'];
+                        }
+                    } catch (Exception $e) {
+                        // Ignore — carry-forward remains as previously computed from same-period invoice
+                        error_log('[InvoiceGenerate] Failed to cancel previous invoices: ' . $e->getMessage());
+                    }
+
+                    if (!empty($carry_forward_amount) && $carry_forward_amount > 0) {
+                        $all_fee_items[] = [
+                            'fee_item_id' => 0,
+                            'description' => 'Carry Forward (from ' . (implode(', ', array_filter([$carry_forward_invoice_no ?? '', implode(', ', $carry_forward_invoice_nos) ?: ''])) ?: 'previous invoice') . ')',
+                            'amount' => (float)$carry_forward_amount
+                        ];
+                        $gross_total = $gross_total_current + (float)$carry_forward_amount;
+                        $net = $net_current + (float)$carry_forward_amount;
+                    } else {
+                        $gross_total = $gross_total_current;
+                        $net = $net_current;
                     }
 
                     if ($gross_total <= 0 && empty($all_fee_items)) {
@@ -451,7 +552,7 @@ try {
                         'concession' => $total_concession,
                         'net' => $net,
                         'total' => $net,
-                        'status' => 'draft',
+                        'status' => 'issued',
                         'due' => $due_date
                     ]);
 
@@ -481,19 +582,50 @@ try {
                 $m = $months[0];
                 try {
                     // Skip if invoice already exists
-                    $stmtCheck = $db->prepare('
-                        SELECT id FROM schoo_fee_invoices
-                        WHERE school_id = :sid AND student_id = :stid AND session_id = :ssid AND billing_month = :bm
-                        LIMIT 1
-                    ');
-                    $stmtCheck->execute([
-                        'sid' => $school_id,
-                        'stid' => $student['id'],
-                        'ssid' => $session_id,
-                        'bm' => $m
-                    ]);
-                    if ($stmtCheck->rowCount() > 0) {
-                        throw new Exception('Invoice already exists for ' . date('F Y', strtotime($m)));
+                    // Check for any existing invoices for this billing month
+                    $stmtCheck = $db->prepare(
+                        'SELECT id, invoice_no, status, due_date, total_amount FROM schoo_fee_invoices
+                        WHERE school_id = :sid AND student_id = :stid AND session_id = :ssid AND billing_month = :bm'
+                    );
+                    $stmtCheck->execute(['sid' => $school_id, 'stid' => $student['id'], 'ssid' => $session_id, 'bm' => $m]);
+                    $rowsForMonth = $stmtCheck->fetchAll(PDO::FETCH_ASSOC);
+
+                    $allowReplace = true;
+                    $carry_forward_amount = 0.0;
+                    $carry_forward_invoice_no = '';
+
+                    if (!empty($rowsForMonth)) {
+                        // Check for 'paid' invoices -> REFUSE creation
+                        foreach ($rowsForMonth as $ex) {
+                            $st = strtolower(trim($ex['status'] ?? ''));
+                            if ($st === 'paid') {
+                                throw new Exception('Cannot create invoice for ' . date('F Y', strtotime($m)) . ': a PAID invoice already exists (student has been billed and paid)');
+                            }
+                        }
+                        
+                        foreach ($rowsForMonth as $ex) {
+                            $st = strtolower(trim($ex['status'] ?? ''));
+                            $due = $ex['due_date'] ?? null;
+                            if (!($st === 'issued' && $due && strtotime($due) <= strtotime(date('Y-m-d')))) {
+                                $allowReplace = false;
+                                break;
+                            }
+                        }
+
+                        if ($allowReplace) {
+                            foreach ($rowsForMonth as $ex) {
+                                $st = strtolower(trim($ex['status'] ?? ''));
+                                if ($st === 'issued') {
+                                    $stmtCancel = $db->prepare('UPDATE schoo_fee_invoices SET status = :newstatus, updated_at = NOW() WHERE id = :id');
+                                    $stmtCancel->execute(['newstatus' => 'canceled', 'id' => $ex['id']]);
+                                    error_log('[InvoiceGenerate] Canceled overdue issued invoice id=' . $ex['id'] . ' for student ' . $student['admission_no']);
+                                    $carry_forward_amount += (float)($ex['total_amount'] ?? 0);
+                                    if (!empty($ex['invoice_no'])) $carry_forward_invoice_no = $ex['invoice_no'];
+                                }
+                            }
+                        } else {
+                            throw new Exception('Invoice already exists for ' . date('F Y', strtotime($m)));
+                        }
                     }
 
                     // Calculate with once_per_session included
@@ -502,35 +634,67 @@ try {
                         $session_id, $single_class_id, $m, $additional_fees, true
                     );
 
-                    $gross_total = (float)$calc['base_amount'];
+                    // Compute current fees totals (exclude carry-forward)
+                    $gross_current = (float)$calc['base_amount'];
                     $concession_auto = (float)($calc['concessions'] ?? 0);
                     $additional = (float)($calc['additional_fees_total'] ?? 0);
 
-                    if ($gross_total <= 0 && empty($calc['fee_items'])) {
+                    if ($gross_current <= 0 && empty($calc['fee_items'])) {
                         throw new Exception('No fees found for this student/class.');
                     }
 
-                    // Apply manual discount
+                    // Apply manual discount to current fees only
                     $manual_discount = 0.0;
                     if ($discount_type && $discount_value > 0) {
                         if ($discount_type === 'percentage') {
-                            $manual_discount = ($gross_total * $discount_value) / 100.0;
+                            $manual_discount = ($gross_current * $discount_value) / 100.0;
                         } else {
                             $manual_discount = $discount_value;
                         }
-                        $manual_discount = max(0.0, min($manual_discount, $gross_total));
+                        $manual_discount = max(0.0, min($manual_discount, $gross_current));
                     }
 
                     $total_concession = $concession_auto + $manual_discount;
-                    $net = max(0, $gross_total - $total_concession + $additional);
+                    $net_current = max(0, $gross_current - $total_concession + $additional);
 
-                    // Add manual discount as line item if present
+                    // Add manual discount as line item if present (current fees only)
                     if ($manual_discount > 0) {
                         $calc['fee_items'][] = [
                             'fee_item_id' => 0,
                             'description' => 'Manual Discount',
                             'amount' => -1 * $manual_discount
                         ];
+                    }
+
+                    // Incorporate carry-forward as separate line item (do not affect discounts)
+                    // Also cancel any other previous overdue 'issued' invoices for this student/session and aggregate their totals
+                    $carry_forward_invoice_nos = [];
+                    try {
+                        $stmtPrev = $db->prepare('SELECT id, invoice_no, total_amount, status, due_date FROM schoo_fee_invoices WHERE school_id = :sid AND student_id = :stid AND session_id = :ssid AND status = :st AND due_date <= :today');
+                        $stmtPrev->execute(['sid' => $school_id, 'stid' => $student['id'], 'ssid' => $session_id, 'st' => 'issued', 'today' => date('Y-m-d')]);
+                        $prevRows = $stmtPrev->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($prevRows as $pr) {
+                            $stmtCancelPrev = $db->prepare('UPDATE schoo_fee_invoices SET status = :newstatus, updated_at = NOW() WHERE id = :id');
+                            $stmtCancelPrev->execute(['newstatus' => 'canceled', 'id' => $pr['id']]);
+                            error_log('[InvoiceGenerate] Canceled previous overdue invoice id=' . $pr['id'] . ' for student ' . $student['admission_no'] . ' (was ' . ($pr['invoice_no'] ?? '') . ')');
+                            $carry_forward_amount += (float)($pr['total_amount'] ?? 0);
+                            if (!empty($pr['invoice_no'])) $carry_forward_invoice_nos[] = $pr['invoice_no'];
+                        }
+                    } catch (Exception $e) {
+                        error_log('[InvoiceGenerate] Failed to cancel previous invoices: ' . $e->getMessage());
+                    }
+
+                    if (!empty($carry_forward_amount) && $carry_forward_amount > 0) {
+                        $calc['fee_items'][] = [
+                            'fee_item_id' => 0,
+                            'description' => 'Carry Forward (from ' . (implode(', ', array_filter([$carry_forward_invoice_no ?? '', implode(', ', $carry_forward_invoice_nos) ?: ''])) ?: 'previous invoice') . ')',
+                            'amount' => (float)$carry_forward_amount
+                        ];
+                        $gross_total = $gross_current + (float)$carry_forward_amount;
+                        $net = $net_current + (float)$carry_forward_amount;
+                    } else {
+                        $gross_total = $gross_current;
+                        $net = $net_current;
                     }
 
                     $invoice_no = getNextInvoiceNumber($db, $school_id, $session_id);
@@ -550,7 +714,7 @@ try {
                         'concession' => $total_concession,
                         'net' => $net,
                         'total' => $net,
-                        'status' => 'draft',
+                        'status' => 'issued',
                         'due' => $due_date
                     ]);
 
@@ -561,10 +725,18 @@ try {
                             INSERT INTO schoo_fee_invoice_items (invoice_id, fee_item_id, description, amount, created_at)
                             VALUES (:inv_id, :fee_id, :desc, :amount, NOW())
                         ');
+                        // Append billing month label to description for single-month invoices
+                        $month_label = date('F Y', strtotime($m));
+                        $desc = trim(($item['description'] ?? ''));
+                        if ($desc !== '') {
+                            $desc = $desc . ' - ' . $month_label;
+                        } else {
+                            $desc = $month_label;
+                        }
                         $stmtItem->execute([
                             'inv_id' => $invoice_id,
                             'fee_id' => intval($item['fee_item_id'] ?? 0),
-                            'desc' => $item['description'],
+                            'desc' => $desc,
                             'amount' => (float)($item['amount'] ?? 0)
                         ]);
                     }
@@ -582,6 +754,7 @@ try {
                 $period_info = $is_multi_month 
                     ? ' (consolidated invoice for ' . count($months) . ' months)'
                     : '';
+                if (ob_get_length()) { ob_clean(); }
                 echo json_encode([
                     'success' => true,
                     'message' => 'Generated ' . $invoice_count . ' consolidated invoice' . ($invoice_count > 1 ? 's' : '') . ' for student ' . $student['admission_no'] . $period_info,
@@ -744,6 +917,7 @@ try {
             : date('F Y', strtotime($bulk_months[0]));
         $preview_html = buildPreviewHTML($preview_data, $bulk_months[0], $period_label, $is_multi_month);
 
+        if (ob_get_length()) { ob_clean(); }
         echo json_encode([
             'success' => true,
             'message' => 'Preview generated successfully',
@@ -792,11 +966,8 @@ try {
         ');
             $matchParams = ['sid' => $school_id, 'month_start' => $month_start, 'adno' => $admission_no];
             try {
-                $stmtMatch->bindValue(':sid', $matchParams['sid']);
-                $stmtMatch->bindValue(':month_start', $matchParams['month_start']);
-                $stmtMatch->bindValue(':adno', $matchParams['adno']);
                 error_log('[DIAG_CONCESSION_SEARCH] Binding params: ' . json_encode($matchParams));
-                $stmtMatch->execute();
+                $stmtMatch->execute($matchParams);
                 $matched = $stmtMatch->fetch(\PDO::FETCH_ASSOC);
             } catch (\PDOException $e) {
                 error_log('[DIAG_CONCESSION_SEARCH] stmtMatch failed: ' . $e->getMessage());
@@ -839,6 +1010,7 @@ try {
             $response['debug_info'][] = $debug;
         }
         
+        if (ob_get_length()) { ob_clean(); }
         echo json_encode($response, JSON_PRETTY_PRINT);
         ob_end_flush();
         exit;
@@ -865,6 +1037,7 @@ try {
 
         $calc = calculateInvoiceAmount($db, $school_id, $stu['id'], $stu['admission_no'], $session_id, $class_id_debug, $billing_month, $additional_fees);
 
+        if (ob_get_length()) { ob_clean(); }
         echo json_encode(['success' => true, 'calculation' => $calc, 'class_id' => $class_id_debug]);
         ob_end_flush();
         exit;
@@ -904,19 +1077,35 @@ try {
             try {
                 if ($is_multi_month) {
                     // Multi-month: create ONE consolidated invoice per student
-                    // Check if consolidated invoice already exists (check by first month)
-                    $check_key = $student['id'] . '_' . $first_month;
-                    if (isset($existing_invoices[$check_key])) {
-                        $skipped_students[] = $student['admission_no'] . ' (invoice exists for ' . date('F Y', strtotime($first_month)) . ')';
-                        continue;
-                    }
-
-                    // Get once_per_session items from first month
+                    // Check if once_per_session items were already included in ANY previous invoice for this session
+                    $stmtCheckOPS = $db->prepare(
+                        'SELECT COUNT(*) as ops_count FROM schoo_fee_invoice_items
+                        WHERE invoice_id IN (
+                            SELECT id FROM schoo_fee_invoices
+                            WHERE school_id = :sid AND student_id = :stid AND session_id = :ssid
+                        )
+                        AND fee_item_id IN (
+                            SELECT id FROM schoo_fee_items WHERE school_id = :school_id_fee AND billing_cycle = "once_per_session"
+                        )'
+                    );
+                    $stmtCheckOPS->execute([
+                        'sid' => $school_id,
+                        'stid' => $student['id'],
+                        'ssid' => $session_id,
+                        'school_id_fee' => $school_id
+                    ]);
+                    $opsCheckResult = $stmtCheckOPS->fetch(PDO::FETCH_ASSOC);
+                    $once_per_session_already_charged = ($opsCheckResult['ops_count'] ?? 0) > 0;
+                    
+                    // Get once_per_session items from first month only (if not already charged)
                     $calc_first = calculateInvoiceAmount(
                         $db, $school_id, $student['id'], $student['admission_no'],
-                        $session_id, $student['class_id'], $first_month, $additional_fees, true
+                        $session_id, $student['class_id'], $first_month, $additional_fees, !$once_per_session_already_charged
                     );
-                    $once_per_session_items = $calc_first['once_per_session_items'] ?? [];
+                    $once_per_session_items = ($once_per_session_already_charged ? [] : ($calc_first['once_per_session_items'] ?? []));
+                    if ($once_per_session_already_charged) {
+                        error_log('[InvoiceGenerate-Bulk] Once-per-session items already charged for student ' . $student['admission_no'] . ' in session ' . $session_id . ', skipping');
+                    }
                     $once_per_session_total = 0.0;
                     foreach ($once_per_session_items as $ops_item) {
                         $once_per_session_total += (float)($ops_item['amount'] ?? 0);
@@ -929,10 +1118,21 @@ try {
                     $total_additional = 0.0;
 
                     foreach ($bulk_months as $m) {
-                        // Smart duplicate prevention: skip this month if invoice already exists
-                        $check_key = $student['id'] . '_' . $m;
-                        if (isset($existing_invoices[$check_key])) {
-                            continue; // Skip this month, but continue with others
+                        // Smart duplicate prevention: check invoice status for this month
+                        $stmtMonthCheck = $db->prepare(
+                            'SELECT id, status FROM schoo_fee_invoices
+                            WHERE school_id = :sid AND student_id = :stid AND session_id = :ssid AND billing_month = :bm'
+                        );
+                        $stmtMonthCheck->execute(['sid' => $school_id, 'stid' => $student['id'], 'ssid' => $session_id, 'bm' => $m]);
+                        $monthInvoices = $stmtMonthCheck->fetchAll(PDO::FETCH_ASSOC);
+                        
+                        // If ANY invoice has status='paid' for this month, refuse (do not create)
+                        foreach ($monthInvoices as $inv) {
+                            $st = strtolower(trim($inv['status'] ?? ''));
+                            if ($st === 'paid') {
+                                $errors[] = $student['admission_no'] . ' - ' . date('F Y', strtotime($m)) . ': PAID invoice exists (student already billed and paid, skipping).';
+                                continue 2; // Skip to next month
+                            }
                         }
 
                         $calc = calculateInvoiceAmount(
@@ -1004,7 +1204,7 @@ try {
                         'concession' => $total_concession,
                         'net' => $net,
                         'total' => $net,
-                        'status' => 'draft',
+                        'status' => 'issued',
                         'due' => $due_date
                     ]);
 
@@ -1026,11 +1226,7 @@ try {
                     $invoice_count++;
                 } else {
                     // Single month: original logic with smart duplicate prevention
-                    $check_key = $student['id'] . '_' . $bulk_months[0];
-                    if (isset($existing_invoices[$check_key])) {
-                        $skipped_students[] = $student['admission_no'] . ' (invoice exists for ' . date('F Y', strtotime($bulk_months[0])) . ')';
-                        continue; // Skip this student for this month only
-                    }
+                    // Let the per-student invoice check handle existing invoices (so we can cancel/replace overdue issued invoices)
 
                     // Calculate invoice amount
                     $calc = calculateInvoiceAmount(
@@ -1073,7 +1269,7 @@ try {
                             'concession' => $concession,
                             'net' => $net,
                             'total' => $net,
-                            'status' => 'draft',
+                            'status' => 'issued',
                             'due' => $due_date
                         ]);
                     } catch (Exception $e) {
@@ -1091,7 +1287,7 @@ try {
                                 'inv' => $invoice_no,
                                 'bm' => $bulk_months[0],
                                 'total' => $net,
-                            'status' => 'draft',
+                            'status' => 'issued',
                                 'due' => $due_date
                             ]);
                             
@@ -1134,6 +1330,7 @@ try {
             if (!empty($skipped_students)) {
                 $message .= '. Skipped ' . count($skipped_students) . ' student(s) with existing invoices for this period.';
             }
+            if (ob_get_length()) { ob_clean(); }
             echo json_encode([
                 'success' => true,
                 'message' => $message,
@@ -1158,6 +1355,7 @@ try {
 } catch (Exception $e) {
     error_log('Invoice Generation Error: ' . $e->getMessage());
     http_response_code(400);
+    if (ob_get_length()) { ob_clean(); }
     echo json_encode([
         'success' => false,
         'message' => $e->getMessage()
@@ -1343,10 +1541,8 @@ function calculateInvoiceAmount($db, $school_id, $student_id, $admission_no, $se
         );
 
         try {
-            $stmtConcession->bindValue(':sid', $school_id);
-            $stmtConcession->bindValue(':adno', $admission_no);
             error_log('[DIAG_CONCESSION_SEARCH] Binding params for calc: ' . json_encode(['sid' => $school_id, 'adno' => $admission_no]));
-            $stmtConcession->execute();
+            $stmtConcession->execute(['sid' => $school_id, 'adno' => $admission_no]);
         } catch (\PDOException $e) {
             error_log('[DIAG_CONCESSION_SEARCH] stmtConcession failed: ' . $e->getMessage());
             error_log('[DIAG_CONCESSION_SEARCH] SQL: ' . $stmtConcession->queryString);

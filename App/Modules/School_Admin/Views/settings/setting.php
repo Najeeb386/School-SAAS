@@ -111,24 +111,6 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-md-3 mb-4">
-                                <a href="../employee/employee.php" class="text-dark text-decoration-none">
-                                    <div class="card shadow-sm h-100">
-                                        <div class="card-body d-flex align-items-center">
-                                            <div class="mr-3">
-                                                <i class="fa fa-graduation-cap fa-2x text-primary"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0">Roles</h6>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </a>
-                            </div>
-                           
-                        </div>
-
-                        <div class="row">
                              <div class="col-md-3 mb-4">
                                 <a href="funds.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
@@ -138,20 +120,6 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                                             </div>
                                             <div>
                                                 <h6 class="mb-0">Funds</h6>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="col-md-4 mb-4">
-                                <a href="activity_log.php" class="text-dark text-decoration-none">
-                                    <div class="card shadow-sm h-100">
-                                        <div class="card-body d-flex align-items-center">
-                                            <div class="mr-3">
-                                                <i class="fa fa-list-alt fa-2x text-secondary"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0">Activity Log</h6>
                                             </div>
                                         </div>
                                     </div>

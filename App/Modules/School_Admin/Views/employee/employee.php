@@ -104,6 +104,7 @@ if (!isset($employees)) {
                                         <div class="d-flex align-items-center justify-content-between mb-3">
                                             <h4 class="mb-0">Employees</h4>
                                             <div>
+                                                <button onclick="window.history.back()" class="btn  btn-info mr-2"><i class="fa fa-arrow-left"></i> Back</button>
                                                 <button class="btn btn-primary" id="addEmployeeBtn" data-toggle="modal" data-target="#employeeModal">Add Employee</button>
                                             </div>
                                         </div>
@@ -134,8 +135,8 @@ if (!isset($employees)) {
                                                                     <?php endif; ?>
                                                                 </td>
                                                                 <td>
-                                                                    <button class="btn btn-sm btn-outline-primary edit-employee" data-id="<?= $e['id'] ?>" data-name="<?= htmlspecialchars($e['name'], ENT_QUOTES,'UTF-8') ?>" data-email="<?= htmlspecialchars($e['email'], ENT_QUOTES,'UTF-8') ?>" data-role="<?= htmlspecialchars($e['role_id'] ?? '', ENT_QUOTES,'UTF-8') ?>" data-perms="<?= htmlspecialchars(json_encode($e['permissions']), ENT_QUOTES,'UTF-8') ?>">Edit</button>
-                                                                    <a href="delete_employee.php?id=<?= $e['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this employee?');">Delete</a>
+                                                                    <button class="btn btn-sm btn-primary edit-employee" data-id="<?= $e['id'] ?>" data-name="<?= htmlspecialchars($e['name'], ENT_QUOTES,'UTF-8') ?>" data-email="<?= htmlspecialchars($e['email'], ENT_QUOTES,'UTF-8') ?>" data-role="<?= htmlspecialchars($e['role_id'] ?? '', ENT_QUOTES,'UTF-8') ?>" data-perms="<?= htmlspecialchars(json_encode($e['permissions']), ENT_QUOTES,'UTF-8') ?>">Edit</button>
+                                                                    <a href="delete_employee.php?id=<?= $e['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Delete this employee?');">Delete</a>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>

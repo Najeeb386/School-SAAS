@@ -24,3 +24,5 @@
 2026-02-03 17:48:37 | saved | {"remote":"::1","payload":{"success":true,"id":10}}
 2026-02-04 09:10:33 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"aams-2026-000004","session_id":2025,"type":"concession","value_type":"percentage","value":"10","applies_to":"tuition_only","start_month":"2026-02-01","end_month":"2026-12-01","status":1}}
 2026-02-04 09:10:33 | saved | {"remote":"::1","payload":{"success":true,"id":11}}
+2026-02-05 15:13:45 | incoming_save | {"remote":"::1","payload":{"school_id":10,"admission_no":"aams-2026-000001","session_id":2025,"type":"scholarship","value_type":"percentage","value":"10","applies_to":"tuition_only","start_month":"2026-02-01","end_month":"2027-02-01","status":1}}
+2026-02-05 15:13:45 | saved | {"remote":"::1","payload":{"success":true,"id":12}}
