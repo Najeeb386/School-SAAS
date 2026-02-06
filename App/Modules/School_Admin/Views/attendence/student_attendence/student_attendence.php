@@ -172,21 +172,49 @@ if ($school_id) {
                                    foreach ($classWiseData as $item) {
                                        $className = $item['class_name'];
                                        if (!isset($classesByName[$className])) {
-                                           $classesByName[$className] = [];
+                                           $classesByName[$className] = [
+                                               'class_id' => $item['class_id'],
+                                               'sections' => []
+                                           ];
                                        }
-                                       $classesByName[$className][] = $item;
+                                       $classesByName[$className]['sections'][] = $item;
                                    }
                                    
                                    // Display each class with its sections
-                                   foreach ($classesByName as $className => $sections) {
+                                   foreach ($classesByName as $className => $classData) {
+                                       $classId = $classData['class_id'];
+                                       $sections = $classData['sections'];
                                ?>
                                 <div class="col-12 col-sm-6 col-lg-4">
-                                    <a href="attendence_marking_classwise.php" style="text-decoration: none; color: inherit;">
+                                    <a href="attendence_marking_classwise.php?class_id=<?php echo $classId; ?>" style="text-decoration: none; color: inherit;">
                                         <div class="card h-100 shadow-sm">
-                                        <div class="card-body">   
-                                        <h5 class="card-title mb-3"><?php echo htmlspecialchars($className); ?></h5>
-                                            
-                                        </div>
+                                            <div class="card-body">
+                                                <p style="color: #dc3545; font-weight: bold; margin-bottom: 0.5rem;">Mark Today's Attendance</p>
+                                                <h5 class="card-title mb-3"><?php echo htmlspecialchars($className); ?></h5>
+                                                <?php 
+                                                foreach ($sections as $section) {
+                                                    $present = (int)($section['present_count'] ?? 0);
+                                                    $absent = (int)($section['absent_count'] ?? 0);
+                                                    $leave = (int)($section['leave_count'] ?? 0);
+                                                    $halfDay = (int)($section['half_day_count'] ?? 0);
+                                                ?>
+                                                <div class="border-bottom pb-2 mb-2">
+                                                    <h6 class="mb-2"><strong><?php echo htmlspecialchars($section['section_name']); ?></strong></h6>
+                                                    <div class="row">
+                                                        <div class="col-6">
+                                                            <small class="text-success"><strong>P: <?php echo $present; ?></strong></small><br>
+                                                            <small class="text-danger"><strong>A: <?php echo $absent; ?></strong></small>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <small class="text-warning"><strong>L: <?php echo $leave; ?></strong></small><br>
+                                                            <small class="text-info"><strong>HD: <?php echo $halfDay; ?></strong></small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <?php 
+                                                }
+                                                ?>
+                                            </div>
                                         </div>
                                     </a>
                                 </div>

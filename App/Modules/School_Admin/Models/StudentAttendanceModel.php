@@ -82,17 +82,17 @@ class StudentAttendanceModel {
                 sa.remarks,
                 sa.attendance_date,
                 se.admission_no,
-                eee.first_name,
-                eee.last_name,
+                ss.first_name,
+                ss.last_name,
                 sc.class_name,
                 scs.section_name
             FROM school_student_attendance sa
             JOIN school_student_enrollments se ON se.student_id = sa.student_id
-            JOIN school_employees eee ON eee.id = se.student_id
+            JOIN school_students ss ON ss.id = sa.student_id
             JOIN school_classes sc ON sc.id = sa.class_id
             JOIN school_class_sections scs ON scs.id = sa.section_id
             WHERE sa.school_id = :school_id AND sa.attendance_date = :date
-            ORDER BY sc.class_order, scs.section_name, eee.first_name
+            ORDER BY sc.class_order, scs.section_name, ss.first_name
         ");
         $stmt->execute([
             ':school_id' => $school_id,
@@ -206,18 +206,17 @@ class StudentAttendanceModel {
                 se.student_id,
                 se.admission_no,
                 se.roll_no,
-                ee.first_name,
-                ee.last_name,
-                ee.email,
-                ee.avatar
+                ss.first_name,
+                ss.last_name,
+                ss.dob
             FROM school_student_enrollments se
-            JOIN school_employees ee ON ee.id = se.student_id
+            JOIN school_students ss ON ss.id = se.student_id
             WHERE se.school_id = :school_id 
                 AND se.class_id = :class_id 
                 AND se.section_id = :section_id
                 AND se.status = 'active'
                 AND se.deleted_at IS NULL
-            ORDER BY se.roll_no ASC, ee.first_name ASC
+            ORDER BY se.roll_no ASC, ss.first_name ASC
         ");
         $stmt->execute([
             ':school_id' => $school_id,
@@ -227,4 +226,78 @@ class StudentAttendanceModel {
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Get or create attendance record for a student
+     */
+    public function getOrCreateAttendance(int $school_id, int $student_id, int $class_id, int $section_id, string $date) {
+        $stmt = $this->db->prepare("
+            SELECT * FROM school_student_attendance 
+            WHERE school_id = :school_id 
+                AND student_id = :student_id 
+                AND class_id = :class_id 
+                AND section_id = :section_id 
+                AND attendance_date = :date
+            LIMIT 1
+        ");
+        $stmt->execute([
+            ':school_id' => $school_id,
+            ':student_id' => $student_id,
+            ':class_id' => $class_id,
+            ':section_id' => $section_id,
+            ':date' => $date
+        ]);
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Save or update attendance record
+     */
+    public function saveAttendance(int $school_id, int $session_id, int $student_id, int $class_id, int $section_id, string $date, string $status, ?string $remarks = null, ?int $marked_by = null) {
+        $existing = $this->getOrCreateAttendance($school_id, $student_id, $class_id, $section_id, $date);
+        
+        if ($existing) {
+            // Update existing
+            $stmt = $this->db->prepare("
+                UPDATE school_student_attendance 
+                SET status = :status, remarks = :remarks, marked_by = :marked_by, updated_at = NOW()
+                WHERE id = :id
+            ");
+            return $stmt->execute([
+                ':status' => $status,
+                ':remarks' => $remarks,
+                ':marked_by' => $marked_by,
+                ':id' => $existing['id']
+            ]);
+        } else {
+            // Create new
+            $stmt = $this->db->prepare("
+                INSERT INTO school_student_attendance 
+                (school_id, session_id, student_id, class_id, section_id, attendance_date, status, remarks, marked_by, created_at, updated_at)
+                VALUES (:school_id, :session_id, :student_id, :class_id, :section_id, :date, :status, :remarks, :marked_by, NOW(), NOW())
+            ");
+            return $stmt->execute([
+                ':school_id' => $school_id,
+                ':session_id' => $session_id,
+                ':student_id' => $student_id,
+                ':class_id' => $class_id,
+                ':section_id' => $section_id,
+                ':date' => $date,
+                ':status' => $status,
+                ':remarks' => $remarks,
+                ':marked_by' => $marked_by
+            ]);
+        }
+    }
+
+    /**
+     * Get class info
+     */
+    public function getClassById(int $class_id) {
+        $stmt = $this->db->prepare("SELECT * FROM school_classes WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => $class_id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }
+
