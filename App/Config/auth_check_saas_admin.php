@@ -14,21 +14,21 @@ require_once __DIR__ . '/SecurityConfig.php';
 
 // Check SAAS-specific session keys to isolate from school admin sessions
 if (!isset($_SESSION['saas_logged_in']) || $_SESSION['saas_logged_in'] !== true) {
-    header('Location: /School-SAAS/App/Modules/Auth/saas-login.php');
+    header('Location: /School-SAAS/App/Modules/Auth/login.php');
     exit;
 }
 
 // Verify this is a SAAS Admin session (not School Admin)
 if (!isset($_SESSION['saas_user_type']) || $_SESSION['saas_user_type'] !== 'saas_admin') {
     session_destroy();
-    header('Location: /School-SAAS/App/Modules/Auth/saas-login.php?invalid=1');
+    header('Location: /School-SAAS/App/Modules/Auth/login.php?invalid=1');
     exit;
 }
 
 // Check if session has required data
 if (!isset($_SESSION['saas_admin_id']) || !isset($_SESSION['saas_email'])) {
     session_destroy();
-    header('Location: /School-SAAS/App/Modules/Auth/saas-login.php?invalid=1');
+    header('Location: /School-SAAS/App/Modules/Auth/login.php?invalid=1');
     exit;
 }
 
@@ -38,7 +38,7 @@ if (isset($_SESSION['saas_last_activity'])) {
     $elapsed = time() - $_SESSION['saas_last_activity'];
     if ($elapsed > $SAAS_SESSION_TIMEOUT) {
         session_destroy();
-        header('Location: /School-SAAS/App/Modules/Auth/saas-login.php?expired=1');
+        header('Location: /School-SAAS/App/Modules/Auth/login.php?expired=1');
         exit;
     }
 }

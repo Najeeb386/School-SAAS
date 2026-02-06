@@ -128,7 +128,7 @@ foreach ($teachers as $teacher) {
 </head>
 
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div>
                 <h3>Staff Payslips</h3>

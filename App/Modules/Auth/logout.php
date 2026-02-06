@@ -23,7 +23,7 @@ if (isset($_SESSION['saas_logged_in']) && $_SESSION['saas_logged_in'] === true) 
     unset($_SESSION['saas_logged_in'], $_SESSION['saas_admin_id'], $_SESSION['saas_email'], $_SESSION['saas_user_type'], $_SESSION['saas_last_activity']);
 
     // Redirect to SAAS login
-    header('Location: /School-SAAS/App/Modules/Auth/saas-login.php');
+    header('Location: /School-SAAS/App/Modules/Auth/login.php');
     exit;
 }
 

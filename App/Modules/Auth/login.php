@@ -30,7 +30,7 @@ $loginContext = 'Login';
 
 // Detect login context
 if ($school['is_admin']) {
-    $loginContext = 'SAAS Admin Login';
+    $loginContext = 'Login';
 } elseif ($school['school_id']) {
     $loginContext = 'School: ' . $school['school_name'];
 } else if (empty($school['subdomain'])) {

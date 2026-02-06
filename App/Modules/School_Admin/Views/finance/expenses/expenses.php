@@ -37,17 +37,36 @@ $summary = $controller->getSummary($school_id, $session_id);
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <link rel="shortcut icon" href="../../../../../../public/assets/img/favicon.ico">
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; color: #000; background: #f5f5f5; padding: 20px; }
+
+        body { 
+            font-family: Arial, sans-serif; 
+            color: #000; 
+            background: #f2f4f6; 
+            padding: 20px; 
+        }
+
         .container { max-width: 1400px; margin: 0 auto; }
-        h3 { color: #000; margin-bottom: 10px; font-size: 28px; }
+
+        h3 { 
+            color: #1f2937; 
+            margin-bottom: 10px; 
+            font-size: 28px; 
+        }
+
         .breadcrumb { margin-bottom: 20px; font-size: 14px; }
-        .breadcrumb a { color: #007bff; text-decoration: none; }
+        .breadcrumb a { color: #2563eb; text-decoration: none; }
         .breadcrumb a:hover { text-decoration: underline; }
-        
-        .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        
+
+        .stat-row { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 15px; 
+            margin-bottom: 25px; 
+        }
+
         .stat-card {
             color: white;
             padding: 20px;
@@ -63,61 +82,192 @@ $summary = $controller->getSummary($school_id, $session_id);
         }
 
         .stat-card .amount { font-size: 24px; font-weight: 700; }
-        .stat-card.total { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-        .stat-card.paid { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .stat-card.pending { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
 
-        .controls { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
-        .controls button, .controls select, .controls input { 
-            padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; cursor: pointer;
+        /* PROFESSIONAL SOLID COLORS (NO GRADIENTS) */
+        .stat-card.total { background: #1e40af; }      /* Deep professional blue */
+        .stat-card.paid { background: #166534; }       /* Formal green */
+        .stat-card.pending { background: #92400e; }    /* Muted amber */
+
+        .controls { 
+            display: flex; 
+            gap: 15px; 
+            margin-bottom: 20px; 
+            flex-wrap: wrap; 
+            align-items: center; 
         }
+
+        .controls button, .controls select, .controls input { 
+            padding: 8px 12px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            font-size: 14px; 
+            cursor: pointer;
+        }
+
         .controls input { color: #000; }
-        .controls button { background: #007bff; color: white; border: none; }
-        .controls button:hover { background: #0056b3; }
-        .controls .outline { background: white; color: #007bff; border: 1px solid #007bff; }
+
+        .controls button { 
+            background: #2563eb; 
+            color: white; 
+            border: none; 
+        }
+
+        .controls button:hover { background: #1d4ed8; }
+
+        .controls .outline { 
+            background: white; 
+            color: #2563eb; 
+            border: 1px solid #2563eb; 
+        }
+
         #customDateRange { display: flex !important; }
 
-        .card { background: white; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; }
-        
-        table { width: 100%; border-collapse: collapse; color: #000; margin-top: 10px; }
-        table thead { background: #007bff; color: white; }
-        table th { padding: 12px; text-align: left; font-weight: 600; border: none; }
-        table td { padding: 12px; border-bottom: 1px solid #ddd; color: #000; }
-        table tbody tr:hover { background: #f9f9f9; }
+        .card { 
+            background: white; 
+            border-radius: 6px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+            padding: 20px; 
+        }
 
-        .badge { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; }
-        .badge-hosting { background: #e3f2fd; color: #1976d2; }
-        .badge-salary { background: #f3e5f5; color: #7b1fa2; }
-        .badge-marketing { background: #fff3e0; color: #e65100; }
-        .badge-maintenance { background: #fce4ec; color: #c2185b; }
-        .badge-software { background: #e8f5e9; color: #388e3c; }
-        .badge-office { background: #f1f8e9; color: #558b2f; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            color: #000; 
+            margin-top: 10px; 
+        }
+
+        table thead { 
+            background: #0f172a; 
+            color: white; 
+        }
+
+        table th { 
+            padding: 12px; 
+            text-align: left; 
+            font-weight: 600; 
+            border: none; 
+        }
+
+        table td { 
+            padding: 12px; 
+            border-bottom: 1px solid #ddd; 
+            color: #000; 
+        }
+
+        table tbody tr:hover { background: #f1f5f9; }
+
+        /* PROFESSIONAL BADGES */
+        .badge-hosting { background: #e0f2fe; color: #075985; }
+        .badge-salary { background: #f3e8ff; color: #6b21a8; }
+        .badge-marketing { background: #fff7ed; color: #9a3412; }
+        .badge-maintenance { background: #fce7f3; color: #9d174d; }
+        .badge-software { background: #ecfdf5; color: #065f46; }
+        .badge-office { background: #f7fee7; color: #3f6212; }
         .badge-misc { background: #eceff1; color: #455a64; }
+
         .badge-paid { background: #d4edda; color: #155724; }
         .badge-pending { background: #fff3cd; color: #856404; }
 
-        .btn { padding: 6px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
-        .btn-primary { background: #007bff; color: white; }
-        .btn-primary:hover { background: #0056b3; }
-        .btn-outline { background: white; border: 1px solid #ddd; color: #333; }
+        .btn { 
+            padding: 6px 12px; 
+            border: none; 
+            border-radius: 3px; 
+            cursor: pointer; 
+            font-size: 12px; 
+        }
+
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+
+        .btn-outline { 
+            background: white; 
+            border: 1px solid #ddd; 
+            color: #333; 
+        }
+
         .btn-outline:hover { background: #f8f9fa; }
 
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal.show { display: flex; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 600px; color: #000; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 15px; }
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.5); 
+        }
+
+        .modal.show { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+
+        .modal-content { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 8px; 
+            width: 90%; 
+            max-width: 600px; 
+            color: #000; 
+        }
+
+        .modal-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            border-bottom: 1px solid #ddd; 
+            padding-bottom: 15px; 
+        }
+
         .modal-header h5 { margin: 0; color: #000; }
-        .close-btn { font-size: 24px; background: none; border: none; cursor: pointer; color: #999; }
+
+        .close-btn { 
+            font-size: 24px; 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+            color: #999; 
+        }
+
         .close-btn:hover { color: #000; }
 
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; color: #000; }
+
+        .form-group label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: 600; 
+            color: #333; 
+        }
+
+        .form-group input, 
+        .form-group select, 
+        .form-group textarea { 
+            width: 100%; 
+            padding: 8px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            font-size: 14px; 
+            color: #000; 
+        }
+
         .form-group textarea { resize: vertical; min-height: 80px; }
 
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        
-        .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .form-row { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+        }
+
+        .form-actions { 
+            display: flex; 
+            gap: 10px; 
+            margin-top: 20px; 
+        }
+
         .form-actions button { flex: 1; padding: 10px; }
 
         .text-center { text-align: center; }
@@ -133,19 +283,33 @@ $summary = $controller->getSummary($school_id, $session_id);
 
         @media print {
             body { background: white; }
-            .stat-row { display: flex; gap: 15px; margin-bottom: 25px; page-break-inside: avoid; }
+            .stat-row { 
+                display: flex; 
+                gap: 15px; 
+                margin-bottom: 25px; 
+                page-break-inside: avoid; 
+            }
+
             .stat-card { flex: 1; padding: 15px; }
             .stat-card h6, .stat-card .amount { font-weight: bold; }
+
             .controls, .modal, .close-btn, .btn-outline { display: none !important; }
-            table { width: 100%; margin-top: 20px; page-break-inside: avoid; }
-            table thead { background: #007bff; color: white; }
+
+            table { 
+                width: 100%; 
+                margin-top: 20px; 
+                page-break-inside: avoid; 
+            }
+
+            table thead { background: #0f172a; color: white; }
             table th, table td { font-weight: bold; }
         }
     </style>
 </head>
 
+
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div>
                 <h3>Expenses</h3>
@@ -155,7 +319,7 @@ $summary = $controller->getSummary($school_id, $session_id);
                     <span>Expenses</span>
                 </div>
             </div>
-            <button onclick="history.back()" class="btn btn-outline">← Back</button>
+            <button onclick="history.back()" class="btn btn-primary">← Back</button>
         </div>
 
         <!-- Statistics Cards -->
