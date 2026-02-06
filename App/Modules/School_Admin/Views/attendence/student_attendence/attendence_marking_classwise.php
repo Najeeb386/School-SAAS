@@ -4,22 +4,6 @@
  * User must be logged in as School Admin to access this page
  */
 require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
-require_once __DIR__ . '/../../../Controllers/StudentAttendanceController.php';
-require_once __DIR__ . '/../../../Models/StudentAttendanceModel.php';
-
-// Initialize controller
-$school_id = $_SESSION['school_id'] ?? null;
-$controller = null;
-$totalStudents = 0;
-$attendanceStats = ['P' => 0, 'A' => 0, 'L' => 0, 'HD' => 0];
-$classWiseData = [];
-
-if ($school_id) {
-    $controller = new \App\Modules\School_Admin\Controllers\StudentAttendanceController((int)$school_id);
-    $totalStudents = $controller->getTotalStudents();
-    $attendanceStats = $controller->getAttendanceStats();
-    $classWiseData = $controller->getClassWiseAttendanceSummary();
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -40,30 +24,6 @@ if ($school_id) {
     <link rel="stylesheet" type="text/css" href="../../../../../../public/assets/css/vendors.css" />
     <!-- app style -->
     <link rel="stylesheet" type="text/css" href="../../../../../../public/assets/css/style.css" />
-    <style>
-        .row.g-3 > .col-12.col-sm-6.col-lg-4 {
-            display: flex;
-            flex-wrap: wrap;
-        }
-        @media (min-width: 992px) {
-            .row.g-3 > .col-12.col-sm-6.col-lg-4 {
-                flex: 0 0 calc(33.333% - 0.5rem);
-                max-width: calc(33.333% - 0.5rem);
-            }
-        }
-        @media (min-width: 576px) and (max-width: 991px) {
-            .row.g-3 > .col-12.col-sm-6.col-lg-4 {
-                flex: 0 0 calc(50% - 0.5rem);
-                max-width: calc(50% - 0.5rem);
-            }
-        }
-        @media (max-width: 575px) {
-            .row.g-3 > .col-12.col-sm-6.col-lg-4 {
-                flex: 0 0 100%;
-                max-width: 100%;
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -89,7 +49,7 @@ if ($school_id) {
                     <div class="container-fluid">
                         <div class="row mb-4">
                             <div class="col-11">
-                                <h3 class="mb-3">Students Attendance</h3>
+                                <h3 class="mb-3">class name Attendance</h3>
                                 <nav aria-label="breadcrumb">
                                     <ol class="breadcrumb p-0 bg-transparent">
                                         <li class="breadcrumb-item"><a href="../dashboard/index.php">Overview</a></li>
@@ -108,7 +68,7 @@ if ($school_id) {
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div>
                                                 <p class="text-muted mb-1">Total Students</p>
-                                                <h5><?php echo $totalStudents; ?></h5>
+                                                <h5 id="totalStaff">0</h5>
                                             </div>
                                             <i class="fas fa-users fa-2x text-primary opacity-50"></i>
                                         </div>
@@ -121,7 +81,7 @@ if ($school_id) {
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div>
                                                 <p class="text-muted mb-1">Present Today</p>
-                                                <h5 id="presentCount" class="text-success"><?php echo $attendanceStats['P']; ?></h5>
+                                                <h5 id="presentCount" class="text-success">0</h5>
                                             </div>
                                             <i class="fas fa-check-circle fa-2x text-success opacity-50"></i>
                                         </div>
@@ -134,7 +94,7 @@ if ($school_id) {
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div>
                                                 <p class="text-muted mb-1">Absent Today</p>
-                                                <h5 id="absentCount" class="text-danger"><?php echo $attendanceStats['A']; ?></h5>
+                                                <h5 id="absentCount" class="text-danger">0</h5>
                                             </div>
                                             <i class="fas fa-times-circle fa-2x text-danger opacity-50"></i>
                                         </div>
@@ -147,7 +107,7 @@ if ($school_id) {
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div>
                                                 <p class="text-muted mb-1">On Leave</p>
-                                                <h5 id="leaveCount" class="text-warning"><?php echo $attendanceStats['L']; ?></h5>
+                                                <h5 id="leaveCount" class="text-warning">0</h5>
                                             </div>
                                             <i class="fas fa-sun fa-2x text-warning opacity-50"></i>
                                         </div>
@@ -156,47 +116,79 @@ if ($school_id) {
                             </div>
                         </div>
                         <!-- stats end here  -->
-                         <!-- class wise attendence -->
-                          <div class="card">
-                            <div class="card-header">
-                                <h3>Class Wise Attendance</h3>
-                            </div>
-                            <div class="card-body">
-                               <div class="row g-3">
-                               <?php 
-                               if (empty($classWiseData)) {
-                                   echo '<div class="col-12"><p class="text-muted">No attendance data available for today.</p></div>';
-                               } else {
-                                   // Group data by class
-                                   $classesByName = [];
-                                   foreach ($classWiseData as $item) {
-                                       $className = $item['class_name'];
-                                       if (!isset($classesByName[$className])) {
-                                           $classesByName[$className] = [];
-                                       }
-                                       $classesByName[$className][] = $item;
-                                   }
-                                   
-                                   // Display each class with its sections
-                                   foreach ($classesByName as $className => $sections) {
-                               ?>
-                                <div class="col-12 col-sm-6 col-lg-4">
-                                    <a href="attendence_marking_classwise.php" style="text-decoration: none; color: inherit;">
-                                        <div class="card h-100 shadow-sm">
-                                        <div class="card-body">   
-                                        <h5 class="card-title mb-3"><?php echo htmlspecialchars($className); ?></h5>
-                                            
-                                        </div>
-                                        </div>
-                                    </a>
+                         <!-- Month/Year Filter Section (Enhanced Bootstrap Design) -->
+                        <div class="card mt-4 mb-3 shadow-sm border-0">
+                            <div class="card-header bg-white border-0 pb-0">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <h6 class="mb-2 fw-bold text-primary">
+                                        <i class="fas fa-calendar-alt me-2"></i> Filter by Month & Year
+                                    </h6>
                                 </div>
-                               <?php 
-                                   }
-                               }
-                               ?>
-                               </div> 
+                                <hr class="mt-2">
                             </div>
-                          </div>
+
+                            <div class="card-body pt-2">
+                                <div class="row g-3 align-items-end">
+
+                                    <div class="col-md-3">
+                                        <label for="filterMonth" class="form-label fw-semibold">
+                                            <i class="far fa-calendar me-1"></i> Month
+                                        </label>
+                                        <select id="filterMonth" class="form-select shadow-sm">
+                                            <option value="0">January</option>
+                                            <option value="1">February</option>
+                                            <option value="2">March</option>
+                                            <option value="3">April</option>
+                                            <option value="4">May</option>
+                                            <option value="5">June</option>
+                                            <option value="6">July</option>
+                                            <option value="7">August</option>
+                                            <option value="8">September</option>
+                                            <option value="9">October</option>
+                                            <option value="10">November</option>
+                                            <option value="11">December</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <label for="filterYear" class="form-label fw-semibold">
+                                            <i class="fas fa-clock me-1"></i> Year
+                                        </label>
+                                        <select id="filterYear" class="form-select shadow-sm">
+                                            <option value="2023">2023</option>
+                                            <option value="2024">2024</option>
+                                            <option value="2025">2025</option>
+                                            <option value="2026">2026</option>
+                                            <option value="2027">2027</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <label for="filterDept" class="form-label fw-semibold">
+                                            <i class="fas fa-building me-1"></i> Sections
+                                        </label>
+                                        <select id="filterDept" class="form-select shadow-sm">
+                                            <option value="">All Departments</option>
+                                            <option value="Teaching">Teaching</option>
+                                            <option value="Library">Library</option>
+                                            <option value="Admin">Admin</option>
+                                            <option value="Support">Support</option>
+                                            <option value="Finance">Finance</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-3 d-flex align-items-end gap-2">
+                                        <button id="applyMonthFilter" class="btn btn-primary flex-grow-1 shadow-sm">
+                                            <i class="fas fa-filter me-1"></i> Apply Filter
+                                        </button>
+                                        <button id="resetMonthFilter" class="btn btn-outline-secondary shadow-sm">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <!-- end container-fluid -->
                 </div>

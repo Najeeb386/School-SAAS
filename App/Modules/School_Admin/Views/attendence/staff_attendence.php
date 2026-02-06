@@ -678,39 +678,7 @@ $db = \Database::connect();
         <!-- Filter Section -->
         
 
-        <!-- Attendance Table -->
-        <div class="card">
-            <div class="card-body">
-                <div id="loadingSpinner" class="text-center py-5" style="display: none;">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-                
-                <div id="emptyState" class="text-center py-5" style="display: none;">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No staff records found</p>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table table-hover" id="attendanceTable" style="display: none;">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Staff Name</th>
-                                <th>Employee ID</th>
-                                <th>Department</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attendanceTableBody">
-                            <!-- Dynamically populated -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+       
 
         <!-- Month/Year Filter Section -->
         <div class="card mt-4 mb-3">
