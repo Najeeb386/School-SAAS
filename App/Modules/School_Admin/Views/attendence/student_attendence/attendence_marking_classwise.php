@@ -37,6 +37,10 @@ if ($school_id && $class_id) {
     // If section selected, get stats for that section
     if ($selected_section) {
         $month_year = $selected_year . '-' . str_pad($selected_month, 2, '0', STR_PAD_LEFT);
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $selected_month, $selected_year);
+        $today = date('Y-m-d');
+        
+        // Get today's attendance stats for this class/section
         $stmt = $db->prepare("
             SELECT COUNT(DISTINCT se.student_id) as total,
                    SUM(CASE WHEN sa.status = 'P' THEN 1 ELSE 0 END) as present_count,
@@ -47,7 +51,7 @@ if ($school_id && $class_id) {
                 AND sa.class_id = ? 
                 AND sa.section_id = ? 
                 AND sa.school_id = ? 
-                AND DATE_FORMAT(sa.attendance_date, '%Y-%m') = ?
+                AND sa.attendance_date = ?
             WHERE se.school_id = ? 
                 AND se.class_id = ? 
                 AND se.section_id = ? 
@@ -57,7 +61,7 @@ if ($school_id && $class_id) {
             $class_id,
             $selected_section,
             $school_id,
-            $month_year,
+            $today,
             $school_id,
             $class_id,
             $selected_section
@@ -68,17 +72,11 @@ if ($school_id && $class_id) {
         $attendanceStats['A'] = (int)($stats['absent_count'] ?? 0);
         $attendanceStats['L'] = (int)($stats['leave_count'] ?? 0);
         
-        // Get attendance register data
+        // Get attendance register data - Get distinct students only
         $stmt = $db->prepare("
-            SELECT se.student_id, se.admission_no, se.roll_no, ss.first_name, ss.last_name,
-                   sa.attendance_date, sa.status, sa.remarks
+            SELECT DISTINCT se.student_id, se.admission_no, se.roll_no, ss.first_name, ss.last_name
             FROM school_student_enrollments se
-            LEFT JOIN school_students ss ON ss.id = se.student_id
-            LEFT JOIN school_student_attendance sa ON sa.student_id = se.student_id 
-                AND sa.class_id = ? 
-                AND sa.section_id = ? 
-                AND sa.school_id = ? 
-                AND DATE_FORMAT(sa.attendance_date, '%Y-%m') = ?
+            JOIN school_students ss ON ss.id = se.student_id
             WHERE se.school_id = ? 
                 AND se.class_id = ? 
                 AND se.section_id = ? 
@@ -86,15 +84,47 @@ if ($school_id && $class_id) {
             ORDER BY se.roll_no, ss.first_name
         ");
         $stmt->execute([
-            $class_id,
-            $selected_section,
-            $school_id,
-            $month_year,
             $school_id,
             $class_id,
             $selected_section
         ]);
-        $attendanceRegister = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Get all attendance records for the month for these students
+        $stmt = $db->prepare("
+            SELECT student_id, attendance_date, status
+            FROM school_student_attendance
+            WHERE school_id = ? 
+                AND class_id = ? 
+                AND section_id = ? 
+                AND DATE_FORMAT(attendance_date, '%Y-%m') = ?
+        ");
+        $stmt->execute([
+            $school_id,
+            $class_id,
+            $selected_section,
+            $month_year
+        ]);
+        $attendanceRecords = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Build attendance lookup array
+        $attendanceMap = [];
+        foreach ($attendanceRecords as $record) {
+            $key = $record['student_id'] . '_' . $record['attendance_date'];
+            $attendanceMap[$key] = $record['status'];
+        }
+        
+        // Reformat for easier loop iteration
+        $attendanceRegister = [];
+        foreach ($students as $student) {
+            $student['attendance_data'] = [];
+            for ($day = 1; $day <= $daysInMonth; $day++) {
+                $date = $selected_year . '-' . str_pad($selected_month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($day, 2, '0', STR_PAD_LEFT);
+                $key = $student['student_id'] . '_' . $date;
+                $student['attendance_data'][$date] = $attendanceMap[$key] ?? null;
+            }
+            $attendanceRegister[] = $student;
+        }
     }
 }
 ?>
@@ -110,16 +140,29 @@ if ($school_id && $class_id) {
     <link rel="stylesheet" type="text/css" href="../../../../../../public/assets/css/vendors.css" />
     <link rel="stylesheet" type="text/css" href="../../../../../../public/assets/css/style.css" />
     <style>
+        body { color: #000; }
         .attendance-calendar { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .attendance-calendar th { background-color: #f8f9fa; padding: 8px; text-align: center; font-weight: bold; border: 1px solid #dee2e6; }
-        .attendance-calendar td { padding: 8px; text-align: center; border: 1px solid #dee2e6; }
-        .attendance-calendar .student-name { text-align: left; font-weight: 500; }
-        .attendance-cell { cursor: pointer; padding: 4px 6px; border-radius: 3px; }
+        .attendance-calendar th { background-color: #f8f9fa; padding: 8px; text-align: center; font-weight: bold; border: 1px solid #dee2e6; color: #000; font-size: 12px; }
+        .attendance-calendar td { padding: 8px; text-align: center; border: 1px solid #dee2e6; color: #000; }
+        .attendance-calendar .student-name { text-align: left; font-weight: 600; color: #000; }
+        .attendance-calendar .student-name small { color: #333; }
+        .attendance-cell { cursor: pointer; padding: 4px 6px; border-radius: 3px; font-weight: bold; font-size: 12px; }
         .attendance-cell.present { background-color: #28a745; color: white; }
         .attendance-cell.absent { background-color: #dc3545; color: white; }
-        .attendance-cell.leave { background-color: #ffc107; color: black; }
+        .attendance-cell.leave { background-color: #ffc107; color: #000; }
         .attendance-cell.halfday { background-color: #17a2b8; color: white; }
+        .attendance-cell:empty { background-color: #f0f0f0; color: #999; }
         .filter-section { background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .form-label { color: #000; font-weight: 500; }
+        .form-control { color: #000; border-color: #ddd; }
+        .form-control:focus { color: #000; border-color: #80bdff; }
+        .card { background-color: #fff; border: 1px solid #ddd; }
+        .card-header { background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; }
+        .card-header h5 { color: #000; margin: 0; font-weight: 600; }
+        h3 { color: #000; font-weight: 600; }
+        .text-muted { color: #666 !important; }
+        .alert-info { color: #004085; background-color: #d1ecf1; border-color: #bee5eb; }
+        .alert-warning { color: #856404; background-color: #fff3cd; border-color: #ffeeba; }
     </style>
 </head>
 <body>
@@ -137,7 +180,7 @@ if ($school_id && $class_id) {
                             <?php endif; ?>
                         </div>
                         <div class="col-1 mt-3">
-                            <button onclick="window.history.back()" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back</button>
+                            <button onclick="window.location.href='student_attendence.php'" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back</button>
                         </div>
                     </div>
 
@@ -250,7 +293,6 @@ if ($school_id && $class_id) {
                                             <th style="width: 20%;">Student Info</th>
                                             <?php
                                             // Generate calendar days
-                                            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $selected_month, $selected_year);
                                             for ($day = 1; $day <= $daysInMonth; $day++):
                                                 $date = $selected_year . '-' . str_pad($selected_month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($day, 2, '0', STR_PAD_LEFT);
                                                 $dayName = date('D', strtotime($date));
@@ -265,21 +307,13 @@ if ($school_id && $class_id) {
                                         <?php foreach ($attendanceRegister as $record): ?>
                                             <tr>
                                                 <td class="student-name">
-                                                    <small>
-                                                        <strong><?php echo htmlspecialchars($record['first_name'] . ' ' . $record['last_name']); ?></strong><br>
-                                                        Roll: <?php echo $record['roll_no']; ?> | Adm: <?php echo $record['admission_no']; ?>
-                                                    </small>
+                                                    <strong><?php echo htmlspecialchars($record['first_name'] . ' ' . $record['last_name']); ?></strong><br>
+                                                    <small>Roll: <?php echo $record['roll_no']; ?> | Adm: <?php echo $record['admission_no']; ?></small>
                                                 </td>
                                                 <?php
                                                 for ($day = 1; $day <= $daysInMonth; $day++):
                                                     $date = $selected_year . '-' . str_pad($selected_month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($day, 2, '0', STR_PAD_LEFT);
-                                                    $status = '';
-                                                    foreach ($attendanceRegister as $r) {
-                                                        if ($r['student_id'] == $record['student_id'] && $r['attendance_date'] == $date) {
-                                                            $status = $r['status'];
-                                                            break;
-                                                        }
-                                                    }
+                                                    $status = $record['attendance_data'][$date] ?? null;
                                                     $statusClass = '';
                                                     $statusDisplay = '-';
                                                     if ($status == 'P') { $statusClass = 'present'; $statusDisplay = 'P'; }
@@ -326,6 +360,16 @@ if ($school_id && $class_id) {
                 <div class="form-group mb-3">
                     <label class="form-label">Select Date</label>
                     <input type="date" id="modalAttendanceDate" class="form-control" value="<?php echo date('Y-m-d'); ?>">
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Quick Select (Apply to All)</label>
+                    <select id="quickSelectAttendance" class="form-control" onchange="applyQuickSelect()">
+                        <option value="">-- Select to apply to all --</option>
+                        <option value="P">All Present</option>
+                        <option value="A">All Absent</option>
+                        <option value="L">All Leave</option>
+                        <option value="HD">All Half Day</option>
+                    </select>
                 </div>
                 <div id="studentsList"></div>
             </div>
@@ -388,29 +432,28 @@ if ($school_id && $class_id) {
                         let html = '<div class="form-group"><label class="form-label">Students</label><div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">';
                         
                         data.data.forEach((student, index) => {
-                            const studentId = `student_${student.student_id}`;
                             html += `
                                 <div class="mb-3 pb-3 border-bottom" style="display: flex; justify-content: space-between; align-items: center;">
                                     <div>
                                         <strong>${student.first_name} ${student.last_name}</strong><br>
                                         <small class="text-muted">Roll: ${student.roll_no} | Admission: ${student.admission_no}</small>
                                     </div>
-                                    <div style="display: flex; gap: 5px;">
-                                        <label class="form-check form-check-inline">
-                                            <input type="radio" name="attendance_${student.student_id}" value="P" class="form-check-input">
-                                            <span class="form-check-label" style="color: #28a745; font-weight: bold;">P</span>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <label style="display: flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; padding: 8px 12px; border: 2px solid #28a745; border-radius: 5px; background-color: #f0f8f5;">
+                                            <input type="radio" name="attendance_${student.student_id}" value="P" style="width: 18px; height: 18px; cursor: pointer;">
+                                            <span style="color: #28a745; font-weight: bold; font-size: 14px;">Present</span>
                                         </label>
-                                        <label class="form-check form-check-inline">
-                                            <input type="radio" name="attendance_${student.student_id}" value="A" class="form-check-input">
-                                            <span class="form-check-label" style="color: #dc3545; font-weight: bold;">A</span>
+                                        <label style="display: flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; padding: 8px 12px; border: 2px solid #dc3545; border-radius: 5px; background-color: #fff5f5;">
+                                            <input type="radio" name="attendance_${student.student_id}" value="A" style="width: 18px; height: 18px; cursor: pointer;">
+                                            <span style="color: #dc3545; font-weight: bold; font-size: 14px;">Absent</span>
                                         </label>
-                                        <label class="form-check form-check-inline">
-                                            <input type="radio" name="attendance_${student.student_id}" value="L" class="form-check-input">
-                                            <span class="form-check-label" style="color: #ffc107; font-weight: bold;">L</span>
+                                        <label style="display: flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; padding: 8px 12px; border: 2px solid #ffc107; border-radius: 5px; background-color: #fffbf0;">
+                                            <input type="radio" name="attendance_${student.student_id}" value="L" style="width: 18px; height: 18px; cursor: pointer;">
+                                            <span style="color: #ffc107; font-weight: bold; font-size: 14px;">Leave</span>
                                         </label>
-                                        <label class="form-check form-check-inline">
-                                            <input type="radio" name="attendance_${student.student_id}" value="HD" class="form-check-input">
-                                            <span class="form-check-label" style="color: #17a2b8; font-weight: bold;">HD</span>
+                                        <label style="display: flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; padding: 8px 12px; border: 2px solid #17a2b8; border-radius: 5px; background-color: #f0f8fa;">
+                                            <input type="radio" name="attendance_${student.student_id}" value="HD" style="width: 18px; height: 18px; cursor: pointer;">
+                                            <span style="color: #17a2b8; font-weight: bold; font-size: 14px;">Half Day</span>
                                         </label>
                                     </div>
                                 </div>
@@ -483,31 +526,66 @@ if ($school_id && $class_id) {
                 attendance: attendanceRecords
             })
         })
-        .then(response => response.json())
-        .then(data => {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = 'Save Attendance';
+        .then(response => {
+            console.log('Save response status:', response.status);
+            return response.text();
+        })
+        .then(text => {
+            console.log('Save response text:', text);
+            try {
+                const data = JSON.parse(text);
+                console.log('Parsed response:', data);
+                
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Save Attendance';
 
-            if (data.success) {
-                alert(data.message);
-                // Close modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('markAttendanceModal'));
-                modal.hide();
-                // Reset form
-                document.getElementById('modalSectionFilter').value = '';
-                document.getElementById('studentsList').innerHTML = '';
-                // Reload page to show updated attendance
-                location.reload();
-            } else {
-                alert('Error: ' + data.error);
+                if (data.success) {
+                    alert(data.message);
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('markAttendanceModal'));
+                    modal.hide();
+                    // Reset form
+                    document.getElementById('modalSectionFilter').value = '';
+                    document.getElementById('quickSelectAttendance').value = '';
+                    document.getElementById('studentsList').innerHTML = '';
+                    // Reload page to show updated attendance
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (parseError) {
+                console.error('JSON Parse Error:', parseError);
+                console.error('Response was:', text);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Save Attendance';
+                alert('Error parsing server response. Check browser console for details.\nResponse: ' + text.substring(0, 100));
             }
         })
         .catch(error => {
             saveBtn.disabled = false;
             saveBtn.innerHTML = 'Save Attendance';
-            console.error('Error:', error);
-            alert('Error saving attendance. Please try again.');
+            console.error('Fetch Error:', error);
+            alert('Network error: ' + error.message);
         });
+    }
+
+    function applyQuickSelect() {
+        const quickSelect = document.getElementById('quickSelectAttendance').value;
+        
+        if (!quickSelect) {
+            return;
+        }
+
+        // Get all radio buttons and select the matching ones
+        const allRadios = document.querySelectorAll('input[name^="attendance_"]');
+        allRadios.forEach(radio => {
+            if (radio.value === quickSelect) {
+                radio.checked = true;
+            }
+        });
+
+        // Reset the quick select dropdown
+        document.getElementById('quickSelectAttendance').value = '';
     }
 </script>
 </body>

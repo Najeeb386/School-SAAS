@@ -98,7 +98,7 @@ if ($school_id) {
                                 </nav>
                             </div>
                             <div class="col-1 mt-3">
-                                <button onclick="window.history.back()" class="btn btn-primary"> <i class="fas fa-arrow-left"></i> Back</button>
+                                <button onclick="window.location.href='../attendence.php'" class="btn btn-primary"> <i class="fas fa-arrow-left"></i> Back</button>
                             </div>
                         </div>
                         <div class="row mb-4">
