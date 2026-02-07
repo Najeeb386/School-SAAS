@@ -163,18 +163,7 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                 <!-- end app-main -->
             </div>
             <!-- end app-container -->
-            <!-- begin footer -->
-            <footer class="footer">
-                <div class="row">
-                    <div class="col-12 col-sm-6 text-center text-sm-left">
-                        <p>&copy; Copyright 2019. All rights reserved.</p>
-                    </div>
-                   <div class="col col-sm-6 ml-sm-auto text-center text-sm-right">
-                        <p><a target="_blank" href="https://www.templateshub.net">Templates Hub</a></p>
-                    </div>
-                </div>
-            </footer>
-            <!-- end footer -->
+            
         </div>
         <!-- end app-wrap -->
     </div>
@@ -389,7 +378,9 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                         populateSessionDropdowns(sessions);
                     }
                 })
-                .catch(error => console.error('Error loading sessions:', error));
+                .catch(error => {
+                    console.error('Error loading sessions:', error);
+                });
         }
 
         /**
@@ -427,7 +418,6 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading exams:', error);
                     document.getElementById('noDataMsg').innerHTML = 'Error loading exams. Please refresh the page.';
                 });
         }
@@ -465,12 +455,15 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                     <td>${formatDate(exam.end_date)}</td>
                     <td>${statusBadge}</td>
                     <td>
-                        <button class="btn btn-sm btn-warning" onclick="editExam(${exam.id})" title="Edit">
-                            <i class="fa fa-edit"></i>
-                        </button>
                         <button class="btn btn-sm btn-danger" onclick="deleteExam(${exam.id})" title="Delete">
                             <i class="fa fa-trash"></i>
                         </button>
+                        <button class="btn btn-sm btn-warning" onclick="editExam(${exam.id})" title="Edit">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                       <a class="btn btn-sm btn-success" href="assign_to_class.php" title="Assign to Class">
+                            </i> Details
+                        </a>
                     </td>
                 `;
                 tbody.appendChild(row);
@@ -570,7 +563,6 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                 })
                 .catch(error => {
                     alert('Error loading exam details');
-                    console.error('Error:', error);
                 });
         }
 
@@ -589,14 +581,9 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
             const formData = new FormData(form);
             const data = Object.fromEntries(formData);
 
-            // Console log for debugging
-            console.log('Form data to submit:', data);
-
             const examId = document.getElementById('examId').value;
             const action = examId ? 'update' : 'add';
             const url = './manage_exams.php?action=' + action;
-
-            console.log('Submitting to:', url);
 
             fetch(url, {
                 method: 'POST',
@@ -605,18 +592,18 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                 },
                 body: JSON.stringify(data)
             })
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(result => {
-                    console.log('Result:', result);
                     if (result.success) {
                         alert(result.message);
-                        // Close modal
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('examModal'));
-                        if (modal) {
-                            modal.hide();
+                        // Close modal - just hide it with simple DOM manipulation
+                        const modalElement = document.getElementById('examModal');
+                        modalElement.classList.remove('show');
+                        modalElement.style.display = 'none';
+                        // Remove backdrop
+                        const backdrop = document.querySelector('.modal-backdrop');
+                        if (backdrop) {
+                            backdrop.remove();
                         }
                         // Reload exams
                         setTimeout(() => {
@@ -627,7 +614,6 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                     }
                 })
                 .catch(error => {
-                    console.error('Fetch error:', error);
                     alert('Error saving exam: ' + error.message);
                 });
         }
@@ -657,7 +643,6 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                     })
                     .catch(error => {
                         alert('Error deleting exam: ' + error);
-                        console.error('Error:', error);
                     });
             }
         }

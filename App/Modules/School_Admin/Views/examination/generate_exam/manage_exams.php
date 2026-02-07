@@ -52,10 +52,10 @@ try {
     }
 
     // Requires AFTER session check
-    require_once __DIR__ . '/../../../../../App/Core/database.php';
-    require_once __DIR__ . '/../../Controllers/ExamController.php';
-    require_once __DIR__ . '/../../Models/ExamModel.php';
-    require_once __DIR__ . '/../../Models/SessionModel.php';
+    require_once __DIR__ . '/../../../../../Core/database.php';
+    require_once __DIR__ . '/../../../Controllers/ExamController.php';
+    require_once __DIR__ . '/../../../Models/ExamModel.php';
+    require_once __DIR__ . '/../../../Models/SessionModel.php';
 
     $school_id = (int)$_SESSION['school_id'];
 
@@ -153,102 +153,6 @@ try {
             break;
     }
 
-} catch (Exception $e) {
-    error_log("Caught Exception: " . $e->getMessage());
-    http_response_code(500);
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => false,
-        'message' => 'Server error: ' . $e->getMessage()
-    ]);
-}
-
-exit;
-
-    // Get action from request
-    $action = $_GET['action'] ?? $_POST['action'] ?? null;
-
-    switch ($action) {
-        case 'get':
-            // Get all exams
-            $exams = $controller->getExams();
-            http_response_code(200);
-            echo json_encode([
-                'success' => true,
-                'data' => $exams
-            ]);
-            break;
-
-        case 'filter':
-            // Get filtered exams
-            $data = json_decode(file_get_contents('php://input'), true) ?? [];
-            $result = $controller->getFilteredExams($data);
-            http_response_code(200);
-            echo json_encode($result);
-            break;
-
-        case 'sessions':
-            // Get all sessions for dropdown
-            $sessions = $controller->getSessions();
-            http_response_code(200);
-            echo json_encode([
-                'success' => true,
-                'data' => $sessions
-            ]);
-            break;
-
-        case 'add':
-            // Add new exam
-            $data = json_decode(file_get_contents('php://input'), true);
-            $result = $controller->addExam($data);
-            http_response_code($result['success'] ? 201 : 400);
-            echo json_encode($result);
-            break;
-
-        case 'update':
-            // Update exam
-            $data = json_decode(file_get_contents('php://input'), true);
-            $id = $data['id'] ?? null;
-
-            if (!$id) {
-                http_response_code(400);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'ID is required for update'
-                ]);
-            } else {
-                $result = $controller->updateExam($id, $data);
-                http_response_code($result['success'] ? 200 : 400);
-                echo json_encode($result);
-            }
-            break;
-
-        case 'delete':
-            // Delete exam
-            $data = json_decode(file_get_contents('php://input'), true);
-            $id = $data['id'] ?? null;
-
-            if (!$id) {
-                http_response_code(400);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'ID is required for deletion'
-                ]);
-            } else {
-                $result = $controller->deleteExam($id);
-                http_response_code($result['success'] ? 200 : 400);
-                echo json_encode($result);
-            }
-            break;
-
-        default:
-            http_response_code(400);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Invalid action: ' . ($action ?? 'none')
-            ]);
-            break;
-    }
 } catch (Exception $e) {
     error_log("Caught Exception: " . $e->getMessage());
     http_response_code(500);
