@@ -1,9 +1,29 @@
 <?php
 /**
- * School Admin Dashboard - Protected Page
- * User must be logged in as School Admin to access this page
+ * School Admin - Holidays Management
  */
 require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
+require_once __DIR__ . '/../../../Controllers/HolidayController.php';
+require_once __DIR__ . '/../../../Models/HolidayModel.php';
+
+$school_id = $_SESSION['school_id'] ?? null;
+$user_id = $_SESSION['user_id'] ?? null;
+
+$holidays = [];
+$totalHolidays = 0;
+$holidaysThisMonth = 0;
+$holidaysThisWeek = 0;
+
+if ($school_id) {
+    require_once __DIR__ . '/../../../../../Core/database.php';
+    $db = \Database::connect();
+    $controller = new \App\Modules\School_Admin\Controllers\HolidayController($db, (int)$school_id);
+    
+    $holidays = $controller->getHolidays();
+    $totalHolidays = $controller->getTotalHolidays();
+    $holidaysThisMonth = $controller->getHolidaysThisMonth();
+    $holidaysThisWeek = $controller->getHolidaysThisWeek();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -49,44 +69,44 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                     <div class="container-fluid">
                         <div class="row mb-4">
                             <div class="col-11">
-                                <h3 class="mb-3">Hollidays</h3>
+                                <h3 class="mb-3 fw-bold" style="color: #000;">Holidays</h3>
                                 <nav aria-label="breadcrumb">
                                     <ol class="breadcrumb p-0 bg-transparent">
-                                        <li class="breadcrumb-item"><a href="../dashboard/index.php">Overview</a></li>
-                                        <li class="breadcrumb-item active" aria-current="page">Hollidays</li>
+                                        <li class="breadcrumb-item"><a href="../dashboard/index.php" style="color: #007bff;">Overview</a></li>
+                                        <li class="breadcrumb-item active" aria-current="page" style="color: #000;">Holidays</li>
                                     </ol>
                                 </nav>
                             </div>
-                            <div class="col-1 mt-3 text-right">
-                                <button class="btn btn-success mb-2" data-toggle="modal" data-target="#holidayModal">
-                                    <i class="fas fa-plus"></i>
+                            <div class="col-1 mt-3 text-end">
+                                <button class="btn btn-success mb-2" onclick="openHolidayModal()">
+                                    <i class="fas fa-plus"></i> Add
                                 </button>
                                 <button onclick="window.history.back()" class="btn btn-primary">
-                                    <i class="fas fa-arrow-left"></i>
+                                    <i class="fas fa-arrow-left"></i> Back
                                 </button>
                             </div>
                         </div>
                         <div class="row mb-4">
                             <div class="col-md-3 col-sm-6 mb-3">
-                                <div class="card border-left-primary">
+                                <div class="card border-left-primary shadow-sm h-100">
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div>
-                                                <p class="text-muted mb-1">Total Hollidays this session</p>
-                                                <h5 id="totalStaff">0</h5>
+                                                <p class="text-muted mb-1 fw-semibold" style="color: #000;">Total Holidays this session</p>
+                                                <h5 class="fw-bold" style="color: #000;"><?php echo $totalHolidays; ?></h5>
                                             </div>
-                                            <i class="fas fa-users fa-2x text-primary opacity-50"></i>
+                                            <i class="fas fa-calendar fa-2x text-primary opacity-50"></i>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-3 col-sm-6 mb-3">
-                                <div class="card border-left-success">
+                                <div class="card border-left-success shadow-sm h-100">
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div>
-                                                <p class="text-muted mb-1">Hollidays this month</p>
-                                                <h5 id="presentCount" class="text-success">0</h5>
+                                                <p class="text-muted mb-1 fw-semibold" style="color: #000;">Holidays this month</p>
+                                                <h5 class="fw-bold" style="color: #000;"><?php echo $holidaysThisMonth; ?></h5>
                                             </div>
                                             <i class="fas fa-check-circle fa-2x text-success opacity-50"></i>
                                         </div>
@@ -94,14 +114,14 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                                 </div>
                             </div>
                             <div class="col-md-3 col-sm-6 mb-3">
-                                <div class="card border-left-danger">
+                                <div class="card border-left-info shadow-sm h-100">
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div>
-                                                <p class="text-muted mb-1">Hollidays this week</p>
-                                                <h5 id="absentCount" class="text-danger">0</h5>
+                                                <p class="text-muted mb-1 fw-semibold" style="color: #000;">Holidays this week</p>
+                                                <h5 class="fw-bold" style="color: #000;"><?php echo $holidaysThisWeek; ?></h5>
                                             </div>
-                                            <i class="fas fa-times-circle fa-2x text-danger opacity-50"></i>
+                                            <i class="fas fa-calendar-week fa-2x text-info opacity-50"></i>
                                         </div>
                                     </div>
                                 </div>
@@ -110,66 +130,76 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                         <!-- stats end here  -->
                           <div class="row">
                             <div class="col-12">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h5 class="mb-0">Holiday List</h5>
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-light border-bottom-2">
+                                        <h5 class="mb-0 fw-bold" style="color: #000;">Holiday List</h5>
                                     </div>
 
                                     <div class="card-body table-responsive">
-                                        <table class="table table-hover">
-                                            <thead class="thead-light">
+                                        <table class="table table-hover table-bordered">
+                                            <thead class="table-light">
                                                 <tr>
-                                                    <th>#</th>
-                                                    <th>Title</th>
-                                                    <th>Type</th>
-                                                    <th>Date(s)</th>
-                                                    <th>Applies To</th>
-                                                    <th>Status</th>
-                                                    <th width="120">Action</th>
+                                                    <th style="color: #000; font-weight: 600;">#</th>
+                                                    <th style="color: #000; font-weight: 600;">Title</th>
+                                                    <th style="color: #000; font-weight: 600;">Type</th>
+                                                    <th style="color: #000; font-weight: 600;">Date(s)</th>
+                                                    <th style="color: #000; font-weight: 600;">Applies To</th>
+                                                    <th style="color: #000; font-weight: 600;">Status</th>
+                                                    <th width="120" style="color: #000; font-weight: 600;">Action</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>1</td>
-                                                    <td>Eid-ul-Fitr</td>
-                                                    <td>
-                                                        <span class="badge badge-info">Public Holiday</span>
-                                                    </td>
-                                                    <td>10 Apr 2026 → 12 Apr 2026</td>
-                                                    <td>Whole School</td>
-                                                    <td>
-                                                        <span class="badge badge-success">Active</span>
-                                                    </td>
-                                                    <td>
-                                                        <button class="btn btn-sm btn-outline-primary">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-outline-danger">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-
-                                                <tr>
-                                                    <td>2</td>
-                                                    <td>Summer Vacation</td>
-                                                    <td>
-                                                        <span class="badge badge-warning">Vacation</span>
-                                                    </td>
-                                                    <td>01 Jun 2026 → 31 Jul 2026</td>
-                                                    <td>Students</td>
-                                                    <td>
-                                                        <span class="badge badge-success">Active</span>
-                                                    </td>
-                                                    <td>
-                                                        <button class="btn btn-sm btn-outline-primary">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-outline-danger">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
+                                            <tbody id="holidaysList">
+                                                <?php if (empty($holidays)): ?>
+                                                    <tr>
+                                                        <td colspan="7" class="text-center text-muted py-4" style="color: #000;">
+                                                            No holidays found. <a href="javascript:void(0)" onclick="openHolidayModal()" style="color: #007bff;">Add your first holiday</a>
+                                                        </td>
+                                                    </tr>
+                                                <?php else: ?>
+                                                    <?php foreach ($holidays as $index => $holiday): ?>
+                                                        <tr>
+                                                            <td style="color: #000; font-weight: 500;"><?php echo $index + 1; ?></td>
+                                                            <td style="color: #000;"><strong><?php echo htmlspecialchars($holiday['title']); ?></strong></td>
+                                                            <td>
+                                                                <?php 
+                                                                    $badge_colors = [
+                                                                        'WEEKLY_OFF' => 'secondary',
+                                                                        'HOLIDAY' => 'danger',
+                                                                        'VACATION' => 'warning',
+                                                                        'EVENT' => 'info'
+                                                                    ];
+                                                                    $color = $badge_colors[$holiday['event_type']] ?? 'secondary';
+                                                                ?>
+                                                                <span class="badge bg-<?php echo $color; ?> text-white"><?php echo \App\Modules\School_Admin\Controllers\HolidayController::formatEventType($holiday['event_type']); ?></span>
+                                                            </td>
+                                                            <td style="color: #000;">
+                                                                <?php 
+                                                                    if ($holiday['event_type'] === 'WEEKLY_OFF') {
+                                                                        echo \App\Modules\School_Admin\Controllers\HolidayController::getDayName($holiday['day_of_week']);
+                                                                    } else {
+                                                                        $start = $holiday['start_date'] ? date('d M Y', strtotime($holiday['start_date'])) : '-';
+                                                                        $end = $holiday['end_date'] ? date('d M Y', strtotime($holiday['end_date'])) : '-';
+                                                                        echo $start !== '-' && $end !== '-' && $start !== $end ? $start . ' → ' . $end : $start;
+                                                                    }
+                                                                ?>
+                                                            </td>
+                                                            <td style="color: #000;">
+                                                                <span class="badge bg-light text-dark"><?php echo \App\Modules\School_Admin\Controllers\HolidayController::formatAppliesto($holiday['applies_to']); ?></span>
+                                                            </td>
+                                                            <td>
+                                                                <span class="badge bg-success text-white">Active</span>
+                                                            </td>
+                                                            <td>
+                                                                <button class="btn btn-sm btn-outline-primary" onclick="editHoliday(<?php echo $holiday['id']; ?>)" title="Edit">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </button>
+                                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteHoliday(<?php echo $holiday['id']; ?>)" title="Delete">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
                                             </tbody>
                                         </table>
                                     </div>
@@ -216,80 +246,253 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
             }
         });
     </script>
+
+    <!-- Holiday Management Scripts -->
+    <script>
+        function openHolidayModal() {
+            document.getElementById('holidayForm').reset();
+            document.getElementById('dayOfWeekContainer').style.display = 'none';
+            document.getElementById('startDateContainer').style.display = 'none';
+            document.getElementById('endDateContainer').style.display = 'none';
+            const modal = new bootstrap.Modal(document.getElementById('holidayModal'));
+            modal.show();
+        }
+
+        function toggleDayOfWeek() {
+            const eventType = document.getElementById('holidayEventType').value;
+            document.getElementById('dayOfWeekContainer').style.display = eventType === 'WEEKLY_OFF' ? 'block' : 'none';
+            document.getElementById('startDateContainer').style.display = eventType === 'WEEKLY_OFF' ? 'none' : 'block';
+            document.getElementById('endDateContainer').style.display = eventType === 'WEEKLY_OFF' ? 'none' : 'block';
+        }
+
+        function saveHoliday() {
+            const title = document.getElementById('holidayTitle').value.trim();
+            const eventType = document.getElementById('holidayEventType').value;
+            const appliesto = document.getElementById('holidayAppliesto').value;
+            const description = document.getElementById('holidayDescription').value.trim();
+            
+            if (!title) {
+                alert('Please enter holiday title');
+                return;
+            }
+            if (!eventType) {
+                alert('Please select event type');
+                return;
+            }
+
+            let dayOfWeek = null;
+            let startDate = null;
+            let endDate = null;
+
+            if (eventType === 'WEEKLY_OFF') {
+                dayOfWeek = document.getElementById('holidayDayOfWeek').value;
+                if (!dayOfWeek) {
+                    alert('Please select a day for weekly off');
+                    return;
+                }
+            } else {
+                startDate = document.getElementById('holidayStartDate').value;
+                if (!startDate) {
+                    alert('Please select start date');
+                    return;
+                }
+                endDate = document.getElementById('holidayEndDate').value || startDate;
+            }
+
+            const payload = {
+                action: 'add',
+                title: title,
+                event_type: eventType,
+                day_of_week: dayOfWeek,
+                start_date: startDate,
+                end_date: endDate,
+                applies_to: appliesto,
+                description: description
+            };
+
+            fetch('manage_holidays.php?action=add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                return response.text().then(text => {
+                    return {
+                        status: response.status,
+                        ok: response.ok,
+                        text: text
+                    };
+                });
+            })
+            .then(({ status, ok, text }) => {
+                console.log('Response status:', status);
+                console.log('Response text:', text);
+                
+                try {
+                    const data = JSON.parse(text);
+                    if (data.success) {
+                        alert('Holiday added successfully');
+                        // Close Bootstrap 5 modal correctly
+                        const modalElement = document.getElementById('holidayModal');
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.hide();
+                        setTimeout(() => {
+                            location.reload();
+                        }, 500);
+                    } else {
+                        alert('Error: ' + (data.message || data.error || 'Unknown error'));
+                    }
+                } catch (e) {
+                    console.error('JSON Parse Error:', e);
+                    console.error('Response was:', text);
+                    alert('Error parsing response: ' + e.message + '\nResponse: ' + text.substring(0, 200));
+                }
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+                alert('Error adding holiday: ' + error.message);
+            });
+        }
+
+        function editHoliday(holidayId) {
+            alert('Edit functionality coming soon - Holiday ID: ' + holidayId);
+        }
+
+        function deleteHoliday(holidayId) {
+            if (!confirm('Are you sure you want to delete this holiday?')) {
+                return;
+            }
+
+            const payload = {
+                id: holidayId
+            };
+
+            fetch('manage_holidays.php?action=delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                return response.text().then(text => {
+                    return {
+                        status: response.status,
+                        ok: response.ok,
+                        text: text
+                    };
+                });
+            })
+            .then(({ status, ok, text }) => {
+                console.log('Response status:', status);
+                console.log('Response text:', text);
+                
+                try {
+                    const data = JSON.parse(text);
+                    if (data.success) {
+                        alert('Holiday deleted successfully');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 500);
+                    } else {
+                        alert('Error: ' + (data.message || data.error || 'Unknown error'));
+                    }
+                } catch (e) {
+                    console.error('JSON Parse Error:', e);
+                    console.error('Response was:', text);
+                    alert('Error parsing response: ' + e.message + '\nResponse: ' + text.substring(0, 200));
+                }
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+                alert('Error deleting holiday: ' + error.message);
+            });
+        }
+    </script>
 </body>
 <div class="modal fade" id="holidayModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-primary shadow-lg">
 
-            <div class="modal-header">
-                <h5 class="modal-title">Add Holiday</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
+            <div class="modal-header bg-light border-bottom-3">
+                <h5 class="modal-title fw-bold" style="color: #000;">Add Holiday</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
-            <div class="modal-body">
-                <form>
+            <div class="modal-body p-4">
+                <form id="holidayForm">
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label>Holiday Title</label>
-                            <input type="text" class="form-control" placeholder="e.g. Eid, Winter Break">
-                        </div>
+                    <div class="mb-4">
+                        <label for="holidayTitle" class="form-label fw-semibold" style="color: #000;">Holiday Title <span class="text-danger">*</span></label>
+                        <input type="text" id="holidayTitle" class="form-control form-control-lg" placeholder="e.g. Eid, Winter Break" style="color: #000; border: 2px solid #e9ecef;" required>
+                    </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label>Holiday Type</label>
-                            <select class="form-control">
-                                <option value="">Select Type</option>
-                                <option>Public Holiday</option>
-                                <option>Vacation</option>
-                                <option>Weekly Off</option>
-                                <option>Exam Break</option>
-                                <option>Other</option>
+                    <div class="mb-4">
+                        <label for="holidayEventType" class="form-label fw-semibold" style="color: #000;">Event Type <span class="text-danger">*</span></label>
+                        <select id="holidayEventType" class="form-select form-select-lg" onchange="toggleDayOfWeek()" style="color: #000; border: 2px solid #e9ecef;" required>
+                            <option value="">Select Type</option>
+                            <option value="HOLIDAY">Holiday</option>
+                            <option value="VACATION">Vacation</option>
+                            <option value="WEEKLY_OFF">Weekly Off</option>
+                            <option value="EVENT">Event</option>
+                        </select>
+                    </div>
+
+                    <div id="dayOfWeekContainer" style="display: none;">
+                        <div class="mb-4">
+                            <label for="holidayDayOfWeek" class="form-label fw-semibold" style="color: #000;">Repeating Day <span class="text-danger">*</span></label>
+                            <select id="holidayDayOfWeek" class="form-select form-select-lg" style="color: #000; border: 2px solid #e9ecef;">
+                                <option value="">Select Day</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                                <option value="7">Sunday</option>
                             </select>
                         </div>
+                    </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label>Start Date</label>
-                            <input type="date" class="form-control">
+                    <div id="startDateContainer" style="display: none;">
+                        <div class="mb-4">
+                            <label for="holidayStartDate" class="form-label fw-semibold" style="color: #000;">Start Date <span class="text-danger">*</span></label>
+                            <input type="date" id="holidayStartDate" class="form-control form-control-lg" style="color: #000; border: 2px solid #e9ecef;">
                         </div>
+                    </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label>End Date</label>
-                            <input type="date" class="form-control">
+                    <div id="endDateContainer" style="display: none;">
+                        <div class="mb-4">
+                            <label for="holidayEndDate" class="form-label fw-semibold" style="color: #000;">End Date</label>
+                            <input type="date" id="holidayEndDate" class="form-control form-control-lg" style="color: #000; border: 2px solid #e9ecef;">
                         </div>
+                    </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label>Applies To</label>
-                            <select class="form-control">
-                                <option>Whole School</option>
-                                <option>Students</option>
-                                <option>Staff</option>
-                                <option>Teachers Only</option>
-                            </select>
-                        </div>
+                    <div class="mb-4">
+                        <label for="holidayAppliesto" class="form-label fw-semibold" style="color: #000;">Applies To <span class="text-danger">*</span></label>
+                        <select id="holidayAppliesto" class="form-select form-select-lg" style="color: #000; border: 2px solid #e9ecef;" required>
+                            <option value="">Select</option>
+                            <option value="ALL">All</option>
+                            <option value="STUDENTS">Students</option>
+                            <option value="STAFF">Staff</option>
+                        </select>
+                    </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label>Status</label>
-                            <select class="form-control">
-                                <option value="1">Active</option>
-                                <option value="0">Inactive</option>
-                            </select>
-                        </div>
-
-                        <div class="col-12 mb-3">
-                            <label>Description / Remarks</label>
-                            <textarea class="form-control" rows="3"
-                                placeholder="Optional notes"></textarea>
-                        </div>
+                    <div class="mb-4">
+                        <label for="holidayDescription" class="form-label fw-semibold" style="color: #000;">Description / Remarks</label>
+                        <textarea id="holidayDescription" class="form-control form-control-lg" rows="3" placeholder="Optional notes" style="color: #000; border: 2px solid #e9ecef;"></textarea>
                     </div>
 
                 </form>
             </div>
 
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button class="btn btn-success">Save Holiday</button>
+            <div class="modal-footer bg-light p-3 border-top">
+                <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-lg fw-semibold" onclick="saveHoliday()">
+                    <i class="fas fa-save me-2"></i> Save Holiday
+                </button>
             </div>
 
         </div>

@@ -20,6 +20,7 @@ $attendanceStats = ['P' => 0, 'A' => 0, 'L' => 0, 'HD' => 0];
 $sections = [];
 $classInfo = null;
 $attendanceRegister = [];
+$holidaysByDate = []; // Store holidays by date
 
 if ($school_id && $class_id) {
     $controller = new \App\Modules\School_Admin\Controllers\StudentAttendanceController((int)$school_id);
@@ -33,6 +34,87 @@ if ($school_id && $class_id) {
     
     // Get sections for this class
     $sections = $controller->getSectionsByClass((int)$class_id);
+    
+    // Fetch holidays for STUDENTS (applies_to: ALL or STUDENTS)
+    $stmt = $db->prepare("
+        SELECT 
+            id,
+            title,
+            description,
+            event_type,
+            day_of_week,
+            start_date,
+            end_date,
+            applies_to
+        FROM school_holliday_calendar
+        WHERE school_id = ?
+            AND (applies_to = 'STUDENTS' OR applies_to = 'ALL')
+            AND (
+                (event_type = 'WEEKLY_OFF')
+                OR
+                (event_type != 'WEEKLY_OFF' 
+                    AND (
+                        (YEAR(start_date) = ? AND MONTH(start_date) = ?)
+                        OR
+                        (YEAR(end_date) = ? AND MONTH(end_date) = ?)
+                        OR
+                        (start_date <= DATE_FORMAT(?, '%Y-%m-01') AND end_date >= DATE_FORMAT(?, '%Y-%m-t') )
+                    )
+                )
+            )
+        ORDER BY start_date ASC, day_of_week ASC
+    ");
+    $stmt->execute([
+        $school_id,
+        $selected_year,
+        $selected_month,
+        $selected_year,
+        $selected_month,
+        "$selected_year-$selected_month-01",
+        "$selected_year-$selected_month-01"
+    ]);
+    $holidays = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Process holidays to calculate which dates they apply to
+    $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $selected_month, $selected_year);
+    foreach ($holidays as $holiday) {
+        if ($holiday['event_type'] === 'WEEKLY_OFF') {
+            // Add to every occurrence of this day in the month
+            $targetDay = (int)$holiday['day_of_week'];
+            for ($day = 1; $day <= $daysInMonth; $day++) {
+                $dateStr = sprintf('%04d-%02d-%02d', $selected_year, $selected_month, $day);
+                $dateObj = new DateTime($dateStr);
+                // day_of_week: 1=Monday, 7=Sunday
+                // PHP: 0=Sunday, 1=Monday...6=Saturday
+                $phpDayOfWeek = (int)$dateObj->format('w');
+                $phpDayOfWeek = $phpDayOfWeek === 0 ? 7 : $phpDayOfWeek;
+                
+                if ($phpDayOfWeek === $targetDay) {
+                    if (!isset($holidaysByDate[$dateStr])) {
+                        $holidaysByDate[$dateStr] = [];
+                    }
+                    $holidaysByDate[$dateStr][] = $holiday;
+                }
+            }
+        } else {
+            // Date-based holiday: add for each day in the range
+            $startDate = new DateTime($holiday['start_date']);
+            $endDate = new DateTime($holiday['end_date']);
+            
+            $currentDate = $startDate;
+            while ($currentDate <= $endDate) {
+                $dateStr = $currentDate->format('Y-m-d');
+                // Only include if within the month
+                if ($currentDate->format('Y-m') === sprintf('%04d-%02d', $selected_year, $selected_month)) {
+                    if (!isset($holidaysByDate[$dateStr])) {
+                        $holidaysByDate[$dateStr] = [];
+                    }
+                    $holidaysByDate[$dateStr][] = $holiday;
+                }
+                $currentDate->modify('+1 day');
+            }
+        }
+    }
     
     // If section selected, get stats for that section
     if ($selected_section) {
@@ -163,6 +245,22 @@ if ($school_id && $class_id) {
         .text-muted { color: #666 !important; }
         .alert-info { color: #004085; background-color: #d1ecf1; border-color: #bee5eb; }
         .alert-warning { color: #856404; background-color: #fff3cd; border-color: #ffeeba; }
+        
+        /* Holiday styling */
+        .holiday-th { background-color: #ffe6e6 !important; }
+        .holiday-td { background-color: #fff0f0 !important; }
+        .holiday-badge { 
+            font-size: 9px; 
+            font-weight: 600; 
+            margin-top: 2px; 
+            padding: 2px 4px; 
+            border-radius: 3px; 
+            display: block;
+        }
+        .holiday-badge.weekly-off { background-color: #ffc107; color: #000; }
+        .holiday-badge.holiday { background-color: #dc3545; color: #fff; }
+        .holiday-badge.vacation { background-color: #17a2b8; color: #fff; }
+        .holiday-badge.event { background-color: #28a745; color: #fff; }
     </style>
 </head>
 <body>
@@ -296,9 +394,30 @@ if ($school_id && $class_id) {
                                             for ($day = 1; $day <= $daysInMonth; $day++):
                                                 $date = $selected_year . '-' . str_pad($selected_month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($day, 2, '0', STR_PAD_LEFT);
                                                 $dayName = date('D', strtotime($date));
+                                                
+                                                // Check if this date is a holiday
+                                                $hasHoliday = isset($holidaysByDate[$date]) && !empty($holidaysByDate[$date]);
+                                                $holidayClass = $hasHoliday ? 'holiday-th' : '';
+                                                $holidayInfo = '';
+                                                
+                                                if ($hasHoliday) {
+                                                    $holiday = $holidaysByDate[$date][0];
+                                                    $holidayType = strtolower($holiday['event_type']);
+                                                    if ($holidayType === 'weekly_off') {
+                                                        $holidayType = 'weekly-off';
+                                                        $badge = 'W.O';
+                                                    } elseif ($holidayType === 'holiday') {
+                                                        $badge = 'HOL';
+                                                    } elseif ($holidayType === 'vacation') {
+                                                        $badge = 'VAC';
+                                                    } else {
+                                                        $badge = 'EVT';
+                                                    }
+                                                    $holidayInfo = "<div class='holiday-badge {$holidayType}' title='{$holiday['title']}'>{$badge}</div>";
+                                                }
                                             ?>
-                                                <th style="width: calc(80% / <?php echo $daysInMonth; ?>);">
-                                                    <small><?php echo $day; ?><br><?php echo $dayName; ?></small>
+                                                <th class="<?php echo $holidayClass; ?>" style="width: calc(80% / <?php echo $daysInMonth; ?>);">
+                                                    <small><?php echo $day; ?><br><?php echo $dayName; ?><?php echo $holidayInfo; ?></small>
                                                 </th>
                                             <?php endfor; ?>
                                         </tr>
@@ -320,13 +439,52 @@ if ($school_id && $class_id) {
                                                     elseif ($status == 'A') { $statusClass = 'absent'; $statusDisplay = 'A'; }
                                                     elseif ($status == 'L') { $statusClass = 'leave'; $statusDisplay = 'L'; }
                                                     elseif ($status == 'HD') { $statusClass = 'halfday'; $statusDisplay = 'HD'; }
+                                                    
+                                                    // Check if this date is a holiday
+                                                    $hasHoliday = isset($holidaysByDate[$date]) && !empty($holidaysByDate[$date]);
+                                                    $holidayCellClass = $hasHoliday ? 'holiday-td' : '';
                                                 ?>
-                                                    <td><span class="attendance-cell <?php echo $statusClass; ?>"><?php echo $statusDisplay; ?></span></td>
+                                                    <td class="<?php echo $holidayCellClass; ?>"><span class="attendance-cell <?php echo $statusClass; ?>"><?php echo $statusDisplay; ?></span></td>
                                                 <?php endfor; ?>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
+                            </div>
+                            
+                            <!-- Legend -->
+                            <div class="card-footer bg-light">
+                                <h6 class="mb-3">Legend:</h6>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <span class="badge bg-success me-2">P</span> = Present
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="badge bg-danger me-2">A</span> = Absent
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="badge bg-warning me-2">L</span> = Leave
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="badge bg-info me-2">HD</span> = Half Day
+                                    </div>
+                                </div>
+                                <hr>
+                                <h6 class="mb-3">Holidays Legend:</h6>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <span class="holiday-badge weekly-off">W.O</span> = Weekly Off
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="holiday-badge holiday">HOL</span> = Holiday
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="holiday-badge vacation">VAC</span> = Vacation
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="holiday-badge event">EVT</span> = Event
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     <?php elseif (!$selected_section): ?>
@@ -413,22 +571,12 @@ if ($school_id && $class_id) {
         // Show loading message
         document.getElementById('studentsList').innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Loading students...</p>';
 
-        // Build the URL
         const url = `get_students_for_section.php?class_id=${classId}&section_id=${sectionId}`;
-        console.log('Fetching URL:', url);
 
-        // Fetch students via AJAX
         fetch(url)
-            .then(response => {
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
-                return response.text(); // Use text() first to debug
-            })
-            .then(text => {
-                console.log('Response text:', text);
-                try {
-                    const data = JSON.parse(text);
-                    if (data.success && data.data.length > 0) {
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.length > 0) {
                         let html = '<div class="form-group"><label class="form-label">Students</label><div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">';
                         
                         data.data.forEach((student, index) => {
@@ -462,18 +610,13 @@ if ($school_id && $class_id) {
                         
                         html += '</div></div>';
                         document.getElementById('studentsList').innerHTML = html;
-                    } else if (data.success && data.data.length === 0) {
-                        document.getElementById('studentsList').innerHTML = '<p class="text-warning">No students found in this section.</p>';
-                    } else {
-                        document.getElementById('studentsList').innerHTML = '<p class="text-danger">Error: ' + (data.error || 'Unknown error') + '</p>';
-                    }
-                } catch (parseError) {
-                    console.error('JSON Parse error:', parseError);
-                    document.getElementById('studentsList').innerHTML = '<p class="text-danger">Error parsing response. Check console.</p>';
+                } else if (data.success && data.data.length === 0) {
+                    document.getElementById('studentsList').innerHTML = '<p class="text-warning">No students found in this section.</p>';
+                } else {
+                    document.getElementById('studentsList').innerHTML = '<p class="text-danger">Error loading students. Please try again.</p>';
                 }
             })
             .catch(error => {
-                console.error('Fetch error:', error);
                 document.getElementById('studentsList').innerHTML = '<p class="text-danger">Error loading students. Please try again.</p>';
             });
     }
@@ -513,7 +656,6 @@ if ($school_id && $class_id) {
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-        // Send data to server
         fetch('save_attendance.php', {
             method: 'POST',
             headers: {
@@ -526,46 +668,27 @@ if ($school_id && $class_id) {
                 attendance: attendanceRecords
             })
         })
-        .then(response => {
-            console.log('Save response status:', response.status);
-            return response.text();
-        })
-        .then(text => {
-            console.log('Save response text:', text);
-            try {
-                const data = JSON.parse(text);
-                console.log('Parsed response:', data);
-                
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = 'Save Attendance';
+        .then(response => response.json())
+        .then(data => {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = 'Save Attendance';
 
-                if (data.success) {
-                    alert(data.message);
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('markAttendanceModal'));
-                    modal.hide();
-                    // Reset form
-                    document.getElementById('modalSectionFilter').value = '';
-                    document.getElementById('quickSelectAttendance').value = '';
-                    document.getElementById('studentsList').innerHTML = '';
-                    // Reload page to show updated attendance
-                    location.reload();
-                } else {
-                    alert('Error: ' + data.error);
-                }
-            } catch (parseError) {
-                console.error('JSON Parse Error:', parseError);
-                console.error('Response was:', text);
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = 'Save Attendance';
-                alert('Error parsing server response. Check browser console for details.\nResponse: ' + text.substring(0, 100));
+            if (data.success) {
+                alert(data.message);
+                const modal = bootstrap.Modal.getInstance(document.getElementById('markAttendanceModal'));
+                modal.hide();
+                document.getElementById('modalSectionFilter').value = '';
+                document.getElementById('quickSelectAttendance').value = '';
+                document.getElementById('studentsList').innerHTML = '';
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to save attendance'));
             }
         })
         .catch(error => {
             saveBtn.disabled = false;
             saveBtn.innerHTML = 'Save Attendance';
-            console.error('Fetch Error:', error);
-            alert('Network error: ' + error.message);
+            alert('Error saving attendance. Please try again.');
         });
     }
 

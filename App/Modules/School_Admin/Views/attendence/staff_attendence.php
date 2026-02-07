@@ -20,11 +20,6 @@ $db = \Database::connect();
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body {
-            background-color: #f8f9fa;
-        }
-
-        
         .status-present {
             background-color: #d4edda;
             color: #155724;
@@ -779,7 +774,7 @@ $db = \Database::connect();
 
                 <!-- Legend -->
                 <div class="mt-4 pt-3 border-top">
-                    <h6 class="mb-3">Legend:</h6>
+                    <h6 class="mb-3">Attendance Legend:</h6>
                     <div class="row">
                         <div class="col-md-3">
                             <span class="badge bg-success me-2">P</span> = Present
@@ -792,6 +787,24 @@ $db = \Database::connect();
                         </div>
                         <div class="col-md-3">
                             <span class="badge bg-info me-2">HD</span> = Half Day
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <h6 class="mb-3">Holidays Legend:</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <span class="badge bg-warning text-dark me-2">W.O</span> = Weekly Off
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-danger me-2">HOL</span> = Holiday
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-info me-2">VAC</span> = Vacation
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-success me-2">EVT</span> = Event
                         </div>
                     </div>
                 </div>
@@ -857,6 +870,8 @@ $db = \Database::connect();
         let allStaff = [];
         let currentMonth = new Date().getMonth() + 1;
         let currentYear = new Date().getFullYear();
+        let holidaysByDate = {}; // Store holidays by date
+        const holidaysApiUrl = 'get_holidays.php';
 
         // Format today's date display
         function formatTodayDate() {
@@ -867,6 +882,34 @@ $db = \Database::connect();
             if (displayEl) {
                 displayEl.textContent = `Today: ${formattedDate}`;
             }
+        }
+
+        // Load holidays for STAFF (applies_to: ALL or STAFF)
+        function loadHolidaysForStaff(month = null, year = null) {
+            if (month === null) month = currentMonth;
+            if (year === null) year = currentYear;
+            
+            const params = new URLSearchParams({
+                month: String(month).padStart(2, '0'),
+                year: year,
+                applies_to: 'STAFF'
+            });
+            
+            return fetch(`${holidaysApiUrl}?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        holidaysByDate = data.data;
+                        return data.data;
+                    } else {
+                        console.error('Failed to load holidays:', data.error);
+                        return {};
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading holidays:', error);
+                    return {};
+                });
         }
 
         // Load staff from database API
@@ -909,23 +952,26 @@ $db = \Database::connect();
             
             const url = `${apiBaseUrl}?${params}`;
             
-            return fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        allStaff = data.data;
-                        generateCalendarView(data);
-                        updateStats();
-                        return data;
-                    } else {
-                        console.error('Failed to load monthly data:', data.message);
-                        return null;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading monthly data:', error);
+            // Load both monthly data and holidays in parallel
+            return Promise.all([
+                fetch(url).then(response => response.json()),
+                loadHolidaysForStaff(month, year)
+            ])
+            .then(([staffData, holidays]) => {
+                if (staffData.success) {
+                    allStaff = staffData.data;
+                    generateCalendarView(staffData);
+                    updateStats();
+                    return staffData;
+                } else {
+                    console.error('Failed to load monthly data:', staffData.message);
                     return null;
-                });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading monthly data:', error);
+                return null;
+            });
         }
 
         // Populate staff attendance list in modal
@@ -1003,7 +1049,7 @@ $db = \Database::connect();
             // Generate calendar HTML
             let html = '<table class="table table-bordered calendar-table"><thead><tr><th style="width: 200px;">Staff Info</th>';
             
-            // Add date headers
+            // Add date headers with holiday styling
             dates.forEach(date => {
                 const dateObj = new Date(date);
                 const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
@@ -1012,7 +1058,35 @@ $db = \Database::connect();
                 const headerClass = isSunday ? 'sunday-cell' : '';
                 const dayStyle = isSunday ? 'color: red; font-weight: bold;' : '';
                 
-                html += `<th class="${headerClass}" style="text-align: center; ${dayStyle}">${dayNum}<br><small>${dayName}</small></th>`;
+                // Check if this date is a holiday
+                const holidays = holidaysByDate[date] || [];
+                let holidayHtml = '';
+                
+                if (holidays.length > 0) {
+                    const holiday = holidays[0];
+                    let holidayTypeClass = 'bg-light';
+                    let holidayText = '';
+                    
+                    if (holiday.event_type === 'WEEKLY_OFF') {
+                        holidayTypeClass = 'bg-warning';
+                        holidayText = 'W.O';
+                    } else if (holiday.event_type === 'HOLIDAY') {
+                        holidayTypeClass = 'bg-danger text-white';
+                        holidayText = 'HOL';
+                    } else if (holiday.event_type === 'VACATION') {
+                        holidayTypeClass = 'bg-info text-white';
+                        holidayText = 'VAC';
+                    } else if (holiday.event_type === 'EVENT') {
+                        holidayTypeClass = 'bg-success text-white';
+                        holidayText = 'EVT';
+                    }
+                    
+                    const holidayTitle = holiday.title.substring(0, 12);
+                    holidayHtml = `<div style="margin-top: 4px; padding: 2px 4px; border-radius: 3px; font-size: 9px; font-weight: 600; ${holidayTypeClass === 'bg-light' ? 'color: #666;' : 'color: white;'} background-color: ${holidayTypeClass.includes('bg-') ? '' : '#fff'};" class="${holidayTypeClass}" title="${holiday.title}">${holidayText}</div>`;
+                }
+                
+                const headerContent = `${dayNum}<br><small>${dayName}</small>${holidayHtml}`;
+                html += `<th class="${headerClass} ${holidays.length > 0 ? 'holiday-cell' : ''}" style="text-align: center; ${dayStyle} padding: 8px 4px;">${headerContent}</th>`;
             });
             
             html += '</tr></thead><tbody>';
@@ -1036,10 +1110,14 @@ $db = \Database::connect();
                         const dateObj = new Date(date);
                         const isSunday = dateObj.getDay() === 0;
                         const cellClass = isSunday ? 'sunday-cell' : '';
+                        
+                        // Check if this date is a holiday
+                        const holidays = holidaysByDate[date] || [];
+                        const cellBackgroundClass = holidays.length > 0 ? 'holiday-cell' : '';
 
                         // Only show badge if status exists (don't show empty dashes)
                         if (status) {
-                            html += `<td class="${cellClass}" style="text-align: center;">
+                            html += `<td class="${cellClass} ${cellBackgroundClass}" style="text-align: center;">
                                 <span class="badge ${statusClass} cursor-pointer" 
                                       onclick="toggleAttendance('${member.staff_type}', ${member.id}, '${date}', this)"
                                       data-staff-type="${member.staff_type}"
@@ -1049,7 +1127,7 @@ $db = \Database::connect();
                                       style="font-size: 11px; padding: 4px 8px; cursor: pointer; display: inline-block;">${status}</span>
                             </td>`;
                         } else {
-                            html += `<td class="${cellClass}" style="text-align: center;">
+                            html += `<td class="${cellClass} ${cellBackgroundClass}" style="text-align: center;">
                             </td>`;
                         }
                     });
