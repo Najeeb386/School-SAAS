@@ -58,6 +58,7 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                             <div class="col-12">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h3 class="mb-0">Grading Criteria</h3>
+                                    
                                     <button class="btn btn-primary" onclick="openGradingCriteriaModal()">
                                         <i class="fa fa-plus"></i> Add New Grade
                                     </button>
