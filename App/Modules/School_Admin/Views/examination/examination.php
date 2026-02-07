@@ -68,7 +68,7 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
 
                         <div class="row">
                             <div class="col-md-3 mb-4">
-                                <a href="payroll/payroll.php" class="text-dark text-decoration-none">
+                                <a href="grading_criteria.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">

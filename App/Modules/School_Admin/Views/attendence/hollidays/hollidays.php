@@ -227,26 +227,6 @@ if ($school_id) {
     <!-- custom app -->
     <script src="../../../../../../public/assets/js/app.js"></script>
 
-    <!-- Hide loader on page load -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                var loader = document.querySelector('.loader');
-                if (loader) {
-                    loader.style.display = 'none';
-                }
-            }, 500);
-        });
-        
-        // Fallback: hide loader after 2 seconds
-        window.addEventListener('load', function() {
-            var loader = document.querySelector('.loader');
-            if (loader) {
-                loader.style.display = 'none';
-            }
-        });
-    </script>
-
     <!-- Holiday Management Scripts -->
     <script>
         function openHolidayModal() {
@@ -317,42 +297,22 @@ if ($school_id) {
                 },
                 body: JSON.stringify(payload)
             })
-            .then(response => {
-                return response.text().then(text => {
-                    return {
-                        status: response.status,
-                        ok: response.ok,
-                        text: text
-                    };
-                });
-            })
-            .then(({ status, ok, text }) => {
-                console.log('Response status:', status);
-                console.log('Response text:', text);
-                
-                try {
-                    const data = JSON.parse(text);
-                    if (data.success) {
-                        alert('Holiday added successfully');
-                        // Close Bootstrap 5 modal correctly
-                        const modalElement = document.getElementById('holidayModal');
-                        const modal = new bootstrap.Modal(modalElement);
-                        modal.hide();
-                        setTimeout(() => {
-                            location.reload();
-                        }, 500);
-                    } else {
-                        alert('Error: ' + (data.message || data.error || 'Unknown error'));
-                    }
-                } catch (e) {
-                    console.error('JSON Parse Error:', e);
-                    console.error('Response was:', text);
-                    alert('Error parsing response: ' + e.message + '\nResponse: ' + text.substring(0, 200));
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Holiday added successfully');
+                    const modalElement = document.getElementById('holidayModal');
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.hide();
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
+                } else {
+                    alert('Error: ' + (data.message || 'Unable to add holiday'));
                 }
             })
             .catch(error => {
-                console.error('Fetch Error:', error);
-                alert('Error adding holiday: ' + error.message);
+                alert('Error adding holiday');
             });
         }
 
@@ -376,38 +336,19 @@ if ($school_id) {
                 },
                 body: JSON.stringify(payload)
             })
-            .then(response => {
-                return response.text().then(text => {
-                    return {
-                        status: response.status,
-                        ok: response.ok,
-                        text: text
-                    };
-                });
-            })
-            .then(({ status, ok, text }) => {
-                console.log('Response status:', status);
-                console.log('Response text:', text);
-                
-                try {
-                    const data = JSON.parse(text);
-                    if (data.success) {
-                        alert('Holiday deleted successfully');
-                        setTimeout(() => {
-                            location.reload();
-                        }, 500);
-                    } else {
-                        alert('Error: ' + (data.message || data.error || 'Unknown error'));
-                    }
-                } catch (e) {
-                    console.error('JSON Parse Error:', e);
-                    console.error('Response was:', text);
-                    alert('Error parsing response: ' + e.message + '\nResponse: ' + text.substring(0, 200));
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Holiday deleted successfully');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
+                } else {
+                    alert('Error: ' + (data.message || 'Unable to delete holiday'));
                 }
             })
             .catch(error => {
-                console.error('Fetch Error:', error);
-                alert('Error deleting holiday: ' + error.message);
+                alert('Error deleting holiday');
             });
         }
     </script>
