@@ -81,11 +81,11 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                                         </h5>
                                     </div>
                                     <div class="card-body">
-                                        <button class="btn btn-primary btn-lg" onclick="viewSchedule()">
+                                        <button class="btn btn-success btn-lg" onclick="viewSchedule()">
                                             <i class="fa fa-calendar"></i> View Complete Schedule
                                         </button>
-                                        <button class="btn btn-success btn-lg" onclick="downloadDatesheet()">
-                                            <i class="fa fa-download"></i> Download Datesheet
+                                        <button class="btn btn-primary btn-lg" onclick="window.location.href='./generate_exam.php'">
+                                            <i class="fa fa-arrow-left"></i> Back
                                         </button>
                                     </div>
                                 </div>

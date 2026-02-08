@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
 
-// Get exam_id from URL - THIS IS THE ONLY INPUT
 $exam_id = $_GET['exam_id'] ?? null;
+$school_id = $_SESSION['school_id'] ?? null;
 
 if (!$exam_id) {
     die('
@@ -48,7 +48,7 @@ if (!$exam_id) {
                     <div class="container-fluid">
                         <div class="row mb-4">
                             <div class="col-12">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-3 no-print">
                                     <h3 class="mb-0" style="color: #000; font-weight: 700;">Examination Schedule / Datesheet</h3>
                                     <div>
                                         <button class="btn btn-primary btn-sm" onclick="printDatesheet()">
@@ -80,18 +80,6 @@ if (!$exam_id) {
                                         </div>
 
                                         <div id="scheduleGridContainer" style="overflow-x: auto;"></div>
-
-                                        <div class="mt-4 pt-3 border-top">
-                                            <p style="color: #666; font-size: 12px; margin-bottom: 5px;">
-                                                <strong>Important Notes:</strong>
-                                            </p>
-                                            <ul style="color: #666; font-size: 11px; margin: 5px 0; padding-left: 20px;">
-                                                <li>Students must report 15 minutes before the exam time.</li>
-                                                <li>Entry will be closed 10 minutes after the exam starts.</li>
-                                                <li>Students must carry their admit card and ID proof.</li>
-                                                <li>Mobile phones are strictly prohibited in the examination hall.</li>
-                                            </ul>
-                                        </div>
 
                                         <div class="row mt-4">
                                             <div class="col-md-4 text-center">
@@ -151,9 +139,10 @@ if (!$exam_id) {
             border: 1px solid #000;
             padding: 10px;
             text-align: left;
-            color: #333;
+            color: #000;
             font-size: 13px;
             vertical-align: top;
+            font-weight: 600;
         }
 
         .schedule-table tbody tr:nth-child(odd) {
@@ -196,6 +185,7 @@ if (!$exam_id) {
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const examId = urlParams.get('exam_id');
+        const schoolId = <?php echo json_encode($school_id); ?>;
         let datesheetData = null;
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -247,9 +237,10 @@ if (!$exam_id) {
             }
 
             // Display school logo if available
-            if (school.logo_path) {
+            if (school.logo_path && schoolId) {
+                const logoPath = `../../../../../../Storage/uploads/schools/school_${schoolId}/${school.logo_path}`;
                 document.getElementById('logoContainer').style.display = 'block';
-                document.getElementById('schoolLogo').src = school.logo_path;
+                document.getElementById('schoolLogo').src = logoPath;
             }
 
             // Set dynamic school name
@@ -281,7 +272,8 @@ if (!$exam_id) {
                     }
                     gridData[item.exam_date][item.class_name].push({
                         subject: item.subject_name,
-                        time: item.exam_time
+                        time: item.exam_time,
+                        section: item.section_name || ''
                     });
                 });
 
@@ -300,11 +292,11 @@ if (!$exam_id) {
                     <table class="schedule-table" style="border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 13px;">
                         <thead>
                             <tr style="background-color: #f8f9fa;">
-                                <th style="border: 1px solid #000; padding: 12px; font-weight: 700; width: 120px; text-align: center;">DATE</th>
+                                <th style="border: 1px solid #000; padding: 12px; font-weight: 700; width: 120px; text-align: center; color: #000;">DATE</th>
             `;
 
             classes.forEach(className => {
-                html += `<th style="border: 1px solid #000; padding: 12px; font-weight: 700; text-align: center; min-width: 150px;">${escapeHtml(className)}</th>`;
+                html += `<th style="border: 1px solid #000; padding: 12px; font-weight: 700; text-align: center; min-width: 150px; color: #000;">${escapeHtml(className)}</th>`;
             });
 
             html += `
@@ -319,21 +311,48 @@ if (!$exam_id) {
                 const formattedDate = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
                 const dateDisplay = formattedDate + ' (' + dayName + ')';
 
-                html += `<tr style="height: 80px;">`;
-                html += `<td style="border: 1px solid #000; padding: 10px; font-weight: 600; text-align: center; vertical-align: top;">${escapeHtml(dateDisplay)}</td>`;
+                html += `<tr style="height: auto; min-height: 80px;">`;
+                html += `<td style="border: 1px solid #000; padding: 10px; font-weight: 700; text-align: center; vertical-align: top; color: #000;">${escapeHtml(dateDisplay)}</td>`;
 
                 classes.forEach(className => {
                     const subjects = gridData[date][className] || [];
                     let cellContent = '';
 
-                    subjects.forEach((item) => {
-                        cellContent += `<div style="margin-bottom: 4px; font-size: 12px;">
-                            <strong>${escapeHtml(item.subject)}</strong><br>
-                            <small style="color: #666;">Time: ${escapeHtml(item.time)}</small>
-                        </div>`;
+                    // Group subjects by time and combine sections
+                    const groupedByTime = {};
+                    subjects.forEach(item => {
+                        if (!groupedByTime[item.time]) {
+                            groupedByTime[item.time] = [];
+                        }
+                        groupedByTime[item.time].push(item);
                     });
 
-                    html += `<td style="border: 1px solid #000; padding: 10px; vertical-align: top;">${cellContent || '-'}</td>`;
+                    // Generate content for each time slot
+                    Object.keys(groupedByTime).sort().forEach(time => {
+                        const items = groupedByTime[time];
+                        const uniqueSubjects = [...new Set(items.map(i => i.subject))];
+
+                        uniqueSubjects.forEach(subject => {
+                            const sectionsForSubject = items.filter(i => i.subject === subject).map(i => i.section).filter(s => s);
+                            let subjectDisplay = escapeHtml(subject);
+
+                            if (sectionsForSubject.length > 0) {
+                                const uniqueSections = [...new Set(sectionsForSubject)];
+                                if (uniqueSections.length > 1) {
+                                    subjectDisplay += ' (All Sections)';
+                                } else {
+                                    subjectDisplay += ' (Sec-' + escapeHtml(uniqueSections[0]) + ')';
+                                }
+                            }
+
+                            cellContent += `<div style="margin-bottom: 8px; font-size: 12px; color: #000;">
+                                <strong style="color: #000; font-weight: 700;">${subjectDisplay}</strong><br>
+                                <span style="color: #000; font-weight: 600;">Time: ${escapeHtml(time)}</span>
+                            </div>`;
+                        });
+                    });
+
+                    html += `<td style="border: 1px solid #000; padding: 10px; vertical-align: top; color: #000;">${cellContent || '<span style="color: #000; font-weight: 600;">-</span>'}</td>`;
                 });
 
                 html += `</tr>`;
