@@ -398,5 +398,100 @@ class ExamAssignmentModel {
             return false;
         }
     }
+
+    /**
+     * Get subjects for a specific class (all sections)
+     */
+    public function getSubjectsByClass($class_id) {
+        try {
+            $query = "SELECT DISTINCT 
+                        ss.id,
+                        ss.name,
+                        ss.name as code
+                      FROM school_subject_assignments ssa
+                      JOIN school_subjects ss ON ssa.subject_id = ss.id
+                      WHERE ssa.school_id = :school_id 
+                        AND ssa.class_id = :class_id
+                      ORDER BY ss.name ASC";
+            
+            $stmt = $this->pdo->prepare($query);
+            $stmt->execute([
+                ':school_id' => $this->school_id,
+                ':class_id' => $class_id
+            ]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Save assignment to all sections of a class
+     */
+    public function saveAssignmentToAllSections($exam_id, $class_id, $subjects) {
+        try {
+            // Get all sections for this class
+            $sections = $this->getSectionsByClass($class_id);
+            
+            if (empty($sections)) {
+                return [
+                    'success' => false,
+                    'message' => 'No sections found for this class'
+                ];
+            }
+            
+            $exam_id = (int)$exam_id;
+            $class_id = (int)$class_id;
+            $section_count = 0;
+            
+            // Save assignment for each section
+            foreach ($sections as $section) {
+                $section_id = (int)$section['id'];
+                
+                // Save exam class
+                $exam_class_data = [
+                    'exam_id' => $exam_id,
+                    'class_id' => $class_id,
+                    'section_id' => $section_id,
+                    'status' => 'active'
+                ];
+                
+                $exam_class_id = $this->saveExamClass($exam_class_data);
+                
+                if (!$exam_class_id) {
+                    // Continue with next section even if one fails
+                    continue;
+                }
+                
+                // Save subjects for this section
+                $subjects_saved = $this->saveExamSubjects($exam_class_id, $subjects);
+                
+                if ($subjects_saved) {
+                    $section_count++;
+                } else {
+                    // Delete the exam class if subjects couldn't be saved
+                    $this->deleteExamClass($exam_class_id);
+                }
+            }
+            
+            if ($section_count === 0) {
+                return [
+                    'success' => false,
+                    'message' => 'Failed to save assignment to any sections'
+                ];
+            }
+            
+            return [
+                'success' => true,
+                'message' => "Exam assignment saved successfully for {$section_count} section(s)",
+                'sections_count' => $section_count
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ];
+        }
+    }
 }
 ?>

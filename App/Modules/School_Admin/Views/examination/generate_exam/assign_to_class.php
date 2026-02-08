@@ -214,9 +214,24 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
 
                                     <div class="col-md-4 mb-3">
                                         <label for="sectionSelect" class="form-label fw-bold" style="color: #000; font-size: 15px;">Select Section <span class="text-danger">*</span></label>
-                                        <select class="form-select form-control-lg" id="sectionSelect" name="section_id" onchange="loadSubjectsByClassAndSection(document.getElementById('classSelect').value, this.value)" required style="border: 2px solid #e9ecef; color: #000;">
+                                        <select class="form-select form-control-lg" id="sectionSelect" name="section_id" onchange="loadSubjectsByClassAndSection(document.getElementById('classSelect').value, this.value); checkApplyAllStatus();" required style="border: 2px solid #e9ecef; color: #000;">
                                             <option value="">-- Choose Section --</option>
                                         </select>
+                                    </div>
+                                </div>
+
+                                <!-- Apply to All Sections Checkbox -->
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="applyToAllSections" name="apply_to_all_sections" onchange="toggleApplyToAllSections()">
+                                            <label class="form-check-label fw-bold" style="color: #000; cursor: pointer;" for="applyToAllSections">
+                                                <i class="fa fa-check-square"></i> Apply to All Sections of this Class
+                                            </label>
+                                            <small class="d-block text-muted mt-2">
+                                                <i class="fa fa-info-circle"></i> Check this to apply the subjects to all sections in the same class automatically. The section selection will be disabled.
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -721,6 +736,8 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
         function openAssignModal() {
             document.getElementById('examClassId').value = '';
             document.getElementById('assignForm').reset();
+            document.getElementById('applyToAllSections').checked = false; // Reset checkbox
+            document.getElementById('sectionSelect').disabled = false; // Enable section select
             document.getElementById('assignModalLabel').innerHTML = 
                 '<i class="fa fa-tasks"></i> Assign Exam to Class & Add Subjects';
             
@@ -1074,12 +1091,20 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
             const examId = document.getElementById('examSelectId').value;
             const classId = document.getElementById('classSelect').value;
             const sectionId = document.getElementById('sectionSelect').value;
+            const applyToAll = document.getElementById('applyToAllSections').checked;
+            
+            // If apply to all is not checked, section must be selected
+            if (!applyToAll && !sectionId) {
+                alert('Please select a section or check "Apply to All Sections"');
+                return;
+            }
             
             const examClassData = {
                 exam_id: examId,
                 class_id: classId,
-                section_id: sectionId,
-                subjects: currentSubjects
+                section_id: applyToAll ? null : sectionId, // null means apply to all
+                subjects: currentSubjects,
+                apply_to_all_sections: applyToAll
             };
 
             // Call API to save assignment
@@ -1105,7 +1130,10 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
             })
             .then(data => {
                 if (data.success) {
-                    alert('Assignment with ' + currentSubjects.length + ' subject(s) saved successfully');
+                    const message = applyToAll 
+                        ? `Assignment with ${currentSubjects.length} subject(s) saved successfully for all sections of the class`
+                        : `Assignment with ${currentSubjects.length} subject(s) saved successfully`;
+                    alert(message);
                     
                     // Close modal
                     const modalElement = document.getElementById('assignModal');
@@ -1255,6 +1283,73 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
             if (!dateString) return '-';
             const date = new Date(dateString);
             return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        /**
+         * Toggle apply to all sections checkbox
+         */
+        function toggleApplyToAllSections() {
+            const checkbox = document.getElementById('applyToAllSections');
+            const sectionSelect = document.getElementById('sectionSelect');
+            
+            if (checkbox.checked) {
+                sectionSelect.disabled = true;
+                sectionSelect.value = '';
+                // Load all subjects for the selected class (without specific section)
+                loadAllSubjectsByClass(document.getElementById('classSelect').value);
+            } else {
+                sectionSelect.disabled = false;
+                sectionSelect.value = '';
+                // Reset subjects
+                allSubjects = [];
+                loadSubjectsByClassAndSection(document.getElementById('classSelect').value, '');
+            }
+        }
+
+        /**
+         * Check if apply all sections checkbox should be enabled
+         */
+        function checkApplyAllStatus() {
+            const classId = document.getElementById('classSelect').value;
+            const checkbox = document.getElementById('applyToAllSections');
+            
+            if (!classId) {
+                checkbox.disabled = true;
+                checkbox.checked = false;
+            } else {
+                checkbox.disabled = false;
+            }
+        }
+
+        /**
+         * Load all subjects by class (regardless of section)
+         */
+        function loadAllSubjectsByClass(classId) {
+            if (!classId) {
+                allSubjects = [];
+                return;
+            }
+
+            fetch(`./manage_exam_assignments.php?action=get_subjects_by_class&class_id=${classId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP ${response.status}: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success && data.data) {
+                        allSubjects = data.data;
+                    } else {
+                        allSubjects = [];
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading subjects by class:', error.message);
+                    allSubjects = [];
+                });
         }
 
         /**

@@ -1,10 +1,20 @@
 <?php
-/**
- * Examination Schedule / Datesheet Display
- * User must be logged in as School Admin to access this page
- */
 require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
+
+// Get exam_id from URL - THIS IS THE ONLY INPUT
+$exam_id = $_GET['exam_id'] ?? null;
+
+if (!$exam_id) {
+    die('
+        <div style="text-align: center; padding: 50px; font-family: Arial;">
+            <h2 style="color: red;">Error: Exam ID is required</h2>
+            <p>Please access this page with: schedule.php?exam_id=2</p>
+            <button style="color: blue; text-decoration: underline;" onclick="window.history.back()">Back</button>
+        </div>
+    ');
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -14,22 +24,15 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <meta name="description" content="Examination Schedule and Datesheet" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <!-- app favicon -->
     <link rel="shortcut icon" href="../../../../../../public/assets/img/favicon.ico">
-    <!-- google fonts -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet">
-    <!-- plugin stylesheets -->
     <link rel="stylesheet" type="text/css" href="../../../../../../public/assets/css/vendors.css" />
-    <!-- app style -->
     <link rel="stylesheet" type="text/css" href="../../../../../../public/assets/css/style.css" />
 </head>
 
 <body>
-    <!-- begin app -->
     <div class="app">
-        <!-- begin app-wrap -->
         <div class="app-wrap">
-            <!-- begin pre-loader -->
             <div class="loader">
                 <div class="h-100 d-flex justify-content-center">
                     <div class="align-self-center">
@@ -37,23 +40,11 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                     </div>
                 </div>
             </div>
-            <!-- end pre-loader -->
 
-            <!-- begin app-header -->
-            <header class="app-header top-bar">
-                <!-- begin navbar -->
-                <!-- end navbar -->
-            </header>
-            <!-- end app-header -->
+            <header class="app-header top-bar"></header>
 
-            <!-- begin app-container -->
             <div class="app-container">
-                <!-- begin app-navbar -->
-                <!-- end app-navbar -->
-
-                <!-- begin app-main -->
                 <div class="" id="main">
-                    <!-- begin container-fluid -->
                     <div class="container-fluid">
                         <div class="row mb-4">
                             <div class="col-12">
@@ -74,28 +65,22 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                             </div>
                         </div>
 
-                        <!-- Datesheet Display -->
                         <div class="row">
                             <div class="col-12">
                                 <div class="card" id="datesheetCard" style="display: none;">
                                     <div class="card-body">
-                                        <!-- Header Section -->
                                         <div class="text-center mb-4" id="datesheetHeader">
-                                            <!-- School Name -->
+                                            <div class="mb-2" id="logoContainer" style="display: none;">
+                                                <img id="schoolLogo" src="" alt="School Logo" style="max-width: 80px; max-height: 80px;" class="mb-2">
+                                            </div>
+
                                             <h2 id="schoolName" style="color: #000; font-weight: 700; margin: 0; font-size: 24px;"></h2>
-
-                                            <!-- Exam Name -->
-                                            <h4 id="examName" style="color: #333; font-weight: 600; margin: 10px 0 0 0;">DATE SHEET FOR EXAMINATION - 2024</h4>
-
+                                            <h4 id="examName" style="color: #333; font-weight: 600; margin: 10px 0 0 0;"></h4>
                                             <hr style="border-top: 2px solid #000; margin: 15px 0;">
                                         </div>
 
-                                        <!-- Schedule Grid Table -->
-                                        <div id="scheduleGridContainer" style="overflow-x: auto;">
-                                            <!-- Schedule grid will be generated here -->
-                                        </div>
+                                        <div id="scheduleGridContainer" style="overflow-x: auto;"></div>
 
-                                        <!-- Footer Notes -->
                                         <div class="mt-4 pt-3 border-top">
                                             <p style="color: #666; font-size: 12px; margin-bottom: 5px;">
                                                 <strong>Important Notes:</strong>
@@ -108,7 +93,6 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                                             </ul>
                                         </div>
 
-                                        <!-- Signature Section -->
                                         <div class="row mt-4">
                                             <div class="col-md-4 text-center">
                                                 <div style="height: 50px; border-top: 1px solid #000; margin-bottom: 5px;"></div>
@@ -126,7 +110,6 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                                     </div>
                                 </div>
 
-                                <!-- Empty State -->
                                 <div class="card" id="emptyState">
                                     <div class="card-body text-center py-5">
                                         <i class="fa fa-calendar" style="font-size: 48px; color: #ccc; margin-bottom: 20px; display: block;"></i>
@@ -136,23 +119,14 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                             </div>
                         </div>
                     </div>
-                    <!-- end container-fluid -->
                 </div>
-                <!-- end app-main -->
             </div>
-            <!-- end app-container -->
         </div>
-        <!-- end app-wrap -->
     </div>
-    <!-- end app -->
 
-    <!-- plugins -->
     <script src="../../../../../../public/assets/js/vendors.js"></script>
-
-    <!-- custom app -->
     <script src="../../../../../../public/assets/js/app.js"></script>
 
-    <style>
     <style>
         .schedule-table {
             width: 100%;
@@ -194,35 +168,12 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
             background-color: #e9ecef;
         }
 
-        .exam-date {
-            font-weight: 600;
-            text-align: center;
-        }
-
-        .exam-day {
-            text-align: center;
-        }
-
-        .subject-name {
-            font-weight: 500;
-        }
-
-        .exam-time {
-            text-align: center;
-            font-weight: 600;
-        }
-
-        .marks-info {
-            text-align: center;
-        }
-
         @media print {
             .app-header,
             .app-navbar,
             .loader,
             .btn,
             .breadcrumb,
-            #filterExam,
             .card > .card-body > .row:first-child {
                 display: none !important;
             }
@@ -243,19 +194,13 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
     </style>
 
     <script>
-        let allScheduleData = [];
-        let selectedExamId = null;
+        const urlParams = new URLSearchParams(window.location.search);
+        const examId = urlParams.get('exam_id');
+        let datesheetData = null;
 
-        // Load page
         document.addEventListener('DOMContentLoaded', function () {
-            // Get exam_id from URL parameters
-            const urlParams = new URLSearchParams(window.location.search);
-            selectedExamId = urlParams.get('exam_id');
-
-            if (!selectedExamId) {
-                document.getElementById('emptyMessage').textContent = 'No exam selected. Please go back and select an exam.';
-                document.getElementById('datesheetCard').style.display = 'none';
-                document.getElementById('emptyState').style.display = 'block';
+            if (!examId) {
+                document.getElementById('emptyMessage').textContent = 'Error: No exam ID provided in URL';
                 return;
             }
 
@@ -269,81 +214,86 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
             }, 500);
         });
 
-        /**
-         * Load schedule data for the exam
-         */
         function loadDatesheet() {
-            fetch('./manage_exam_assignments.php?action=get_assignments&exam_id=' + selectedExamId)
+            fetch('./manage_exam_assignments.php?action=get_datesheet_data&exam_id=' + examId)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success && data.data && data.data.length > 0) {
-                        allScheduleData = data.data;
+                    if (data.success && data.data) {
+                        datesheetData = data.data;
                         displayDatesheet();
                     } else {
-                        document.getElementById('emptyMessage').textContent = 'No schedule data available for this exam.';
+                        document.getElementById('emptyMessage').textContent = data.message || 'Failed to load datesheet data';
                         document.getElementById('datesheetCard').style.display = 'none';
                         document.getElementById('emptyState').style.display = 'block';
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading schedule:', error);
-                    document.getElementById('emptyMessage').textContent = 'Error loading schedule. Please try again.';
+                    document.getElementById('emptyMessage').textContent = 'Error loading datesheet. Please try again.';
                     document.getElementById('datesheetCard').style.display = 'none';
                     document.getElementById('emptyState').style.display = 'block';
                 });
         }
 
-        /**
-         * Display the datesheet in grid format (dates × classes matrix)
-         */
         function displayDatesheet() {
-            if (allScheduleData.length === 0) {
+            if (!datesheetData) return;
+
+            const school = datesheetData.school;
+            const exam = datesheetData.exam;
+            const scheduleData = datesheetData.schedule || [];
+
+            if (!school || !exam) {
+                document.getElementById('emptyMessage').textContent = 'Incomplete data received from server';
                 return;
             }
 
-            // Get exam info from first record
-            const examInfo = allScheduleData[0];
+            // Display school logo if available
+            if (school.logo_path) {
+                document.getElementById('logoContainer').style.display = 'block';
+                document.getElementById('schoolLogo').src = school.logo_path;
+            }
 
-            // Update header information
-            document.getElementById('schoolName').textContent = 'SHRI RAM GLOBAL SCHOOL';
-            document.getElementById('examName').textContent = 'DATE SHEET FOR ' + (examInfo.exam_name || 'EXAMINATION') + ' - 2024';
+            // Set dynamic school name
+            document.getElementById('schoolName').textContent = school.school_name || 'School Name';
 
-            // Get unique dates and classes
-            const uniqueDates = [...new Set(allScheduleData.map(item => item.exam_date))].sort();
-            const uniqueClasses = [...new Set(allScheduleData.map(item => item.class_name))].sort();
+            // Set dynamic exam name with academic year
+            const startDate = new Date(exam.start_date);
+            const year = startDate.getFullYear();
+            const nextYear = year + 1;
+            document.getElementById('examName').textContent = 
+                'DATE SHEET FOR ' + (exam.exam_name || 'EXAMINATION') + ' - ' + year + '-' + (nextYear % 100);
 
-            // Create grid data structure: { date: { class: [{subject, time}] } }
-            const gridData = {};
-            uniqueDates.forEach(date => {
-                gridData[date] = {};
-                uniqueClasses.forEach(className => {
-                    gridData[date][className] = [];
+            // Generate grid if we have schedule data
+            if (scheduleData.length > 0) {
+                const uniqueDates = [...new Set(scheduleData.map(item => item.exam_date))].sort();
+                const uniqueClasses = [...new Set(scheduleData.map(item => item.class_name))].sort();
+
+                const gridData = {};
+                uniqueDates.forEach(date => {
+                    gridData[date] = {};
+                    uniqueClasses.forEach(className => {
+                        gridData[date][className] = [];
+                    });
                 });
-            });
 
-            // Populate grid with schedule data
-            allScheduleData.forEach(item => {
-                if (!gridData[item.exam_date][item.class_name]) {
-                    gridData[item.exam_date][item.class_name] = [];
-                }
-                gridData[item.exam_date][item.class_name].push({
-                    subject: item.subject_name,
-                    time: item.exam_time,
-                    marks: item.total_marks,
-                    passing_marks: item.passing_marks
+                scheduleData.forEach(item => {
+                    if (!gridData[item.exam_date][item.class_name]) {
+                        gridData[item.exam_date][item.class_name] = [];
+                    }
+                    gridData[item.exam_date][item.class_name].push({
+                        subject: item.subject_name,
+                        time: item.exam_time
+                    });
                 });
-            });
 
-            // Generate grid table
-            generateGridTable(gridData, uniqueDates, uniqueClasses);
+                generateGridTable(gridData, uniqueDates, uniqueClasses);
+            } else {
+                document.getElementById('scheduleGridContainer').innerHTML = '<p class="text-center text-muted">No schedule data available for this exam</p>';
+            }
 
             document.getElementById('datesheetCard').style.display = 'block';
             document.getElementById('emptyState').style.display = 'none';
         }
 
-        /**
-         * Generate grid table HTML
-         */
         function generateGridTable(gridData, dates, classes) {
             let html = `
                 <div style="overflow-x: auto;">
@@ -353,9 +303,8 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                                 <th style="border: 1px solid #000; padding: 12px; font-weight: 700; width: 120px; text-align: center;">DATE</th>
             `;
 
-            // Add class columns
             classes.forEach(className => {
-                html += `<th style="border: 1px solid #000; padding: 12px; font-weight: 700; text-align: center; min-width: 150px;">${className}</th>`;
+                html += `<th style="border: 1px solid #000; padding: 12px; font-weight: 700; text-align: center; min-width: 150px;">${escapeHtml(className)}</th>`;
             });
 
             html += `
@@ -364,7 +313,6 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                         <tbody>
             `;
 
-            // Add rows for each date
             dates.forEach(date => {
                 const dateObj = new Date(date);
                 const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
@@ -372,17 +320,16 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                 const dateDisplay = formattedDate + ' (' + dayName + ')';
 
                 html += `<tr style="height: 80px;">`;
-                html += `<td style="border: 1px solid #000; padding: 10px; font-weight: 600; text-align: center; vertical-align: top;">${dateDisplay}</td>`;
+                html += `<td style="border: 1px solid #000; padding: 10px; font-weight: 600; text-align: center; vertical-align: top;">${escapeHtml(dateDisplay)}</td>`;
 
-                // Add cells for each class
                 classes.forEach(className => {
                     const subjects = gridData[date][className] || [];
                     let cellContent = '';
 
-                    subjects.forEach((item, index) => {
+                    subjects.forEach((item) => {
                         cellContent += `<div style="margin-bottom: 4px; font-size: 12px;">
-                            <strong>${item.subject}</strong><br>
-                            <small style="color: #666;">Time: ${item.time}</small>
+                            <strong>${escapeHtml(item.subject)}</strong><br>
+                            <small style="color: #666;">Time: ${escapeHtml(item.time)}</small>
                         </div>`;
                     });
 
@@ -401,25 +348,23 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
             document.getElementById('scheduleGridContainer').innerHTML = html;
         }
 
-        /**
-         * Print datesheet
-         */
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
         function printDatesheet() {
-            if (!selectedExamId) {
-                alert('Please go back and select an exam first');
-                return;
-            }
             window.print();
         }
 
-        /**
-         * Download datesheet as PDF
-         */
         function downloadDatesheet() {
-            if (!selectedExamId) {
-                alert('Please go back and select an exam first');
-                return;
-            }
             alert('PDF download functionality will be implemented soon');
         }
     </script>

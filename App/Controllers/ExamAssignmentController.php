@@ -54,8 +54,13 @@ class ExamAssignmentController {
             $missing = [];
             if (empty($assignment_data['exam_id'])) $missing[] = 'exam_id';
             if (empty($assignment_data['class_id'])) $missing[] = 'class_id';
-            if (empty($assignment_data['section_id'])) $missing[] = 'section_id';
             if (empty($assignment_data['subjects'])) $missing[] = 'subjects';
+            
+            // Section is required only if not applying to all sections
+            $apply_to_all = $assignment_data['apply_to_all_sections'] ?? false;
+            if (!$apply_to_all && empty($assignment_data['section_id'])) {
+                $missing[] = 'section_id';
+            }
             
             if (!empty($missing)) {
                 return [
@@ -64,6 +69,16 @@ class ExamAssignmentController {
                 ];
             }
             
+            // If apply_to_all_sections is true, save for all sections
+            if ($apply_to_all) {
+                return $this->model->saveAssignmentToAllSections(
+                    $assignment_data['exam_id'],
+                    $assignment_data['class_id'],
+                    $assignment_data['subjects']
+                );
+            }
+            
+            // Otherwise, save for single section (original behavior)
             $exam_class_data = [
                 'exam_id' => $assignment_data['exam_id'],
                 'class_id' => $assignment_data['class_id'],
@@ -265,6 +280,13 @@ class ExamAssignmentController {
                 'message' => 'Error: ' . $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Get subjects for a specific class (all sections)
+     */
+    public function getSubjectsByClass($class_id) {
+        return $this->model->getSubjectsByClass($class_id);
     }
 }
 ?>

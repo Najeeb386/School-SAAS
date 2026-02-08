@@ -256,6 +256,23 @@ try {
             ]);
             break;
 
+        case 'get_subjects_by_class':
+            // Get all subjects assigned to a specific class (all sections)
+            $class_id = $_GET['class_id'] ?? null;
+            
+            if (!$class_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Class ID is required']);
+                exit;
+            }
+            
+            $subjects = $controller->getSubjectsByClass($class_id);
+            echo json_encode([
+                'success' => true,
+                'data' => $subjects
+            ]);
+            break;
+
         case 'update_subject':
             // Update single subject details only
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -299,6 +316,56 @@ try {
             
             http_response_code($result['success'] ? 200 : 400);
             echo json_encode($result);
+            break;
+
+        case 'get_datesheet_data':
+            // Get complete datesheet data including school info
+            $exam_id = $_GET['exam_id'] ?? null;
+            
+            if (!$exam_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Exam ID is required']);
+                exit;
+            }
+            
+            // Get school info from session
+            $school_id = $_SESSION['school_id'] ?? null;
+            
+            // Fetch school details from schools table
+            $stmt = $pdo->prepare("
+                SELECT id, name as school_name, logo_path, address, city
+                FROM schools 
+                WHERE id = ?
+            ");
+            $stmt->execute([$school_id]);
+            $school_data = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Get exam details
+            $stmt = $pdo->prepare("
+                SELECT id, exam_name, start_date, end_date, status 
+                FROM school_exams 
+                WHERE id = ? AND school_id = ?
+            ");
+            $stmt->execute([$exam_id, $school_id]);
+            $exam_data = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$exam_data) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Exam not found']);
+                exit;
+            }
+            
+            // Get complete schedule data for this exam
+            $assignments = $controller->getAssignmentsByExamId($exam_id);
+            
+            echo json_encode([
+                'success' => true,
+                'data' => [
+                    'school' => $school_data,
+                    'exam' => $exam_data,
+                    'schedule' => $assignments
+                ]
+            ]);
             break;
             
         default:
