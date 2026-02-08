@@ -461,8 +461,8 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                         <button class="btn btn-sm btn-warning" onclick="editExam(${exam.id})" title="Edit">
                             <i class="fa fa-edit"></i>
                         </button>
-                       <a class="btn btn-sm btn-success" href="assign_to_class.php" title="Assign to Class">
-                            </i> Details
+                        <a class="btn btn-sm btn-success" href="assign_to_class.php?exam_id=${exam.id}" title="Assign to Class">
+                            <i class="fa fa-tasks"></i> Details
                         </a>
                     </td>
                 `;
