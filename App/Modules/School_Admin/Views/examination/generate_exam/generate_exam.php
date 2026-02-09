@@ -55,10 +55,10 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                     <!-- begin container-fluid -->
                     <div class="container-fluid">
                         <div class="row mb-4">
-                            <div class="col-12">
+                            <div class="col-11">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h3 class="mb-0">Generate Exam</h3>
-                                    <button class="btn btn-primary" onclick="openExamModal()">
+                                    <button class="btn btn-primary mt-3" onclick="openExamModal()">
                                         <i class="fa fa-plus"></i> Create New Exam
                                     </button>
                                 </div>
@@ -68,6 +68,11 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                                         <li class="breadcrumb-item active" aria-current="page">Generate Exam</li>
                                     </ol>
                                 </nav>
+                            </div>
+                            <div class="col-1 mt-3">
+                                <button class="btn btn-info" onclick="window.location.href='../examination.php'">
+                                        <i class="fa fa-arrow-left"></i> Back
+                                    </button>
                             </div>
                         </div>
 

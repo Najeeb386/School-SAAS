@@ -100,22 +100,6 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                             </div>
 
                             <div class="col-md-3 mb-4">
-                                <a href="expenses/expenses.php" class="text-dark text-decoration-none">
-                                    <div class="card shadow-sm h-100">
-                                        <div class="card-body d-flex align-items-center">
-                                            <div class="mr-3">
-                                                <i class="fa fa-file-text-o fa-2x text-warning"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0">Monthly test</h6>
-                                                <small class="text-muted">Manage monthly test details</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </a>
-                            </div>
-
-                            <div class="col-md-3 mb-4">
                                 <a href="invoices.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
@@ -130,10 +114,7 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                                     </div>
                                 </a>
                             </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-3 mb-4">
+                             <div class="col-md-3 mb-4">
                                 <a href="reports.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
