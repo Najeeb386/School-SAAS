@@ -100,7 +100,7 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                             </div>
 
                             <div class="col-md-3 mb-4">
-                                <a href="invoices.php" class="text-dark text-decoration-none">
+                                <a href="results/upload_marks.php" class="text-dark text-decoration-none">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">

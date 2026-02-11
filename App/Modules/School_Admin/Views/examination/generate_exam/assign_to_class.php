@@ -724,6 +724,9 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                         <button class="btn btn-sm btn-danger" onclick="deleteAssignmentSubject(${assignment.id})" title="Delete">
                             <i class="fa fa-trash"></i>
                         </button>
+                        <button class="btn btn-sm btn-info"  title="Marks / Results">
+                            Marks / Results
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(row);

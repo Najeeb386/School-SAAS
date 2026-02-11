@@ -41,7 +41,7 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
             <!-- begin app-container -->
             <div class="app-container">
                 <!-- begin app-main -->
-                <div class="app-main" id="main">
+                <div class="" id="main">
                     <!-- begin container-fluid -->
                     <div class="container-fluid">
                         <div class="row mb-4">
@@ -62,18 +62,7 @@ require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
                 <!-- end app-main -->
             </div>
             <!-- end app-container -->
-            <!-- begin footer -->
-            <footer class="footer">
-                <div class="row">
-                    <div class="col-12 col-sm-6 text-center text-sm-left">
-                        <p>&copy; Copyright 2019. All rights reserved.</p>
-                    </div>
-                   <div class="col col-sm-6 ml-sm-auto text-center text-sm-right">
-                        <p><a target="_blank" href="https://www.templateshub.net">Templates Hub</a></p>
-                    </div>
-                </div>
-            </footer>
-            <!-- end footer -->
+          
         </div>
         <!-- end app-wrap -->
     </div>
