@@ -234,9 +234,7 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
                                             </ol>
                                         </nav>
                                     </div>
-                                    <button class="btn btn-primary" data-toggle="modal" data-target="#bulkUploadModal">
-                                        <i class="fas fa-cloud-upload-alt mr-2"></i>Bulk Upload
-                                    </button>
+                                    
                                 </div>
                             </div>
                         </div>
@@ -412,72 +410,11 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
     </div>
     <!-- end app -->
 
-    <!-- Bulk Upload Modal -->
-    <div class="modal fade" id="bulkUploadModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-cloud-upload-alt mr-2"></i>Bulk Upload Marks
-                    </h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        <strong>Bulk Upload Format:</strong> Use CSV or Excel file with columns: Student ID, Student Name, Subject, Marks, Grade
-                    </div>
-                    <form id="bulkUploadForm">
-                        <div class="form-group">
-                            <label>Select Exam</label>
-                            <select id="bulk_exam_id" class="form-control" required>
-                                <option value="">-- Choose Exam --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Select Class</label>
-                            <select id="bulk_class_id" class="form-control" required>
-                                <option value="">-- Choose Class --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Select Section</label>
-                            <select id="bulk_section_id" class="form-control" required>
-                                <option value="">-- Choose Section --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Upload File (.csv or .xlsx)</label>
-                            <div class="custom-file">
-                                <input type="file" class="custom-file-input" id="bulkFile" accept=".csv,.xlsx" required>
-                                <label class="custom-file-label" for="bulkFile">Choose file...</label>
-                            </div>
-                            <small class="form-text text-muted">Maximum file size: 5MB</small>
-                        </div>
-                        <div id="uploadProgressContainer" style="display: none;">
-                            <label>Upload Progress</label>
-                            <div class="progress">
-                                <div id="uploadProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
-                            </div>
-                            <small id="uploadStatus" class="text-muted">Uploading...</small>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" id="btnBulkUpload" class="btn btn-primary">
-                        <i class="fas fa-check mr-2"></i>Upload Marks
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    
 
     <!-- Upload Marks Modal (Individual) -->
     <div class="modal fade" id="uploadMarksModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-dialog modal-xl" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
@@ -488,36 +425,89 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
                     </button>
                 </div>
                 <div class="modal-body">
-                    <div id="uploadMarksContent">
-                        <form id="uploadMarksForm">
-                            <div class="form-group">
-                                <label>Exam</label>
-                                <input type="text" class="form-control" id="modal_exam_name" readonly>
-                                <input type="hidden" id="modal_exam_id">
-                            </div>
-                            <div class="form-group">
-                                <label>Class / Section</label>
-                                <input type="text" class="form-control" id="modal_class_section" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label>Upload File (.csv or .xlsx)</label>
-                                <div class="custom-file">
-                                    <input type="file" class="custom-file-input" id="marksFile" accept=".csv,.xlsx" required>
-                                    <label class="custom-file-label" for="marksFile">Choose file...</label>
+                    <input type="hidden" id="modal_exam_id">
+                    
+                    <!-- Exam Info -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-1">Exam Name</h6>
+                                    <p class="font-weight-bold" id="modal_exam_name_display">-</p>
                                 </div>
-                                <small class="form-text text-muted">
-                                    <strong>Download Template:</strong> 
-                                    <a href="#" class="template-download">CSV Template</a> | 
-                                    <a href="#" class="template-download">Excel Template</a>
-                                </small>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-1">Total Marks</h6>
+                                    <p class="font-weight-bold" id="modal_exam_marks_display">-</p>
+                                </div>
                             </div>
-                        </form>
+                        </div>
+                    </div>
+
+                    <!-- Class & Section Selection -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="modal_class_id" class="font-weight-600">Select Class</label>
+                                <select id="modal_class_id" class="form-control form-control-sm" required>
+                                    <option value="">-- Choose Class --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="modal_section_id" class="font-weight-600">Select Section</label>
+                                <select id="modal_section_id" class="form-control form-control-sm" required disabled>
+                                    <option value="">-- Choose Section --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="modal_subject_id" class="font-weight-600">Select Subject</label>
+                                <select id="modal_subject_id" class="form-control form-control-sm" required disabled>
+                                    <option value="">-- Choose Subject --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Students List -->
+                    <div id="studentsContainer" style="display: none;">
+                        <h6 class="font-weight-600 mb-3">
+                            <i class="fas fa-users mr-2"></i>Students
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th style="width: 5%;">#</th>
+                                        <th style="width: 20%;">Student Name</th>
+                                        <th style="width: 15%;">Roll No</th>
+                                        <th style="width: 15%;">Total Marks</th>
+                                        <th style="width: 25%;">Obtained Marks</th>
+                                        <th style="width: 20%;">Grade</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="studentsTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-3">
+                                            <p>Select class and section to view students</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Loading Message -->
+                    <div id="loadingMessage" class="text-center text-muted py-4">
+                        <p>Select a class and section to display students</p>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                     <button type="button" id="btnUploadMarks" class="btn btn-primary">
-                        <i class="fas fa-upload mr-2"></i>Upload
+                        <i class="fas fa-check mr-2"></i>Save Marks
                     </button>
                 </div>
             </div>
@@ -560,6 +550,13 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
 
     <!-- Page Scripts -->
     <script>
+        // Configure jQuery AJAX to send credentials (cookies) with all requests
+        $.ajaxSetup({
+            xhrFields: {
+                withCredentials: true
+            }
+        });
+
         $(function() {
             // Initialize - Load filter options
             loadSessions();
@@ -592,19 +589,61 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
             $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
                 if ($(e.target).attr('href') === '#allExamsTab') {
                     loadAllExams();
-                }
-            });
-
-            // Bulk upload button
-            $('#btnBulkUpload').on('click', function() {
-                // TODO: Implement bulk upload logic
-                alert('Bulk upload feature coming soon!');
-            });
+                }            });
 
             // Upload marks button
             $('#btnUploadMarks').on('click', function() {
                 // TODO: Implement individual upload logic
-                alert('Upload marks feature coming soon!');
+                alert('Mark saving feature coming soon!');
+            });
+
+            // Modal class selection change
+            $('#modal_class_id').on('change', function() {
+                var classId = $(this).val();
+                var examId = $('#modal_exam_id').val();
+                
+                $('#modal_section_id').val('').prop('disabled', !classId);
+                $('#modal_subject_id').val('').prop('disabled', true);
+                $('#studentsContainer').hide();
+                $('#loadingMessage').show().text('Select a section and subject to display students');
+                
+                if (classId) {
+                    loadModalSectionsByClass(classId);
+                    loadModalSubjectsByExam(examId, classId);
+                }
+            });
+
+            // Modal section selection change
+            $('#modal_section_id').on('change', function() {
+                var classId = $('#modal_class_id').val();
+                var sectionId = $(this).val();
+                var subjectId = $('#modal_subject_id').val();
+                
+                // Only load students if all three are selected
+                if (classId && sectionId && subjectId) {
+                    loadStudentsByClassSection(classId, sectionId);
+                } else {
+                    $('#studentsContainer').hide();
+                    $('#loadingMessage').show().text('Please select class, section, and subject');
+                }
+            });
+
+            // Modal subject selection change
+            $('#modal_subject_id').on('change', function() {
+                var classId = $('#modal_class_id').val();
+                var sectionId = $('#modal_section_id').val();
+                var subjectId = $(this).val();
+                
+                // Only load students if all three are selected
+                if (classId && sectionId && subjectId) {
+                    var subjectOption = $('#modal_subject_id').find('option:selected');
+                    var totalMarks = subjectOption.data('total-marks') || 0;
+                    $('#modal_exam_marks_display').text(totalMarks + ' Marks');
+                    loadStudentsByClassSection(classId, sectionId);
+                } else {
+                    $('#studentsContainer').hide();
+                    $('#loadingMessage').show().text('Please select all fields to display students');
+                }
             });
         });
 
@@ -771,9 +810,115 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
         // Open Upload Modal
         function openUploadModal(examId, examName) {
             $('#modal_exam_id').val(examId);
-            $('#modal_exam_name').val(examName);
-            $('#modal_class_section').val('');
+            $('#modal_exam_name_display').text(examName);
+            $('#modal_exam_marks_display').text('-'); // TODO: Fetch from exam details
+            
+            // Reset form
+            $('#modal_class_id').html('<option value="">-- Choose Class --</option>').prop('disabled', false);
+            $('#modal_section_id').html('<option value="">-- Choose Section --</option>').prop('disabled', true);
+            $('#modal_subject_id').html('<option value="">-- Choose Subject --</option>').prop('disabled', true);
+            $('#studentsContainer').hide();
+            $('#loadingMessage').show().text('Select a class, section, and subject to display students');
+            
+            // Load classes for this exam
+            loadModalClassesByExam(examId);
+            
             $('#uploadMarksModal').modal('show');
+        }
+
+        // Load Classes for Modal (Exam-Specific)
+        function loadModalClassesByExam(examId) {
+            $.get('get_classes_by_exam.php', { exam_id: examId }, function(response) {
+                if (response.success && response.data) {
+                    var html = '<option value="">-- Choose Class --</option>';
+                    response.data.forEach(function(cls) {
+                        html += '<option value="' + cls.id + '">' + cls.class_name + '</option>';
+                    });
+                    $('#modal_class_id').html(html);
+                } else {
+                    $('#modal_class_id').html('<option value="">No classes assigned to this exam</option>');
+                }
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('Failed to load classes:', textStatus, errorThrown);
+                $('#modal_class_id').html('<option value="">Error loading classes</option>');
+            });
+        }
+
+        // Load Sections for Modal by Class
+        function loadModalSectionsByClass(classId) {
+            $.get('get_sections.php', { class_id: classId }, function(response) {
+                if (response.success && response.data) {
+                    var html = '<option value="">-- Choose Section --</option>';
+                    response.data.forEach(function(section) {
+                        html += '<option value="' + section.id + '">' + section.section_name + '</option>';
+                    });
+                    $('#modal_section_id').html(html).prop('disabled', false);
+                }
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('Failed to load sections:', textStatus, errorThrown);
+            });
+        }
+
+        // Load Subjects for Modal by Exam and Class
+        function loadModalSubjectsByExam(examId, classId) {
+            if (!examId || !classId) {
+                $('#modal_subject_id').html('<option value="">-- Choose Subject --</option>').prop('disabled', true);
+                return;
+            }
+
+            $.get('get_exam_subjects.php', { exam_id: examId, class_id: classId }, function(response) {
+                if (response.success && response.data && response.data.length > 0) {
+                    var html = '<option value="">-- Choose Subject --</option>';
+                    response.data.forEach(function(subject) {
+                        html += '<option value="' + subject.id + '" data-total-marks="' + (subject.total_marks || 0) + '">' + 
+                                subject.subject_name + ' (' + (subject.total_marks || 0) + ' Marks)' + 
+                                '</option>';
+                    });
+                    $('#modal_subject_id').html(html).prop('disabled', false);
+                } else {
+                    $('#modal_subject_id').html('<option value="">No subjects assigned</option>').prop('disabled', true);
+                }
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('Failed to load subjects:', textStatus, errorThrown);
+                $('#modal_subject_id').html('<option value="">Error loading subjects</option>').prop('disabled', true);
+            });
+        }
+
+        // Load Students by Class and Section
+        function loadStudentsByClassSection(classId, sectionId) {
+            $('#loadingMessage').show().text('Loading students...');
+            $('#studentsContainer').hide();
+            
+            $.get('get_students_by_class.php', { class_id: classId, section_id: sectionId }, function(response) {
+                if (response.success && response.data && response.data.length > 0) {
+                    renderStudentsTable(response.data);
+                    $('#studentsContainer').show();
+                    $('#loadingMessage').hide();
+                } else {
+                    $('#loadingMessage').show().text('No students found in this class and section');
+                    $('#studentsContainer').hide();
+                }
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                $('#loadingMessage').show().text('Error loading students: ' + textStatus);
+                $('#studentsContainer').hide();
+                console.error('Failed to load students:', textStatus, errorThrown, jqXHR.responseText);
+            });
+        }
+
+        // Render Students Table
+        function renderStudentsTable(students) {
+            var html = '';
+            students.forEach(function(student, index) {
+                html += '<tr>' +
+                    '<td>' + (index + 1) + '</td>' +
+                    '<td>' + student.student_name + '</td>' +
+                    '<td>' + (student.actual_roll_no || student.roll_no || '-') + '</td>' +
+                    '<td><input type="number" class="form-control form-control-sm" placeholder="0" readonly></td>' +
+                    '<td><input type="number" class="form-control form-control-sm marks-input" placeholder="Enter marks" data-student-id="' + student.id + '" style="max-width: 100%;"></td>' +
+                    '<td><span class="badge badge-secondary">-</span></td>' +
+                    '</tr>';
+            });
+            $('#studentsTableBody').html(html);
         }
 
         // Open View Results Modal

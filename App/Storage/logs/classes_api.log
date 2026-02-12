@@ -1,0 +1,46 @@
+
+
+=== 2026-02-12 19:39:31 === get_classes_by_exam.php START ===
+Step 1: Calculate app root
+App root: D:\Softwares\Xampp\htdocs\School-SAAS\App
+Project root: D:\Softwares\Xampp\htdocs\School-SAAS
+Step 2: Require auth check from: D:\Softwares\Xampp\htdocs\School-SAAS\App\Config\auth_check_school_admin.php
+  File exists: YES
+Step 3: Auth check passed, school_id = 10
+Step 4: Includes loaded successfully
+Step 5: School ID from session: 10
+Step 6: Exam ID from query: 5
+Step 7: Getting database connection
+Step 8: Database connected
+Step 9: About to prepare query
+SQL:  SELECT c.id, c.class_name FROM school_classes c INNER JOIN school_exam_classes ec ON c.id = ec.class_id WHERE ec.exam_id = ? AND ec.school_id = ? AND c.school_id = ? GROUP BY c.id, c.class_name ORDER BY c.class_order ASC 
+Params: exam_id=5, school_id=10
+
+=== EXCEPTION CAUGHT ===
+Message: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ec.school_id' in 'where clause'
+File: D:\Softwares\Xampp\htdocs\School-SAAS\App\Modules\School_Admin\Views\examination\results\get_classes_by_exam.php
+Line: 87
+Trace: #0 D:\Softwares\Xampp\htdocs\School-SAAS\App\Modules\School_Admin\Views\examination\results\get_classes_by_exam.php(87): PDO->prepare('\r\n        SELEC...')
+#1 {main}
+
+
+=== 2026-02-12 19:44:01 === get_classes_by_exam.php START ===
+Session school_id: 10
+Session logged_in: 1
+exam_id: 5, school_id: 10
+Database connected
+Preparing query
+Params: exam_id=5, school_id=10
+EXCEPTION: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ec.school_id' in 'where clause'
+File: D:\Softwares\Xampp\htdocs\School-SAAS\App\Modules\School_Admin\Views\examination\results\get_classes_by_exam.php, Line: 92
+
+
+=== 2026-02-12 19:44:21 === get_classes_by_exam.php START ===
+Session school_id: 10
+Session logged_in: 1
+exam_id: 6, school_id: 10
+Database connected
+Preparing query
+Params: exam_id=6, school_id=10
+EXCEPTION: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ec.school_id' in 'where clause'
+File: D:\Softwares\Xampp\htdocs\School-SAAS\App\Modules\School_Admin\Views\examination\results\get_classes_by_exam.php, Line: 92
