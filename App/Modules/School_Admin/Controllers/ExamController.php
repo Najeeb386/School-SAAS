@@ -275,4 +275,92 @@ class ExamController {
             ];
         }
     }
+
+    /**
+     * Get current exams (where start_date >= today) with class/section information
+     */
+    public function getCurrentExamsWithDetails($data = []) {
+        $exam_type = $data['exam_type'] ?? null;
+        $session_id = isset($data['session_id']) ? (int)$data['session_id'] : null;
+        $class_id = isset($data['class_id']) ? (int)$data['class_id'] : null;
+        $section_id = isset($data['section_id']) ? (int)$data['section_id'] : null;
+        $date_from = $data['date_from'] ?? null;
+        $date_to = $data['date_to'] ?? null;
+
+        return $this->model->getCurrentExamsWithClassDetails(
+            $this->school_id,
+            $exam_type,
+            $session_id,
+            $class_id,
+            $section_id,
+            $date_from,
+            $date_to
+        );
+    }
+
+    /**
+     * Get all exams with class/section information
+     */
+    public function getAllExamsWithDetails($data = []) {
+        $exam_type = $data['exam_type'] ?? null;
+        $session_id = isset($data['session_id']) ? (int)$data['session_id'] : null;
+        $class_id = isset($data['class_id']) ? (int)$data['class_id'] : null;
+        $section_id = isset($data['section_id']) ? (int)$data['section_id'] : null;
+        $date_from = $data['date_from'] ?? null;
+        $date_to = $data['date_to'] ?? null;
+
+        return $this->model->getAllExamsWithClassDetails(
+            $this->school_id,
+            $exam_type,
+            $session_id,
+            $class_id,
+            $section_id,
+            $date_from,
+            $date_to
+        );
+    }
+
+    /**
+     * Get marks upload statistics
+     */
+    public function getMarksUploadStats() {
+        return $this->model->getMarksUploadStatistics($this->school_id);
+    }
+
+    /**
+     * Get classes for dropdown
+     */
+    public function getClasses() {
+        $db = $this->model->getDb();
+        $stmt = $db->prepare("
+            SELECT DISTINCT c.id, c.class_name 
+            FROM school_classes c 
+            WHERE c.school_id = ? 
+            ORDER BY c.class_order ASC
+        ");
+        $stmt->execute([$this->school_id]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get sections by class
+     */
+    public function getSectionsByClass(int $class_id) {
+        $db = $this->model->getDb();
+        $stmt = $db->prepare("
+            SELECT id, section_name 
+            FROM school_class_sections 
+            WHERE class_id = ? 
+            ORDER BY section_name ASC
+        ");
+        $stmt->execute([$class_id]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get exam results
+     */
+    public function getExamResults(int $exam_id) {
+        return $this->model->getExamResults($exam_id, $this->school_id);
+    }
 }

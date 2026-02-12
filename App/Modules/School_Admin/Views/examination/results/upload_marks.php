@@ -3,8 +3,9 @@
  * Marks Upload Management - School Admin
  * User must be logged in as School Admin to access this page
  */
-require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
-require_once __DIR__ . '/../../../../../Core/database.php';
+$appRoot = dirname(__DIR__, 5); // Navigate to App folder
+require_once $appRoot . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR . 'auth_check_school_admin.php';
+require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'database.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -277,11 +278,6 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                                         <label>Exam Type</label>
                                         <select id="filter_exam_type" class="form-control form-control-sm">
                                             <option value="">All Types</option>
-                                            <option value="midterm">Midterm</option>
-                                            <option value="final">Final</option>
-                                            <option value="annual">Annual</option>
-                                            <option value="board_prep">Board Prep</option>
-                                            <option value="monthly">Monthly</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -345,19 +341,18 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                                                 <thead class="thead-light">
                                                     <tr>
                                                         <th style="width: 5%;">#</th>
-                                                        <th style="width: 12%;">Exam Name</th>
-                                                        <th style="width: 10%;">Type</th>
-                                                        <th style="width: 12%;">Class/Section</th>
-                                                        <th style="width: 10%;">Start Date</th>
-                                                        <th style="width: 10%;">End Date</th>
-                                                        <th style="width: 8%;">Status</th>
-                                                        <th style="width: 10%;">Progress</th>
-                                                        <th style="width: 23%;">Actions</th>
+                                                        <th style="width: 15%;">Exam Name</th>
+                                                        <th style="width: 12%;">Type</th>
+                                                        <th style="width: 15%;">Start Date</th>
+                                                        <th style="width: 15%;">End Date</th>
+                                                        <th style="width: 10%;">Status</th>
+                                                        <th style="width: 12%;">Progress</th>
+                                                        <th style="width: 16%;">Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="currentExamsTbody">
                                                     <tr>
-                                                        <td colspan="9" class="text-center text-muted py-5">
+                                                        <td colspan="8" class="text-center text-muted py-5">
                                                             <div class="no-data-message">
                                                                 <i class="fas fa-inbox"></i>
                                                                 <p>No current exams found. Please adjust your filters.</p>
@@ -380,19 +375,18 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                                                 <thead class="thead-light">
                                                     <tr>
                                                         <th style="width: 5%;">#</th>
-                                                        <th style="width: 12%;">Exam Name</th>
-                                                        <th style="width: 10%;">Type</th>
-                                                        <th style="width: 12%;">Class/Section</th>
-                                                        <th style="width: 10%;">Start Date</th>
-                                                        <th style="width: 10%;">End Date</th>
-                                                        <th style="width: 8%;">Status</th>
-                                                        <th style="width: 10%;">Progress</th>
-                                                        <th style="width: 23%;">Actions</th>
+                                                        <th style="width: 15%;">Exam Name</th>
+                                                        <th style="width: 12%;">Type</th>
+                                                        <th style="width: 15%;">Start Date</th>
+                                                        <th style="width: 15%;">End Date</th>
+                                                        <th style="width: 10%;">Status</th>
+                                                        <th style="width: 12%;">Progress</th>
+                                                        <th style="width: 16%;">Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="allExamsTbody">
                                                     <tr>
-                                                        <td colspan="9" class="text-center text-muted py-5">
+                                                        <td colspan="8" class="text-center text-muted py-5">
                                                             <div class="no-data-message">
                                                                 <i class="fas fa-inbox"></i>
                                                                 <p>No exams found. Please adjust your filters.</p>
@@ -569,6 +563,7 @@ require_once __DIR__ . '/../../../../../Core/database.php';
         $(function() {
             // Initialize - Load filter options
             loadSessions();
+            loadExamTypes();
             loadClasses();
             loadCurrentExams();
 
@@ -600,11 +595,6 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                 }
             });
 
-            // File input label update
-            $('#bulkFile, #marksFile').on('change', function() {
-                $(this).next('label').html(this.files[0]?.name || 'Choose file...');
-            });
-
             // Bulk upload button
             $('#btnBulkUpload').on('click', function() {
                 // TODO: Implement bulk upload logic
@@ -628,8 +618,25 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                     });
                     $('#filter_session').html(html);
                 }
-            }).fail(function() {
-                console.error('Failed to load sessions');
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('Failed to load sessions:', textStatus, errorThrown, jqXHR.responseText);
+            });
+        }
+
+        // Load Exam Types
+        function loadExamTypes() {
+            $.get('get_exam_types.php', function(response) {
+                if (response.success && response.data && response.data.length > 0) {
+                    var html = '<option value="">All Types</option>';
+                    response.data.forEach(function(type) {
+                        // Capitalize first letter
+                        var displayType = type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
+                        html += '<option value="' + type + '">' + displayType + '</option>';
+                    });
+                    $('#filter_exam_type').html(html);
+                }
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('Failed to load exam types:', textStatus, errorThrown, jqXHR.responseText);
             });
         }
 
@@ -643,8 +650,8 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                     });
                     $('#filter_class').html(html);
                 }
-            }).fail(function() {
-                console.error('Failed to load classes');
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('Failed to load classes:', textStatus, errorThrown, jqXHR.responseText);
             });
         }
 
@@ -662,8 +669,8 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                     });
                     $('#filter_section').html(html);
                 }
-            }).fail(function() {
-                console.error('Failed to load sections');
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('Failed to load sections:', textStatus, errorThrown, jqXHR.responseText);
             });
         }
 
@@ -678,14 +685,14 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                     updateStats(response.stats);
                 } else {
                     $('#currentExamsTbody').html(
-                        '<tr><td colspan="9" class="text-center text-muted py-5">' +
+                        '<tr><td colspan="8" class="text-center text-muted py-5">' +
                         '<div class="no-data-message"><i class="fas fa-inbox"></i><p>No current exams found.</p></div>' +
                         '</td></tr>'
                     );
                 }
             }).fail(function() {
                 $('#currentExamsTbody').html(
-                    '<tr><td colspan="9" class="text-center text-danger py-5">Error loading exams</td></tr>'
+                    '<tr><td colspan="8" class="text-center text-danger py-5">Error loading exams</td></tr>'
                 );
             });
         }
@@ -699,14 +706,14 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                     renderExamsTable('#allExamsTbody', response.data);
                 } else {
                     $('#allExamsTbody').html(
-                        '<tr><td colspan="9" class="text-center text-muted py-5">' +
+                        '<tr><td colspan="8" class="text-center text-muted py-5">' +
                         '<div class="no-data-message"><i class="fas fa-inbox"></i><p>No exams found.</p></div>' +
                         '</td></tr>'
                     );
                 }
             }).fail(function() {
                 $('#allExamsTbody').html(
-                    '<tr><td colspan="9" class="text-center text-danger py-5">Error loading exams</td></tr>'
+                    '<tr><td colspan="8" class="text-center text-danger py-5">Error loading exams</td></tr>'
                 );
             });
         }
@@ -736,7 +743,7 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                     '</div>';
 
                 var actions = '<div class="table-actions">' +
-                    '<button class="btn btn-sm btn-outline-primary" onclick="openUploadModal(' + exam.id + ', \'' + exam.exam_name + '\', \'' + exam.class_section + '\')" title="Upload Marks">' +
+                    '<button class="btn btn-sm btn-outline-primary" onclick="openUploadModal(' + exam.id + ', \'' + exam.exam_name + '\')" title="Upload Marks">' +
                     '<i class="fas fa-cloud-upload-alt"></i> Upload' +
                     '</button> ' +
                     '<button class="btn btn-sm btn-outline-info" onclick="openViewResultsModal(' + exam.id + ')" title="View Results">' +
@@ -751,7 +758,6 @@ require_once __DIR__ . '/../../../../../Core/database.php';
                     '<td>' + (index + 1) + '</td>' +
                     '<td><strong>' + exam.exam_name + '</strong></td>' +
                     '<td><span class="badge badge-light">' + exam.exam_type + '</span></td>' +
-                    '<td>' + exam.class_section + '</td>' +
                     '<td>' + formatDate(exam.start_date) + '</td>' +
                     '<td>' + formatDate(exam.end_date) + '</td>' +
                     '<td>' + statusBadge + '</td>' +
@@ -763,10 +769,10 @@ require_once __DIR__ . '/../../../../../Core/database.php';
         }
 
         // Open Upload Modal
-        function openUploadModal(examId, examName, classSection) {
+        function openUploadModal(examId, examName) {
             $('#modal_exam_id').val(examId);
             $('#modal_exam_name').val(examName);
-            $('#modal_class_section').val(classSection);
+            $('#modal_class_section').val('');
             $('#uploadMarksModal').modal('show');
         }
 

@@ -9391,7 +9391,8 @@
     $(function(){
         var customfile = jQuery(".custom-file-input");
         if (customfile.length > 0) {
-                bsCustomFileInput.init();
+                // bsCustomFileInput plugin not available - using native HTML5 file input
+                // bsCustomFileInput.init();
         }
     });
 
