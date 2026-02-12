@@ -36,29 +36,21 @@ try {
     $logged_in = $_SESSION['logged_in'] ?? false;
     $user_type = $_SESSION['user_type'] ?? null;
     
-    // Validation
+    // Validation: require an active logged-in session for school users
     if (!$logged_in || $logged_in !== true) {
-        // Allow a secure localhost fallback for testing/deployment convenience
-        $isLocal = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1']);
-        if ($isLocal && isset($_GET['school_id'])) {
-            $school_id = (int) $_GET['school_id'];
-        } else {
-            http_response_code(401);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Not logged in',
-                'debug' => ['logged_in' => $logged_in]
-            ]);
-            exit;
-        }
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Not logged in'
+        ]);
+        exit;
     }
     
     if ($user_type !== 'school' && !isset($school_id)) {
         http_response_code(401);
         echo json_encode([
             'success' => false,
-            'message' => 'Unauthorized user type',
-            'debug' => ['user_type' => $user_type]
+            'message' => 'Unauthorized user type'
         ]);
         exit;
     }
