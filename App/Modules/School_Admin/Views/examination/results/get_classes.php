@@ -3,15 +3,39 @@
  * API Endpoint: Get Classes
  * Returns all classes for the current school
  */
+// Start session BEFORE sending headers
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 header('Content-Type: application/json; charset=utf-8');
 ob_start();
 
 try {
     $appRoot = dirname(__DIR__, 5); // Navigate to App folder
     $projectRoot = dirname($appRoot); // Navigate to School-SAAS root
-    require_once $appRoot . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR . 'auth_check_school_admin.php';
-    require_once $projectRoot . DIRECTORY_SEPARATOR . 'autoloader.php';
-    require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'database.php';
+
+    // Ensure autoloader exists
+    $autoloaderPath = $projectRoot . DIRECTORY_SEPARATOR . 'autoloader.php';
+    if (!file_exists($autoloaderPath)) {
+        throw new Exception('Autoloader not found at: ' . $autoloaderPath);
+    }
+    require_once $autoloaderPath;
+
+    // Include DB helper
+    $dbPath = $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'database.php';
+    if (!file_exists($dbPath)) {
+        throw new Exception('Database helper not found at: ' . $dbPath);
+    }
+    require_once $dbPath;
+
+    // Basic session checks (avoid redirecting from auth_check in JSON API)
+    if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+        throw new Exception('Unauthorized: User not logged in');
+    }
+    if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'school') {
+        throw new Exception('Unauthorized: Not a school admin');
+    }
 
     $school_id = $_SESSION['school_id'] ?? null;
     if (!$school_id) {

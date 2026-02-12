@@ -45,21 +45,21 @@ try {
 
     $db = \Database::connect();
     
-    // Get students with correct column mapping
-    $stmt = $db->prepare("
-        SELECT 
-            s.id as student_id,
+    // Get students with correct column mapping and deduplicate
+    $sql = "SELECT DISTINCT
+            s.id as id,
             CONCAT(COALESCE(s.first_name, ''), ' ', COALESCE(s.last_name, '')) as student_name,
             COALESCE(sse.roll_no, 0) as roll_no
         FROM school_students s
         INNER JOIN school_student_academics sa ON s.id = sa.student_id
         LEFT JOIN school_student_enrollments sse ON s.id = sse.student_id AND sa.class_id = sse.class_id AND sa.section_id = sse.section_id
-        WHERE s.school_id = ? 
-        AND sa.class_id = ? 
+        WHERE s.school_id = ?
+        AND sa.class_id = ?
         AND sa.section_id = ?
         AND sa.status = 1
-        ORDER BY COALESCE(sse.roll_no, s.id) ASC
-    ");
+        ORDER BY COALESCE(sse.roll_no, s.id) ASC";
+
+    $stmt = $db->prepare($sql);
     $stmt->execute([$school_id, $class_id, $section_id]);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
     

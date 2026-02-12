@@ -618,7 +618,13 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
                 var classId = $('#modal_class_id').val();
                 var sectionId = $(this).val();
                 var subjectId = $('#modal_subject_id').val();
-                
+
+                // When section changes, refresh subject list to filter by class+section
+                if (classId) {
+                    var examId = $('#modal_exam_id').val();
+                    loadModalSubjectsByExam(examId, classId, sectionId);
+                }
+
                 // Only load students if all three are selected
                 if (classId && sectionId && subjectId) {
                     loadStudentsByClassSection(classId, sectionId);
@@ -638,6 +644,7 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
                 if (classId && sectionId && subjectId) {
                     var subjectOption = $('#modal_subject_id').find('option:selected');
                     var totalMarks = subjectOption.data('total-marks') || 0;
+                    modal_current_total_marks = totalMarks;
                     $('#modal_exam_marks_display').text(totalMarks + ' Marks');
                     loadStudentsByClassSection(classId, sectionId);
                 } else {
@@ -828,59 +835,91 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
 
         // Load Classes for Modal (Exam-Specific)
         function loadModalClassesByExam(examId) {
-            $.get('get_classes_by_exam.php', { exam_id: examId }, function(response) {
-                if (response.success && response.data) {
-                    var html = '<option value="">-- Choose Class --</option>';
-                    response.data.forEach(function(cls) {
-                        html += '<option value="' + cls.id + '">' + cls.class_name + '</option>';
-                    });
-                    $('#modal_class_id').html(html);
-                } else {
-                    $('#modal_class_id').html('<option value="">No classes assigned to this exam</option>');
+            $.ajax({
+                url: 'get_classes_by_exam.php',
+                method: 'GET',
+                data: { exam_id: examId },
+                dataType: 'json',
+                crossDomain: false,
+                xhrFields: { withCredentials: true },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        var html = '<option value="">-- Choose Class --</option>';
+                        response.data.forEach(function(cls) {
+                            html += '<option value="' + cls.id + '">' + cls.class_name + '</option>';
+                        });
+                        $('#modal_class_id').html(html);
+                    } else {
+                        $('#modal_class_id').html('<option value="">No classes assigned to this exam</option>');
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error('Failed to load classes:', textStatus, errorThrown, jqXHR.responseText);
+                    $('#modal_class_id').html('<option value="">Error loading classes</option>');
                 }
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                console.error('Failed to load classes:', textStatus, errorThrown);
-                $('#modal_class_id').html('<option value="">Error loading classes</option>');
             });
         }
 
         // Load Sections for Modal by Class
         function loadModalSectionsByClass(classId) {
-            $.get('get_sections.php', { class_id: classId }, function(response) {
-                if (response.success && response.data) {
-                    var html = '<option value="">-- Choose Section --</option>';
-                    response.data.forEach(function(section) {
-                        html += '<option value="' + section.id + '">' + section.section_name + '</option>';
-                    });
-                    $('#modal_section_id').html(html).prop('disabled', false);
+            $.ajax({
+                url: 'get_sections.php',
+                method: 'GET',
+                data: { class_id: classId },
+                dataType: 'json',
+                crossDomain: false,
+                xhrFields: { withCredentials: true },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        var html = '<option value="">-- Choose Section --</option>';
+                        response.data.forEach(function(section) {
+                            html += '<option value="' + section.id + '">' + section.section_name + '</option>';
+                        });
+                        $('#modal_section_id').html(html).prop('disabled', false);
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error('Failed to load sections:', textStatus, errorThrown, jqXHR.responseText);
                 }
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                console.error('Failed to load sections:', textStatus, errorThrown);
             });
         }
 
-        // Load Subjects for Modal by Exam and Class
-        function loadModalSubjectsByExam(examId, classId) {
+        // Current selected subject total marks (set when subject chosen)
+        var modal_current_total_marks = 0;
+
+        // Load Subjects for Modal by Exam and Class (optional sectionId)
+        function loadModalSubjectsByExam(examId, classId, sectionId) {
             if (!examId || !classId) {
                 $('#modal_subject_id').html('<option value="">-- Choose Subject --</option>').prop('disabled', true);
                 return;
             }
+            var requestData = { exam_id: examId, class_id: classId };
+            if (sectionId) requestData.section_id = sectionId;
 
-            $.get('get_exam_subjects.php', { exam_id: examId, class_id: classId }, function(response) {
-                if (response.success && response.data && response.data.length > 0) {
-                    var html = '<option value="">-- Choose Subject --</option>';
-                    response.data.forEach(function(subject) {
-                        html += '<option value="' + subject.id + '" data-total-marks="' + (subject.total_marks || 0) + '">' + 
-                                subject.subject_name + ' (' + (subject.total_marks || 0) + ' Marks)' + 
-                                '</option>';
-                    });
-                    $('#modal_subject_id').html(html).prop('disabled', false);
-                } else {
-                    $('#modal_subject_id').html('<option value="">No subjects assigned</option>').prop('disabled', true);
+            $.ajax({
+                url: 'get_exam_subjects.php',
+                method: 'GET',
+                data: requestData,
+                dataType: 'json',
+                crossDomain: false,
+                xhrFields: { withCredentials: true },
+                success: function(response) {
+                    if (response.success && response.data && response.data.length > 0) {
+                        var html = '<option value="">-- Choose Subject --</option>';
+                        response.data.forEach(function(subject) {
+                            html += '<option value="' + subject.id + '" data-total-marks="' + (subject.total_marks || 0) + '">' + 
+                                    subject.subject_name + ' (' + (subject.total_marks || 0) + ' Marks)' + 
+                                    '</option>';
+                        });
+                        $('#modal_subject_id').html(html).prop('disabled', false);
+                    } else {
+                        $('#modal_subject_id').html('<option value="">No subjects assigned</option>').prop('disabled', true);
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error('Failed to load subjects:', textStatus, errorThrown, jqXHR.responseText);
+                    $('#modal_subject_id').html('<option value="">Error loading subjects</option>').prop('disabled', true);
                 }
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                console.error('Failed to load subjects:', textStatus, errorThrown);
-                $('#modal_subject_id').html('<option value="">Error loading subjects</option>').prop('disabled', true);
             });
         }
 
@@ -889,19 +928,28 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
             $('#loadingMessage').show().text('Loading students...');
             $('#studentsContainer').hide();
             
-            $.get('get_students_by_class.php', { class_id: classId, section_id: sectionId }, function(response) {
-                if (response.success && response.data && response.data.length > 0) {
-                    renderStudentsTable(response.data);
-                    $('#studentsContainer').show();
-                    $('#loadingMessage').hide();
-                } else {
-                    $('#loadingMessage').show().text('No students found in this class and section');
+            $.ajax({
+                url: 'get_students_by_class.php',
+                method: 'GET',
+                data: { class_id: classId, section_id: sectionId },
+                dataType: 'json',
+                crossDomain: false,
+                xhrFields: { withCredentials: true },
+                success: function(response) {
+                    if (response.success && response.data && response.data.length > 0) {
+                        renderStudentsTable(response.data);
+                        $('#studentsContainer').show();
+                        $('#loadingMessage').hide();
+                    } else {
+                        $('#loadingMessage').show().text('No students found in this class and section');
+                        $('#studentsContainer').hide();
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    $('#loadingMessage').show().text('Error loading students: ' + textStatus);
                     $('#studentsContainer').hide();
+                    console.error('Failed to load students:', textStatus, errorThrown, jqXHR.responseText);
                 }
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                $('#loadingMessage').show().text('Error loading students: ' + textStatus);
-                $('#studentsContainer').hide();
-                console.error('Failed to load students:', textStatus, errorThrown, jqXHR.responseText);
             });
         }
 
@@ -912,9 +960,9 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
                 html += '<tr>' +
                     '<td>' + (index + 1) + '</td>' +
                     '<td>' + student.student_name + '</td>' +
-                    '<td>' + (student.actual_roll_no || student.roll_no || '-') + '</td>' +
-                    '<td><input type="number" class="form-control form-control-sm" placeholder="0" readonly></td>' +
-                    '<td><input type="number" class="form-control form-control-sm marks-input" placeholder="Enter marks" data-student-id="' + student.id + '" style="max-width: 100%;"></td>' +
+                        '<td>' + (student.actual_roll_no || student.roll_no || '-') + '</td>' +
+                        '<td><input type="number" class="form-control form-control-sm" value="' + (modal_current_total_marks || 0) + '" readonly></td>' +
+                        '<td><input type="number" class="form-control form-control-sm marks-input" placeholder="Enter marks" data-student-id="' + student.id + '" style="max-width: 100%;"></td>' +
                     '<td><span class="badge badge-secondary">-</span></td>' +
                     '</tr>';
             });
