@@ -34,8 +34,8 @@ try {
     }
 
     $exam_id = isset($_GET['exam_id']) ? (int)$_GET['exam_id'] : null;
-    $class_id = isset($_GET['class_id']) ? (int)$_GET['class_id'] : null;
-    $section_id = isset($_GET['section_id']) ? (int)$_GET['section_id'] : null;
+    $class_id = isset($_GET['class_id']) && $_GET['class_id'] !== '' ? (int)$_GET['class_id'] : null;
+    $section_id = isset($_GET['section_id']) && $_GET['section_id'] !== '' ? (int)$_GET['section_id'] : null;
     
     if (!$exam_id) {
         ob_end_clean();

@@ -460,11 +460,11 @@ if ($exam_id) {
                                     </div>
                                 </div>
                                 
-                                <!-- Classes List -->
-                                <div id="classesList">
-                                    <div class="loading-spinner">
-                                        <i class="fas fa-spinner"></i>
-                                        <p>Loading classes...</p>
+                                <!-- Results Container -->
+                                <div id="resultsContainer">
+                                    <div class="no-data">
+                                        <i class="fas fa-search"></i>
+                                        <p>Please select an exam to view results</p>
                                     </div>
                                 </div>
                             <?php else: ?>
@@ -802,7 +802,7 @@ if ($exam_id) {
                     renderFilteredResults(response.data, classId, sectionId);
                     updateFilteredStats(response.data);
                 } else {
-                    $('#classesList').html(
+                    $('#resultsContainer').html(
                         '<div class="no-data">' +
                             '<i class="fas fa-school"></i>' +
                             '<p>No results found for the selected filters</p>' +
@@ -810,7 +810,7 @@ if ($exam_id) {
                     );
                 }
             }).fail(function() {
-                $('#classesList').html(
+                $('#resultsContainer').html(
                     '<div class="no-data">' +
                         '<i class="fas fa-exclamation-triangle"></i>' +
                         '<p>Error loading results</p>' +
@@ -849,24 +849,33 @@ if ($exam_id) {
             html += '<div class="table-responsive">';
             html += '<table class="results-table">';
             html += '<thead><tr>';
+            html += '<th>Roll No</th>';
             html += '<th>Student Name</th>';
             html += '<th>Admission No</th>';
             html += '<th>Total Marks</th>';
             html += '<th>Grade</th>';
+            html += '<th>Position</th>';
+            html += '<th>Status</th>';
             html += '<th>Actions</th>';
             html += '</tr></thead><tbody>';
             
             data.forEach(function(student) {
-                const marks = student.total_marks !== null ? student.total_marks : 'N/A';
+                const marks = student.total_marks_display || (student.total_obtained + ' / ' + student.total_marks);
                 const percentage = student.percentage !== undefined ? student.percentage + '%' : '';
                 const grade = student.grade || '-';
+                const position = student.position || '-';
+                const status = student.result_status || 'Pending';
+                const rollNo = student.roll_no || '-';
                 const gradeClass = 'grade-' + grade.charAt(0).toUpperCase();
                 
                 html += '<tr>';
+                html += '<td>' + rollNo + '</td>';
                 html += '<td><div class="student-info"><span class="student-name">' + student.student_name + '</span></div></td>';
                 html += '<td>' + student.admission_no + '</td>';
                 html += '<td class="marks-obtained">' + marks + (percentage ? ' (' + percentage + ')' : '') + '</td>';
                 html += '<td><span class="grade-badge ' + gradeClass + '">' + grade + '</span></td>';
+                html += '<td>' + position + '</td>';
+                html += '<td><span class="status-' + status.toLowerCase() + '">' + status + '</span></td>';
                 html += '<td><button class="btn-details" onclick="viewStudentDetails(' + student.student_id + ')">View Details</button></td>';
                 html += '</tr>';
             });
@@ -874,7 +883,7 @@ if ($exam_id) {
             html += '</tbody></table>';
             html += '</div></div></div>';
             
-            $('#classesList').html(html);
+            $('#resultsContainer').html(html);
         }
         
         // Update stats for filtered results
@@ -923,10 +932,10 @@ if ($exam_id) {
                         <div class="stat-label">Avg Marks</div>
                     </div>
                 </div>
-                <div id="classesList">
-                    <div class="loading-spinner">
-                        <i class="fas fa-spinner"></i>
-                        <p>Loading classes...</p>
+                <div id="resultsContainer">
+                    <div class="no-data">
+                        <i class="fas fa-search"></i>
+                        <p>Select filters to view results</p>
                     </div>
                 </div>
             `;
@@ -961,7 +970,7 @@ if ($exam_id) {
                     renderClassesList(response.data, examId);
                     updateSummaryStats(response.data);
                 } else {
-                    $('#classesList').html(
+                    $('#resultsContainer').html(
                         '<div class="no-data">' +
                             '<i class="fas fa-school"></i>' +
                             '<p>No classes assigned to this exam</p>' +
@@ -969,7 +978,7 @@ if ($exam_id) {
                     );
                 }
             }).fail(function() {
-                $('#classesList').html(
+                $('#resultsContainer').html(
                     '<div class="no-data">' +
                         '<i class="fas fa-exclamation-triangle"></i>' +
                         '<p>Error loading classes</p>' +
@@ -984,7 +993,7 @@ if ($exam_id) {
                     renderClassesList(response.data, examId);
                     updateSummaryStats(response.data);
                 } else {
-                    $('#classesList').html(`
+                    $('#resultsContainer').html(`
                         <div class="no-data">
                             <i class="fas fa-school"></i>
                             <p>No classes assigned to this exam</p>
@@ -992,7 +1001,7 @@ if ($exam_id) {
                     `);
                 }
             }).fail(function() {
-                $('#classesList').html(`
+                $('#resultsContainer').html(`
                     <div class="no-data">
                         <i class="fas fa-exclamation-triangle"></i>
                         <p>Error loading classes</p>

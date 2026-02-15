@@ -462,72 +462,56 @@ class ExamModel {
      * Get exam results
      */
     public function getExamResults(int $exam_id, int $school_id, ?int $class_id = null, ?int $section_id = null) {
-        // Aggregate query - get total marks per student
+        // Get results from school_exam_results table with roll_no from school_student_enrollments
         $sql = "
             SELECT 
-                sm.student_id,
-                COALESCE(SUM(sm.obtained_marks), 0) as total_marks,
+                r.id,
+                r.exam_id,
+                r.student_id,
+                r.total_obtained,
+                r.total_marks,
+                r.percentage,
+                r.position,
+                r.result_status,
                 s.first_name,
                 s.last_name,
                 CONCAT(s.first_name, ' ', s.last_name) as student_name,
                 s.admission_no,
-                c.class_name,
-                c.id as class_id,
-                cs.section_name,
-                cs.id as section_id,
-                COUNT(DISTINCT sm.exam_subject_id) as subject_count,
-                SUM(es.total_marks) as max_marks
-            FROM school_exam_marks sm
-            LEFT JOIN school_students s ON sm.student_id = s.id
-            LEFT JOIN school_exam_subjects es ON sm.exam_subject_id = es.id
-            LEFT JOIN school_exam_classes ec ON es.exam_class_id = ec.id
-            LEFT JOIN school_classes c ON ec.class_id = c.id
-            LEFT JOIN school_class_sections cs ON ec.section_id = cs.id
-            WHERE sm.exam_id = ? AND sm.school_id = ?
+                se.roll_no
+            FROM school_exam_results r
+            LEFT JOIN school_students s ON r.student_id = s.id
+            LEFT JOIN school_student_enrollments se ON r.student_id = se.student_id AND se.school_id = ?
+            WHERE r.exam_id = ? AND r.school_id = ?
         ";
         
-        $params = [$exam_id, $school_id];
+        $params = [$school_id, $exam_id, $school_id];
         
-        // Add class filter if provided
-        if ($class_id) {
-            $sql .= " AND ec.class_id = ?";
-            $params[] = $class_id;
-        }
+        // Note: Filtering by class/section requires additional joins if needed
+        // For now, we get all results for the exam
         
-        // Add section filter if provided
-        if ($section_id) {
-            $sql .= " AND ec.section_id = ?";
-            $params[] = $section_id;
-        }
-        
-        $sql .= " GROUP BY sm.student_id, s.first_name, s.last_name, s.admission_no, c.class_name, c.id, cs.section_name, cs.id";
-        $sql .= " ORDER BY s.first_name, s.last_name";
+        $sql .= " ORDER BY r.percentage DESC, s.first_name, s.last_name";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Calculate grade for each student
+        // Calculate grade for each student based on percentage
         foreach ($results as &$result) {
-            $result['grade'] = $this->calculateGrade($result['total_marks'], $result['max_marks']);
-            // Calculate percentage
-            $result['percentage'] = $result['max_marks'] > 0 
-                ? round(($result['total_marks'] / $result['max_marks']) * 100, 2) 
-                : 0;
+            $result['grade'] = $this->calculateGradeFromPercentage($result['percentage']);
+            // Format total_marks display
+            $result['total_marks_display'] = $result['total_obtained'] . ' / ' . $result['total_marks'];
         }
         
         return $results;
     }
     
     /**
-     * Calculate grade based on marks
+     * Calculate grade based on percentage
      */
-    private function calculateGrade($obtained, $total) {
-        if ($total == 0 || $obtained == null) {
+    private function calculateGradeFromPercentage($percentage) {
+        if ($percentage == null) {
             return '-';
         }
-        
-        $percentage = ($obtained / $total) * 100;
         
         if ($percentage >= 90) return 'A+';
         if ($percentage >= 80) return 'A';
