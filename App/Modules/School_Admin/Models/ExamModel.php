@@ -462,22 +462,23 @@ class ExamModel {
      * Get exam results
      */
     public function getExamResults(int $exam_id, int $school_id) {
-        // Use total_makrs as default (common typo in the database)
-        // The query will still work if the column name is different
+        // Simplified query - get subject info from school_exam_subjects only
         $sql = "
             SELECT 
                 sm.id,
                 sm.exam_id,
                 sm.exam_subject_id,
                 sm.student_id,
-                COALESCE(sm.total_marks, sm.total_makrs, 0) as total_marks,
+                sm.total_makrs as total_marks,
                 sm.obtained_marks,
                 sm.is_absent,
                 sm.remarks,
                 s.first_name,
                 s.last_name,
                 s.admission_no,
-                sub.subject_name,
+                es.subject_id,
+                es.total_marks as subject_total_marks,
+                es.exam_date,
                 c.class_name,
                 c.id as class_id,
                 cs.section_name,
@@ -486,12 +487,11 @@ class ExamModel {
             FROM school_exam_marks sm
             LEFT JOIN school_students s ON sm.student_id = s.id
             LEFT JOIN school_exam_subjects es ON sm.exam_subject_id = es.id
-            LEFT JOIN school_subjects sub ON es.subject_id = sub.id
             LEFT JOIN school_exam_classes ec ON es.exam_class_id = ec.id
             LEFT JOIN school_classes c ON ec.class_id = c.id
             LEFT JOIN school_class_sections cs ON ec.section_id = cs.id
             WHERE sm.exam_id = ? AND sm.school_id = ?
-            ORDER BY s.first_name, s.last_name, sub.subject_name
+            ORDER BY s.first_name, s.last_name
         ";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$exam_id, $school_id]);
