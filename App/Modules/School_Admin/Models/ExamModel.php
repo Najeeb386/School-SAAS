@@ -462,29 +462,21 @@ class ExamModel {
      * Get exam results
      */
     public function getExamResults(int $exam_id, int $school_id, ?int $class_id = null, ?int $section_id = null) {
-        // Simplified query - get subject info from school_exam_subjects only
+        // Aggregate query - get total marks per student
         $sql = "
             SELECT 
-                sm.id,
-                sm.exam_id,
-                sm.exam_subject_id,
                 sm.student_id,
-                sm.total_makrs as total_marks,
-                sm.obtained_marks,
-                sm.is_absent,
-                sm.remarks,
+                COALESCE(SUM(sm.obtained_marks), 0) as total_marks,
                 s.first_name,
                 s.last_name,
                 CONCAT(s.first_name, ' ', s.last_name) as student_name,
                 s.admission_no,
-                es.subject_id,
-                es.total_marks as subject_total_marks,
-                es.exam_date,
                 c.class_name,
                 c.id as class_id,
                 cs.section_name,
                 cs.id as section_id,
-                ec.class_id as exam_class_id
+                COUNT(DISTINCT sm.exam_subject_id) as subject_count,
+                SUM(es.total_marks) as max_marks
             FROM school_exam_marks sm
             LEFT JOIN school_students s ON sm.student_id = s.id
             LEFT JOIN school_exam_subjects es ON sm.exam_subject_id = es.id
@@ -508,11 +500,42 @@ class ExamModel {
             $params[] = $section_id;
         }
         
+        $sql .= " GROUP BY sm.student_id, s.first_name, s.last_name, s.admission_no, c.class_name, c.id, cs.section_name, cs.id";
         $sql .= " ORDER BY s.first_name, s.last_name";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Calculate grade for each student
+        foreach ($results as &$result) {
+            $result['grade'] = $this->calculateGrade($result['total_marks'], $result['max_marks']);
+            // Calculate percentage
+            $result['percentage'] = $result['max_marks'] > 0 
+                ? round(($result['total_marks'] / $result['max_marks']) * 100, 2) 
+                : 0;
+        }
+        
+        return $results;
+    }
+    
+    /**
+     * Calculate grade based on marks
+     */
+    private function calculateGrade($obtained, $total) {
+        if ($total == 0 || $obtained == null) {
+            return '-';
+        }
+        
+        $percentage = ($obtained / $total) * 100;
+        
+        if ($percentage >= 90) return 'A+';
+        if ($percentage >= 80) return 'A';
+        if ($percentage >= 70) return 'B+';
+        if ($percentage >= 60) return 'B';
+        if ($percentage >= 50) return 'C';
+        if ($percentage >= 40) return 'D';
+        return 'F';
     }
 
     /**

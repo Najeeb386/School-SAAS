@@ -823,17 +823,17 @@ if ($exam_id) {
         function renderFilteredResults(data, classId, sectionId) {
             // Update stats
             const totalStudents = data.length;
-            let totalMarks = 0;
+            let totalPercentage = 0;
             let countWithMarks = 0;
             
             data.forEach(function(student) {
-                if (student.total_marks !== null && student.total_marks !== undefined) {
-                    totalMarks += parseFloat(student.total_marks);
+                if (student.percentage !== null && student.percentage !== undefined) {
+                    totalPercentage += parseFloat(student.percentage);
                     countWithMarks++;
                 }
             });
             
-            const avgMarks = countWithMarks > 0 ? Math.round((totalMarks / countWithMarks) * 100) / 100 : 0;
+            const avgMarks = countWithMarks > 0 ? Math.round((totalPercentage / countWithMarks) * 100) / 100 : 0;
             
             $('#totalClasses').text('1');
             $('#totalSections').text(sectionId ? '1' : '0');
@@ -858,13 +858,14 @@ if ($exam_id) {
             
             data.forEach(function(student) {
                 const marks = student.total_marks !== null ? student.total_marks : 'N/A';
+                const percentage = student.percentage !== undefined ? student.percentage + '%' : '';
                 const grade = student.grade || '-';
                 const gradeClass = 'grade-' + grade.charAt(0).toUpperCase();
                 
                 html += '<tr>';
                 html += '<td><div class="student-info"><span class="student-name">' + student.student_name + '</span></div></td>';
                 html += '<td>' + student.admission_no + '</td>';
-                html += '<td class="marks-obtained">' + marks + '</td>';
+                html += '<td class="marks-obtained">' + marks + (percentage ? ' (' + percentage + ')' : '') + '</td>';
                 html += '<td><span class="grade-badge ' + gradeClass + '">' + grade + '</span></td>';
                 html += '<td><button class="btn-details" onclick="viewStudentDetails(' + student.student_id + ')">View Details</button></td>';
                 html += '</tr>';
