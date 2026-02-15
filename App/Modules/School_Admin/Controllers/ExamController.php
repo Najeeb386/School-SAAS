@@ -360,7 +360,7 @@ class ExamController {
     /**
      * Get exam results
      */
-    public function getExamResults(int $exam_id) {
-        return $this->model->getExamResults($exam_id, $this->school_id);
+    public function getExamResults(int $exam_id, ?int $class_id = null, ?int $section_id = null) {
+        return $this->model->getExamResults($exam_id, $this->school_id, $class_id, $section_id);
     }
 }

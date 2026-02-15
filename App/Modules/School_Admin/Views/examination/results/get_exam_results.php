@@ -34,6 +34,8 @@ try {
     }
 
     $exam_id = isset($_GET['exam_id']) ? (int)$_GET['exam_id'] : null;
+    $class_id = isset($_GET['class_id']) ? (int)$_GET['class_id'] : null;
+    $section_id = isset($_GET['section_id']) ? (int)$_GET['section_id'] : null;
     
     if (!$exam_id) {
         ob_end_clean();
@@ -48,7 +50,7 @@ try {
     $db = \Database::connect();
     
     $examController = new \App\Modules\School_Admin\Controllers\ExamController($db, $school_id);
-    $results = $examController->getExamResults($exam_id);
+    $results = $examController->getExamResults($exam_id, $class_id, $section_id);
     
     ob_end_clean();
     echo json_encode([

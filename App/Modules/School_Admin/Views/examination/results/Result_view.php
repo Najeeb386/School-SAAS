@@ -383,22 +383,38 @@ if ($exam_id) {
                         <!-- Exam Filter -->
                         <div class="filter-section">
                             <div class="row align-items-end">
-                                <div class="col-md-4">
+                                <div class="col-md-2">
                                     <label for="examSelect" class="form-label">Select Exam</label>
-                                    <select class="form-control" id="examSelect" onchange="loadExamResults()">
+                                    <select class="form-control" id="examSelect" onchange="onExamChange()">
                                         <option value="">-- Select Exam --</option>
                                         <?php foreach ($exams as $exam): ?>
                                             <option value="<?php echo $exam['id']; ?>" <?php echo ($exam_id == $exam['id']) ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($exam['exam_name']); ?> 
                                                 (<?php echo htmlspecialchars($exam['exam_type']); ?>)
-                                                - <?php echo htmlspecialchars($exam['session_name'] ?? 'N/A'); ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-primary" onclick="loadExamResults()">
-                                        <i class="fas fa-search mr-1"></i>Load Results
+                                <div class="col-md-2">
+                                    <label for="classSelect" class="form-label">Select Class</label>
+                                    <select class="form-control" id="classSelect" onchange="onClassChange()">
+                                        <option value="">-- Select Class --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="sectionSelect" class="form-label">Select Section</label>
+                                    <select class="form-control" id="sectionSelect" onchange="onSectionChange()">
+                                        <option value="">-- Select Section --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-primary" onclick="applyFilters()">
+                                        <i class="fas fa-search mr-1"></i>Apply Filter
+                                    </button>
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-outline-secondary" onclick="resetFilters()">
+                                        <i class="fas fa-redo mr-1"></i>Reset
                                     </button>
                                 </div>
                             </div>
@@ -470,6 +486,7 @@ if ($exam_id) {
     
     <script>
         // Configure jQuery AJAX
+        console.log('Result_view.php JavaScript loaded');
         $.ajaxSetup({
             xhrFields: {
                 withCredentials: true
@@ -477,64 +494,400 @@ if ($exam_id) {
         });
         
         $(function() {
-            // Load results if exam is selected
-            const examId = <?php echo $exam_id ? $exam_id : 'null'; ?>;
+            // Load results if exam is selected in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const examId = urlParams.get('exam_id');
+            const classId = urlParams.get('class_id');
+            const sectionId = urlParams.get('section_id');
+            
             if (examId) {
+                // Set exam dropdown value
+                $('#examSelect').val(examId);
+                // Load all classes
+                loadAllClasses();
+                // Load results
                 loadExamResults();
             }
+            
+            
+            // Exam selection change - load classes and results automatically
+            $('#examSelect').on('change', function() {
+                console.log('Exam dropdown changed');
+                const examId = $(this).val();
+                if (examId) {
+                    loadAllClasses();
+                    // Load results automatically when exam is selected
+                    loadExamResults();
+                } else {
+                    $('#classSelect').html('<option value="">-- Select Class --</option>');
+                    $('#sectionSelect').html('<option value="">-- Select Section --</option>');
+                    $('#resultsContainer').html(
+                        '<div class="no-data">' +
+                            '<i class="fas fa-search"></i>' +
+                            '<p>Please select an exam to view results</p>' +
+                        '</div>'
+                    );
+                }
+            });
+            
+            // Class selection change - load sections and results automatically
+            $('#classSelect').on('change', function() {
+                const classId = $(this).val();
+                const examId = $('#examSelect').val();
+                console.log('Class selected:', classId, 'Exam:', examId);
+                if (classId) {
+                    console.log('Loading sections for class:', classId);
+                    loadAllSections(classId);
+                    // Load results automatically when class is selected
+                    if (examId) {
+                        loadExamResults();
+                    }
+                } else {
+                    $('#sectionSelect').html('<option value="">-- Select Section --</option>');
+                }
+            });
+            
+            // Section selection change - load results automatically
+            $('#sectionSelect').on('change', function() {
+                const examId = $('#examSelect').val();
+                const classId = $('#classSelect').val();
+                // Load results automatically when section is selected
+                if (examId && classId) {
+                    loadExamResults();
+                }
+            });
+            
+            // Allow Enter key to trigger filter
+            $('#examSelect, #classSelect, #sectionSelect').on('keypress', function(e) {
+                if (e.which == 13) {
+                    applyFilters();
+                }
+            });
         });
         
-        function loadExamResults() {
+        // Load ALL Classes (not filtered by exam)
+        function loadAllClasses() {
+            $.get('get_classes.php', function(response) {
+                if (response.success && response.data && response.data.length > 0) {
+                    var html = '<option value="">-- Select Class --</option>';
+                    response.data.forEach(function(cls) {
+                        html += '<option value="' + cls.id + '">' + cls.class_name + '</option>';
+                    });
+                    $('#classSelect').html(html);
+                } else {
+                    $('#classSelect').html('<option value="">-- No Classes Available --</option>');
+                }
+            }).fail(function() {
+                $('#classSelect').html('<option value="">-- Error Loading --</option>');
+            });
+        }
+        
+        // Load ALL Sections for a class (not filtered by exam)
+        function loadAllSections(classId) {
+            $.get('get_sections.php', { class_id: classId }, function(response) {
+                if (response.success && response.data && response.data.length > 0) {
+                    var html = '<option value="">-- Select Section --</option>';
+                    response.data.forEach(function(section) {
+                        html += '<option value="' + section.id + '">' + section.section_name + '</option>';
+                    });
+                    $('#sectionSelect').html(html);
+                } else {
+                    $('#sectionSelect').html('<option value="">-- No Sections Available --</option>');
+                }
+            }).fail(function() {
+                $('#sectionSelect').html('<option value="">-- Error Loading --</option>');
+            });
+        }
+        
+        // Reset filters
+        function resetFilters() {
+            $('#examSelect').val('');
+            $('#classSelect').html('<option value="">-- Select Class --</option>');
+            $('#sectionSelect').html('<option value="">-- Select Section --</option>');
+            $('#resultsContainer').html(
+                '<div class="no-data">' +
+                    '<i class="fas fa-search"></i>' +
+                    '<p>Please select an exam to view results</p>' +
+                '</div>'
+            );
+            // Update URL
+            window.history.pushState({}, '', window.location.pathname);
+        }
+        
+        // Direct event handlers for dropdown onchange
+        function onExamChange() {
             const examId = $('#examSelect').val();
+            console.log('Exam changed:', examId);
+            if (examId) {
+                loadAllClasses();
+                loadExamResults();
+            } else {
+                $('#classSelect').html('<option value="">-- Select Class --</option>');
+                $('#sectionSelect').html('<option value="">-- Select Section --</option>');
+                $('#resultsContainer').html(
+                    '<div class="no-data">' +
+                        '<i class="fas fa-search"></i>' +
+                        '<p>Please select an exam to view results</p>' +
+                    '</div>'
+                );
+            }
+        }
+        
+        function onClassChange() {
+            const classId = $('#classSelect').val();
+            const examId = $('#examSelect').val();
+            console.log('Class changed:', classId);
+            if (classId) {
+                loadAllSections(classId);
+                if (examId) {
+                    loadExamResults();
+                }
+            } else {
+                $('#sectionSelect').html('<option value="">-- Select Section --</option>');
+            }
+        }
+        
+        function onSectionChange() {
+            const examId = $('#examSelect').val();
+            const classId = $('#classSelect').val();
+            console.log('Section changed');
+            if (examId && classId) {
+                loadExamResults();
+            }
+        }
+        
+        // Load Classes by Exam for dropdown
+        function loadClassesForDropdown(examId, preselectedClassId = null, preselectedSectionId = null) {
+            $.get('get_classes_by_exam.php', { exam_id: examId }, function(response) {
+                if (response.success && response.data && response.data.length > 0) {
+                    var html = '<option value="">-- Select Class --</option>';
+                    response.data.forEach(function(cls) {
+                        html += '<option value="' + cls.id + '">' + cls.class_name + '</option>';
+                    });
+                    $('#classSelect').html(html);
+                    
+                    // If there's a preselected class (from URL), select it
+                    if (preselectedClassId) {
+                        $('#classSelect').val(preselectedClassId);
+                        // Pass exam_id when loading sections
+                        const examId = $('#examSelect').val();
+                        loadSectionsByClass(preselectedClassId, examId, preselectedSectionId);
+                    }
+                } else {
+                    $('#classSelect').html('<option value="">-- No Classes Available --</option>');
+                }
+            }).fail(function() {
+                $('#classSelect').html('<option value="">-- Error Loading --</option>');
+            });
+        }
+        
+        // Load Sections by Class (filtered by exam)
+        function loadSectionsByClass(classId, examId = null, preselectedSectionId = null) {
+            console.log('Loading sections for class:', classId, 'exam:', examId);
+            let url = 'get_sections.php?class_id=' + classId;
+            if (examId) {
+                url += '&exam_id=' + examId;
+            }
+            $.get(url, function(response) {
+                console.log('Sections response:', response);
+                if (response.success && response.data && response.data.length > 0) {
+                    var html = '<option value="">-- Select Section --</option>';
+                    response.data.forEach(function(section) {
+                        html += '<option value="' + section.id + '">' + section.section_name + '</option>';
+                    });
+                    $('#sectionSelect').html(html);
+                    
+                    // If there's a preselected section (from URL), select it
+                    if (preselectedSectionId) {
+                        $('#sectionSelect').val(preselectedSectionId);
+                    }
+                } else {
+                    $('#sectionSelect').html('<option value="">-- No Sections Available --</option>');
+                }
+            }).fail(function(jqXHR, textStatus, error) {
+                console.log('Error loading sections:', textStatus, error);
+                $('#sectionSelect').html('<option value="">-- Error Loading --</option>');
+            });
+        }
+        
+        // Apply Filters - main entry point
+        function applyFilters() {
+            const examId = $('#examSelect').val();
+            const classId = $('#classSelect').val();
+            const sectionId = $('#sectionSelect').val();
+            
             if (!examId) {
-                $('#resultsContainer').html(`
-                    <div class="no-data">
-                        <i class="fas fa-search"></i>
-                        <p>Please select an exam to view results</p>
-                    </div>
-                `);
+                $('#resultsContainer').html(
+                    '<div class="no-data">' +
+                        '<i class="fas fa-search"></i>' +
+                        '<p>Please select an exam to view results</p>' +
+                    '</div>'
+                );
                 return;
             }
             
-            // Update URL without reload
-            const newUrl = window.location.pathname + '?exam_id=' + examId;
+            // Build URL with all filter params
+            let newUrl = window.location.pathname + '?exam_id=' + examId;
+            if (classId) newUrl += '&class_id=' + classId;
+            if (sectionId) newUrl += '&section_id=' + sectionId;
             window.history.pushState({}, '', newUrl);
             
+            // Load results with filters
+            loadExamResults();
+        }
+        
+        // Load exam results with filters
+        function loadExamResults() {
+            const examId = $('#examSelect').val();
+            const classId = $('#classSelect').val();
+            const sectionId = $('#sectionSelect').val();
+            
+            if (!examId) {
+                $('#resultsContainer').html(
+                    '<div class="no-data">' +
+                        '<i class="fas fa-search"></i>' +
+                        '<p>Please select an exam to view results</p>' +
+                    '</div>'
+                );
+                return;
+            }
+            
             // Show loading
-            $('#resultsContainer').html(`
-                <div class="loading-spinner">
-                    <i class="fas fa-spinner"></i>
-                    <p>Loading results...</p>
-                </div>
-            `);
+            $('#resultsContainer').html(
+                '<div class="loading-spinner">' +
+                    '<i class="fas fa-spinner"></i>' +
+                    '<p>Loading results...</p>' +
+                '</div>'
+            );
             
             // Load exam details first
             $.get('get_exams.php', { exam_id: examId }, function(examResponse) {
                 if (examResponse.success && examResponse.data && examResponse.data.length > 0) {
                     const exam = examResponse.data[0];
                     renderExamHeader(exam);
-                    loadClassesByExam(examId);
+                    
+                    // If class and section are selected, filter by them
+                    if (classId) {
+                        loadFilteredResults(examId, classId, sectionId);
+                    } else {
+                        // Load all classes for this exam
+                        loadClassesByExamForResults(examId);
+                    }
                 } else {
-                    $('#resultsContainer').html(`
-                        <div class="no-data">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <p>Exam not found</p>
-                        </div>
-                    `);
+                    $('#resultsContainer').html(
+                        '<div class="no-data">' +
+                            '<i class="fas fa-exclamation-triangle"></i>' +
+                            '<p>Exam not found</p>' +
+                        '</div>'
+                    );
                 }
             }).fail(function() {
-                $('#resultsContainer').html(`
-                    <div class="no-data">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Error loading exam details</p>
-                    </div>
-                `);
+                $('#resultsContainer').html(
+                    '<div class="no-data">' +
+                        '<i class="fas fa-exclamation-triangle"></i>' +
+                        '<p>Error loading exam details</p>' +
+                    '</div>'
+                );
             });
+        }
+        
+        // Load filtered results by class and section
+        function loadFilteredResults(examId, classId, sectionId) {
+            $.get('get_exam_results.php', { 
+                exam_id: examId, 
+                class_id: classId,
+                section_id: sectionId 
+            }, function(response) {
+                if (response.success && response.data && response.data.length > 0) {
+                    renderFilteredResults(response.data, classId, sectionId);
+                    updateFilteredStats(response.data);
+                } else {
+                    $('#classesList').html(
+                        '<div class="no-data">' +
+                            '<i class="fas fa-school"></i>' +
+                            '<p>No results found for the selected filters</p>' +
+                        '</div>'
+                    );
+                }
+            }).fail(function() {
+                $('#classesList').html(
+                    '<div class="no-data">' +
+                        '<i class="fas fa-exclamation-triangle"></i>' +
+                        '<p>Error loading results</p>' +
+                    '</div>'
+                );
+            });
+        }
+        
+        // Render filtered results (single class/section view)
+        function renderFilteredResults(data, classId, sectionId) {
+            // Update stats
+            const totalStudents = data.length;
+            let totalMarks = 0;
+            let countWithMarks = 0;
+            
+            data.forEach(function(student) {
+                if (student.total_marks !== null && student.total_marks !== undefined) {
+                    totalMarks += parseFloat(student.total_marks);
+                    countWithMarks++;
+                }
+            });
+            
+            const avgMarks = countWithMarks > 0 ? Math.round((totalMarks / countWithMarks) * 100) / 100 : 0;
+            
+            $('#totalClasses').text('1');
+            $('#totalSections').text(sectionId ? '1' : '0');
+            $('#totalStudents').text(totalStudents);
+            $('#avgMarks').text(avgMarks + '%');
+            
+            // Render table
+            let html = '<div class="class-card">';
+            html += '<div class="class-card-header">';
+            html += '<h5><i class="fas fa-users mr-2"></i>Results</h5>';
+            html += '</div>';
+            html += '<div class="class-card-body">';
+            html += '<div class="table-responsive">';
+            html += '<table class="results-table">';
+            html += '<thead><tr>';
+            html += '<th>Student Name</th>';
+            html += '<th>Admission No</th>';
+            html += '<th>Total Marks</th>';
+            html += '<th>Grade</th>';
+            html += '<th>Actions</th>';
+            html += '</tr></thead><tbody>';
+            
+            data.forEach(function(student) {
+                const marks = student.total_marks !== null ? student.total_marks : 'N/A';
+                const grade = student.grade || '-';
+                const gradeClass = 'grade-' + grade.charAt(0).toUpperCase();
+                
+                html += '<tr>';
+                html += '<td><div class="student-info"><span class="student-name">' + student.student_name + '</span></div></td>';
+                html += '<td>' + student.admission_no + '</td>';
+                html += '<td class="marks-obtained">' + marks + '</td>';
+                html += '<td><span class="grade-badge ' + gradeClass + '">' + grade + '</span></td>';
+                html += '<td><button class="btn-details" onclick="viewStudentDetails(' + student.student_id + ')">View Details</button></td>';
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            html += '</div></div></div>';
+            
+            $('#classesList').html(html);
+        }
+        
+        // Update stats for filtered results
+        function updateFilteredStats(data) {
+            // Already handled in renderFilteredResults
         }
         
         function renderExamHeader(exam) {
             const startDate = exam.start_date ? new Date(exam.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
             const endDate = exam.end_date ? new Date(exam.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+            
+            // Get current filter values
+            const currentClassId = $('#classSelect').val();
+            const currentSectionId = $('#sectionSelect').val();
             
             let headerHtml = `
                 <div class="exam-header">
@@ -582,6 +935,46 @@ if ($exam_id) {
             $('#resultsContainer').html(headerHtml);
             $('.filter-section').html(filterSection);
             $('#examSelect').val(exam.id);
+            
+            // Restore filter values after re-rendering filter section
+            if (currentClassId) {
+                // Classes should already be loaded, just set the value
+                const classSelect = document.getElementById('classSelect');
+                if (classSelect) {
+                    classSelect.value = currentClassId;
+                }
+            }
+            if (currentSectionId) {
+                // Sections should already be loaded for the selected class
+                const sectionSelect = document.getElementById('sectionSelect');
+                if (sectionSelect) {
+                    sectionSelect.value = currentSectionId;
+                }
+            }
+        }
+        
+        // Load classes for results display (not for dropdown)
+        function loadClassesByExamForResults(examId) {
+            $.get('get_classes_by_exam.php', { exam_id: examId }, function(response) {
+                if (response.success && response.data && response.data.length > 0) {
+                    renderClassesList(response.data, examId);
+                    updateSummaryStats(response.data);
+                } else {
+                    $('#classesList').html(
+                        '<div class="no-data">' +
+                            '<i class="fas fa-school"></i>' +
+                            '<p>No classes assigned to this exam</p>' +
+                        '</div>'
+                    );
+                }
+            }).fail(function() {
+                $('#classesList').html(
+                    '<div class="no-data">' +
+                        '<i class="fas fa-exclamation-triangle"></i>' +
+                        '<p>Error loading classes</p>' +
+                    '</div>'
+                );
+            });
         }
         
         function loadClassesByExam(examId) {
@@ -907,6 +1300,15 @@ if ($exam_id) {
             if (percentage >= 70) return 'C';
             if (percentage >= 60) return 'D';
             return 'F';
+        }
+        
+        // View student details - shows a modal with subject-wise marks
+        function viewStudentDetails(studentId) {
+            const examId = $('#examSelect').val();
+            if (!examId) return;
+            
+            // For now, show an alert - this can be enhanced later
+            alert('Student ID: ' + studentId + ' - Exam ID: ' + examId + '. Detailed view coming soon!');
         }
         
         // Hide loader on page load

@@ -461,7 +461,7 @@ class ExamModel {
     /**
      * Get exam results
      */
-    public function getExamResults(int $exam_id, int $school_id) {
+    public function getExamResults(int $exam_id, int $school_id, ?int $class_id = null, ?int $section_id = null) {
         // Simplified query - get subject info from school_exam_subjects only
         $sql = "
             SELECT 
@@ -475,6 +475,7 @@ class ExamModel {
                 sm.remarks,
                 s.first_name,
                 s.last_name,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name,
                 s.admission_no,
                 es.subject_id,
                 es.total_marks as subject_total_marks,
@@ -491,10 +492,26 @@ class ExamModel {
             LEFT JOIN school_classes c ON ec.class_id = c.id
             LEFT JOIN school_class_sections cs ON ec.section_id = cs.id
             WHERE sm.exam_id = ? AND sm.school_id = ?
-            ORDER BY s.first_name, s.last_name
         ";
+        
+        $params = [$exam_id, $school_id];
+        
+        // Add class filter if provided
+        if ($class_id) {
+            $sql .= " AND ec.class_id = ?";
+            $params[] = $class_id;
+        }
+        
+        // Add section filter if provided
+        if ($section_id) {
+            $sql .= " AND ec.section_id = ?";
+            $params[] = $section_id;
+        }
+        
+        $sql .= " ORDER BY s.first_name, s.last_name";
+        
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([$exam_id, $school_id]);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
