@@ -12,22 +12,14 @@ header('Content-Type: application/json; charset=utf-8');
 ob_start();
 
 try {
-    $appRoot = dirname(__DIR__, 5); // Navigate to App folder
-    $projectRoot = dirname($appRoot); // Navigate to School-SAAS root
+    // Include auth check
+    require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
 
-    // Ensure autoloader exists
-    $autoloaderPath = $projectRoot . DIRECTORY_SEPARATOR . 'autoloader.php';
-    if (!file_exists($autoloaderPath)) {
-        throw new Exception('Autoloader not found at: ' . $autoloaderPath);
-    }
-    require_once $autoloaderPath;
+    // Include autoloader
+    require_once __DIR__ . '/../../../../../../autoloader.php';
 
     // Include DB helper
-    $dbPath = $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'database.php';
-    if (!file_exists($dbPath)) {
-        throw new Exception('Database helper not found at: ' . $dbPath);
-    }
-    require_once $dbPath;
+    require_once __DIR__ . '/../../../../../Core/database.php';
 
     // Basic session checks (avoid redirecting from auth_check in JSON API)
     if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {

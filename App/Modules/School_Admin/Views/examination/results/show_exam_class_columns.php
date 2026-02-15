@@ -1,9 +1,11 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-$appRoot = dirname(__DIR__, 5);
+$appRoot = dirname(__DIR__, 4);
 try {
-    require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'database.php';
+    require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
+    require_once __DIR__ . '/../../../../../../autoloader.php';
+    require_once __DIR__ . '/../../../../../Core/database.php';
     $db = \Database::connect();
 
     $stmt = $db->prepare("SHOW COLUMNS FROM school_exam_classes");

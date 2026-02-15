@@ -104,11 +104,11 @@ require_once __DIR__ . '/../../../../Config/auth_check_school_admin.php';
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body d-flex align-items-center">
                                             <div class="mr-3">
-                                                <i class="fa fa-file-invoice fa-2x text-info"></i>
+                                                <i class="fa fa-file-upload fa-2x text-success"></i>
                                             </div>
                                             <div>
-                                                <h6 class="mb-0">Results</h6>
-                                                <small class="text-muted">Create and send invoices</small>
+                                                <h6 class="mb-0">Upload Marks</h6>
+                                                <small class="text-muted">Upload and manage student marks</small>
                                             </div>
                                         </div>
                                     </div>

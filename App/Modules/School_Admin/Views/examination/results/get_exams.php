@@ -12,35 +12,35 @@ header('Content-Type: application/json; charset=utf-8');
 ob_start();
 
 try {
-    $appRoot = dirname(__DIR__, 5); // Navigate to App folder
-    $projectRoot = dirname($appRoot); // Navigate to School-SAAS root
-
-    // Ensure autoloader exists
-    $autoloaderPath = $projectRoot . DIRECTORY_SEPARATOR . 'autoloader.php';
-    if (!file_exists($autoloaderPath)) {
-        throw new Exception('Autoloader not found at: ' . $autoloaderPath);
-    }
-
-    require_once $autoloaderPath;
+    // Include auth check
+    require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
+    
+    // Include autoloader
+    require_once __DIR__ . '/../../../../../../autoloader.php';
 
     // Include DB helper
-    $dbPath = $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'database.php';
-    if (!file_exists($dbPath)) {
-        throw new Exception('Database helper not found at: ' . $dbPath);
-    }
-    require_once $dbPath;
+    require_once __DIR__ . '/../../../../../Core/database.php';
 
     // Basic session checks (avoid redirecting from auth_check in JSON API)
     if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-        throw new Exception('Unauthorized: User not logged in');
+        ob_end_clean();
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized: User not logged in', 'data' => []]);
+        exit;
     }
     if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'school') {
-        throw new Exception('Unauthorized: Not a school admin');
+        ob_end_clean();
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Forbidden: Not a school admin', 'data' => []]);
+        exit;
     }
 
     $school_id = $_SESSION['school_id'] ?? null;
     if (!$school_id) {
-        throw new Exception('Unauthorized');
+        ob_end_clean();
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized: missing school context', 'data' => []]);
+        exit;
     }
 
     $db = \Database::connect();

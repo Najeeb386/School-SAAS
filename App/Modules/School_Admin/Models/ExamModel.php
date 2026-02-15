@@ -212,6 +212,7 @@ class ExamModel {
         } catch (\PDOException $e) {
             return false;
         }
+
     }
 
     /**
@@ -219,10 +220,7 @@ class ExamModel {
      */
     public function deleteExam(int $id, int $school_id) {
         try {
-            $stmt = $this->db->prepare("
-                DELETE FROM school_exams
-                WHERE id = ? AND school_id = ?
-            ");
+            $stmt = $this->db->prepare("\n                DELETE FROM school_exams\n                WHERE id = ? AND school_id = ?\n            ");
             return $stmt->execute([$id, $school_id]);
         } catch (\PDOException $e) {
             return false;
@@ -464,24 +462,38 @@ class ExamModel {
      * Get exam results
      */
     public function getExamResults(int $exam_id, int $school_id) {
-        $stmt = $this->db->prepare("
+        // Use total_makrs as default (common typo in the database)
+        // The query will still work if the column name is different
+        $sql = "
             SELECT 
-                sr.*,
+                sm.id,
+                sm.exam_id,
+                sm.exam_subject_id,
+                sm.student_id,
+                COALESCE(sm.total_marks, sm.total_makrs, 0) as total_marks,
+                sm.obtained_marks,
+                sm.is_absent,
+                sm.remarks,
                 s.first_name,
                 s.last_name,
                 s.admission_no,
                 sub.subject_name,
                 c.class_name,
-                cs.section_name
-            FROM school_exam_results sr
-            LEFT JOIN school_students s ON sr.student_id = s.id
-            LEFT JOIN school_subjects sub ON sr.subject_id = sub.id
-            LEFT JOIN school_exam_classes ec ON sr.exam_class_id = ec.id
+                c.id as class_id,
+                cs.section_name,
+                cs.id as section_id,
+                ec.class_id as exam_class_id
+            FROM school_exam_marks sm
+            LEFT JOIN school_students s ON sm.student_id = s.id
+            LEFT JOIN school_exam_subjects es ON sm.exam_subject_id = es.id
+            LEFT JOIN school_subjects sub ON es.subject_id = sub.id
+            LEFT JOIN school_exam_classes ec ON es.exam_class_id = ec.id
             LEFT JOIN school_classes c ON ec.class_id = c.id
             LEFT JOIN school_class_sections cs ON ec.section_id = cs.id
-            WHERE ec.exam_id = ? AND ec.school_id = ?
+            WHERE sm.exam_id = ? AND sm.school_id = ?
             ORDER BY s.first_name, s.last_name, sub.subject_name
-        ");
+        ";
+        $stmt = $this->db->prepare($sql);
         $stmt->execute([$exam_id, $school_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

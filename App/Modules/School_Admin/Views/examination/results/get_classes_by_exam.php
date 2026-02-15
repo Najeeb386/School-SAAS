@@ -65,20 +65,9 @@ try {
     }
     
     // Require database class
-    $appRoot = dirname(__DIR__, 5);
-    $dbPath = $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'database.php';
-    
-    if (!file_exists($dbPath)) {
-        http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Database class not found',
-            'debug' => ['db_path' => $dbPath]
-        ]);
-        exit;
-    }
-    
-    require_once $dbPath;
+    require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
+    require_once __DIR__ . '/../../../../../../autoloader.php';
+    require_once __DIR__ . '/../../../../../Core/database.php';
     
     // Get database connection
     $db = \Database::connect();

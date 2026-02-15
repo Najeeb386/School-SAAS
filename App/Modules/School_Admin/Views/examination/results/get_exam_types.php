@@ -7,11 +7,9 @@ header('Content-Type: application/json; charset=utf-8');
 ob_start();
 
 try {
-    $appRoot = dirname(__DIR__, 5);
-    $projectRoot = dirname($appRoot);
-    require_once $appRoot . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR . 'auth_check_school_admin.php';
-    require_once $projectRoot . DIRECTORY_SEPARATOR . 'autoloader.php';
-    require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'database.php';
+    require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
+    require_once __DIR__ . '/../../../../../../autoloader.php';
+    require_once __DIR__ . '/../../../../../Core/database.php';
 
     $school_id = $_SESSION['school_id'] ?? null;
     if (!$school_id) {

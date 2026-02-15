@@ -3,9 +3,10 @@
  * Marks Upload Management - School Admin
  * User must be logged in as School Admin to access this page
  */
-$appRoot = dirname(__DIR__, 5); // Navigate to App folder
-require_once $appRoot . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR . 'auth_check_school_admin.php';
-require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'database.php';
+$appRoot = dirname(__DIR__, 4); // Navigate to App folder
+require_once __DIR__ . '/../../../../../Config/auth_check_school_admin.php';
+require_once __DIR__ . '/../../../../../../autoloader.php';
+require_once __DIR__ . '/../../../../../Core/database.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -222,7 +223,7 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
                     <div class="container-fluid">
                         <!-- Page Header -->
                         <div class="row mb-4">
-                            <div class="col-12">
+                            <div class="col-11">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <h3 class="mb-3"><i class="fas fa-file-upload mr-2"></i>Marks Upload</h3>
@@ -236,6 +237,9 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
                                     </div>
                                     
                                 </div>
+                            </div>
+                            <div class="col-1 mt-3">
+                                <a href="../examination.php" class="btn btn-sm btn-primary"><i class="fas fa-arrow-left mr-1"></i>Back</a>
                             </div>
                         </div>
 
@@ -414,7 +418,7 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
 
     <!-- Upload Marks Modal (Individual) -->
     <div class="modal fade" id="uploadMarksModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-dialog modal-xxl" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
@@ -593,8 +597,79 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
 
             // Upload marks button
             $('#btnUploadMarks').on('click', function() {
-                // TODO: Implement individual upload logic
-                alert('Mark saving feature coming soon!');
+                var examId = $('#modal_exam_id').val();
+                var subjectId = $('#modal_subject_id').val();
+                if (!examId || !subjectId) {
+                    alert('Please select exam and subject before saving marks.');
+                    return;
+                }
+
+                // Collect marks from table
+                var marks = [];
+                $('#studentsTableBody tr').each(function() {
+                    var input = $(this).find('.marks-input');
+                    if (!input || input.length === 0) return;
+                    var studentId = input.data('student-id');
+                    var val = input.val();
+                    var obtained = (val === '' || val === null) ? null : parseFloat(val);
+                    var is_absent = (val === '' || val === null) ? 1 : 0;
+                    marks.push({
+                        student_id: studentId,
+                        obtained_marks: obtained,
+                        is_absent: is_absent,
+                        remarks: ''
+                    });
+                });
+
+                if (marks.length === 0) {
+                    alert('No student marks to save.');
+                    return;
+                }
+
+                // Confirm if there are empty marks (treat as absent)
+                var emptyCount = marks.filter(function(m){ return m.is_absent === 1; }).length;
+                if (emptyCount > 0) {
+                    if (!confirm(emptyCount + ' students have empty marks and will be marked absent. Continue?')) {
+                        return;
+                    }
+                }
+
+                // Disable button during save
+                var $btn = $('#btnUploadMarks');
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Saving...');
+
+                var payload = {
+                    exam_id: parseInt(examId,10),
+                    exam_subject_id: parseInt(subjectId,10),
+                    marks: marks
+                };
+
+                $.ajax({
+                    url: 'save_marks.php',
+                    method: 'POST',
+                    data: JSON.stringify(payload),
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    xhrFields: { withCredentials: true },
+                    success: function(resp) {
+                        if (resp && resp.success) {
+                            alert('Marks saved successfully.');
+                            $('#uploadMarksModal').modal('hide');
+                            // Refresh exams list to update progress
+                            loadCurrentExams();
+                            loadAllExams();
+                        } else {
+                            alert('Failed to save marks: ' + (resp && resp.message ? resp.message : 'Unknown error'));
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.error('Save marks error:', textStatus, errorThrown, jqXHR.responseText);
+                        alert('Error saving marks: ' + textStatus);
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).html('<i class="fas fa-check mr-2"></i>Save Marks');
+                    }
+                });
             });
 
             // Modal class selection change
@@ -725,21 +800,40 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
             var filters = getActiveFilters();
             filters.current = true;
 
-            $.get('get_exams.php', filters, function(response) {
-                if (response.success && response.data && response.data.length > 0) {
-                    renderExamsTable('#currentExamsTbody', response.data);
-                    updateStats(response.stats);
-                } else {
+            $.ajax({
+                url: 'get_exams.php',
+                method: 'GET',
+                data: filters,
+                dataType: 'json',
+                xhrFields: { withCredentials: true },
+                success: function(response) {
+                    if (response && response.success && response.data && response.data.length > 0) {
+                        renderExamsTable('#currentExamsTbody', response.data);
+                        updateStats(response.stats);
+                    } else {
+                        var msg = (response && response.message) ? response.message : 'No current exams found.';
+                        $('#currentExamsTbody').html(
+                            '<tr><td colspan="8" class="text-center text-muted py-5">' +
+                            '<div class="no-data-message"><i class="fas fa-inbox"></i><p>' + msg + '</p></div>' +
+                            '</td></tr>'
+                        );
+                    }
+                },
+                error: function(jqXHR) {
+                    var msg = 'Error loading exams';
+                    try {
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.message) msg = jqXHR.responseJSON.message;
+                        else if (jqXHR.responseText) {
+                            var p = JSON.parse(jqXHR.responseText);
+                            if (p && p.message) msg = p.message;
+                        }
+                    } catch (e) {}
                     $('#currentExamsTbody').html(
-                        '<tr><td colspan="8" class="text-center text-muted py-5">' +
-                        '<div class="no-data-message"><i class="fas fa-inbox"></i><p>No current exams found.</p></div>' +
+                        '<tr><td colspan="8" class="text-center text-danger py-5">' +
+                        '<div class="no-data-message"><i class="fas fa-exclamation-triangle"></i><p>' + msg + '</p></div>' +
                         '</td></tr>'
                     );
                 }
-            }).fail(function() {
-                $('#currentExamsTbody').html(
-                    '<tr><td colspan="8" class="text-center text-danger py-5">Error loading exams</td></tr>'
-                );
             });
         }
 
@@ -747,20 +841,39 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
         function loadAllExams() {
             var filters = getActiveFilters();
 
-            $.get('get_exams.php', filters, function(response) {
-                if (response.success && response.data && response.data.length > 0) {
-                    renderExamsTable('#allExamsTbody', response.data);
-                } else {
+            $.ajax({
+                url: 'get_exams.php',
+                method: 'GET',
+                data: filters,
+                dataType: 'json',
+                xhrFields: { withCredentials: true },
+                success: function(response) {
+                    if (response && response.success && response.data && response.data.length > 0) {
+                        renderExamsTable('#allExamsTbody', response.data);
+                    } else {
+                        var msg = (response && response.message) ? response.message : 'No exams found.';
+                        $('#allExamsTbody').html(
+                            '<tr><td colspan="8" class="text-center text-muted py-5">' +
+                            '<div class="no-data-message"><i class="fas fa-inbox"></i><p>' + msg + '</p></div>' +
+                            '</td></tr>'
+                        );
+                    }
+                },
+                error: function(jqXHR) {
+                    var msg = 'Error loading exams';
+                    try {
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.message) msg = jqXHR.responseJSON.message;
+                        else if (jqXHR.responseText) {
+                            var p = JSON.parse(jqXHR.responseText);
+                            if (p && p.message) msg = p.message;
+                        }
+                    } catch (e) {}
                     $('#allExamsTbody').html(
-                        '<tr><td colspan="8" class="text-center text-muted py-5">' +
-                        '<div class="no-data-message"><i class="fas fa-inbox"></i><p>No exams found.</p></div>' +
+                        '<tr><td colspan="8" class="text-center text-danger py-5">' +
+                        '<div class="no-data-message"><i class="fas fa-exclamation-triangle"></i><p>' + msg + '</p></div>' +
                         '</td></tr>'
                     );
                 }
-            }).fail(function() {
-                $('#allExamsTbody').html(
-                    '<tr><td colspan="8" class="text-center text-danger py-5">Error loading exams</td></tr>'
-                );
             });
         }
 
@@ -792,7 +905,7 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
                     '<button class="btn btn-sm btn-outline-primary" onclick="openUploadModal(' + exam.id + ', \'' + exam.exam_name + '\')" title="Upload Marks">' +
                     '<i class="fas fa-cloud-upload-alt"></i> Upload' +
                     '</button> ' +
-                    '<button class="btn btn-sm btn-outline-info" onclick="openViewResultsModal(' + exam.id + ')" title="View Results">' +
+                    '<button class="btn btn-sm btn-outline-info" onclick="viewResultsPage(' + exam.id + ')" title="View Results">' +
                     '<i class="fas fa-eye"></i> View' +
                     '</button> ' +
                     '<button class="btn btn-sm btn-outline-success" onclick="downloadResults(' + exam.id + ')" title="Download">' +
@@ -905,13 +1018,22 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
                 xhrFields: { withCredentials: true },
                 success: function(response) {
                     if (response.success && response.data && response.data.length > 0) {
-                        var html = '<option value="">-- Choose Subject --</option>';
-                        response.data.forEach(function(subject) {
-                            html += '<option value="' + subject.id + '" data-total-marks="' + (subject.total_marks || 0) + '">' + 
-                                    subject.subject_name + ' (' + (subject.total_marks || 0) + ' Marks)' + 
-                                    '</option>';
-                        });
-                        $('#modal_subject_id').html(html).prop('disabled', false);
+                                var html = '<option value="">-- Choose Subject --</option>';
+                                response.data.forEach(function(subject) {
+                                    // If section provided and uploaded_percent >= 100, skip (all students have marks)
+                                    if (requestData.section_id && typeof subject.uploaded_percent !== 'undefined' && subject.uploaded_percent >= 100) {
+                                        return; // skip fully uploaded subjects
+                                    }
+                                    html += '<option value="' + subject.id + '" data-total-marks="' + (subject.total_marks || 0) + '">' + 
+                                            subject.subject_name + ' (' + (subject.total_marks || 0) + ' Marks)' + 
+                                            '</option>';
+                                });
+                                // If only the default option remains, show no subjects message
+                                if (html === '<option value="">-- Choose Subject --</option>') {
+                                    $('#modal_subject_id').html('<option value="">No subjects available (all uploaded)</option>').prop('disabled', true);
+                                } else {
+                                    $('#modal_subject_id').html(html).prop('disabled', false);
+                                }
                     } else {
                         $('#modal_subject_id').html('<option value="">No subjects assigned</option>').prop('disabled', true);
                     }
@@ -969,7 +1091,12 @@ require_once $appRoot . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR . 'da
             $('#studentsTableBody').html(html);
         }
 
-        // Open View Results Modal
+        // Open View Results Page (redirect)
+        function viewResultsPage(examId) {
+            window.location.href = 'Result_view.php?exam_id=' + examId;
+        }
+
+        // Open View Results Modal (legacy - kept for reference)
         function openViewResultsModal(examId) {
             $('#resultsContent').html('<p class="text-muted">Loading results...</p>');
             $.get('get_exam_results.php', { exam_id: examId }, function(response) {
